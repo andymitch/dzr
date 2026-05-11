@@ -1,0 +1,14 @@
+[package]
+name = "dzr-core"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+dashmap = "6"
+tracing = "0.1"

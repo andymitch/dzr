@@ -1,0 +1,36 @@
+[package]
+name = "dzr-tui"
+edition.workspace = true
+version.workspace = true
+
+[lib]
+name = "dzr_tui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dzr-tui"
+path = "src/main.rs"
+
+[dependencies]
+dzr-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+ratatui = "0.29"
+crossterm = "0.28"
+ratatui-image = { version = "8", features = ["crossterm"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+rodio = { version = "0.21", default-features = false, features = ["playback"] }
+symphonia = { version = "0.5", default-features = false, features = ["aac", "isomp4", "mkv", "vorbis", "mp3"] }
+opus = "0.3"
+audiopus_sys = { version = "0.2", features = ["static"] }
+rustfft = "6"
+parking_lot = "0.12"
+dirs = "5"
+directories = "5"
+unicode-width = "0.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
