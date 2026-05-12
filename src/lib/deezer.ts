@@ -65,6 +65,12 @@ export const artistTop = (id: number) => invoke<Paged<Track>>('deezer_artist_top
 export const artistInfo = (id: number) => invoke<Artist>('deezer_artist', { id });
 export const artistAlbums = (id: number) => invoke<Paged<Album>>('deezer_artist_albums', { id });
 
+export type MatchInfo = {
+  video_id: string;
+  duration: number | null;
+  title: string | null;
+};
+
 export const resolveTrack = (
   trackId: number,
   artist: string,
@@ -78,6 +84,19 @@ export const resolveTrack = (
     title,
     duration,
     force,
+  });
+
+export const matchTrack = (
+  trackId: number,
+  artist: string,
+  title: string,
+  duration: number,
+) =>
+  invoke<MatchInfo>('match_track', {
+    trackId,
+    artist,
+    title,
+    duration,
   });
 
 export const resolverInvalidate = (trackId: number) =>

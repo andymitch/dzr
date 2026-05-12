@@ -1,5 +1,5 @@
 use crate::AppState;
-use dzr_core::{Album, Artist, Paged, Playlist, Resolved, Track, User};
+use dzr_core::{Album, Artist, MatchInfo, Paged, Playlist, Resolved, Track, User};
 use serde_json::Value;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, Runtime};
@@ -137,6 +137,22 @@ pub async fn resolve_track<R: Runtime>(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn match_track<R: Runtime>(
+    app: AppHandle<R>,
+    track_id: i64,
+    artist: String,
+    title: String,
+    duration: Option<u64>,
+) -> Result<MatchInfo, String> {
+    let s = state(&app);
+    s.resolver
+        .match_track(track_id, &artist, &title, duration)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 
 #[tauri::command]
 pub fn resolver_invalidate<R: Runtime>(app: AppHandle<R>, track_id: i64) {

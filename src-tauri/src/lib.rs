@@ -71,6 +71,7 @@ pub fn run() {
             commands::deezer_artist,
             commands::deezer_artist_albums,
             commands::resolve_track,
+            commands::match_track,
             commands::resolver_invalidate,
             commands::ytdlp_version,
         ])

@@ -41,10 +41,11 @@ let audio: HTMLAudioElement | null = null;
 let pendingPlayId: number | null = null;
 let transitioning = false;
 
-const MAX_CONCURRENT = 3;
+const MAX_CONCURRENT = 4;
 let inFlight = 0;
 const queue: Track[] = [];
-const promises = new Map<number, Promise<Resolved>>();
+const matchPromises = new Map<number, Promise<{ video_id: string }>>();
+const urlPromises = new Map<number, Promise<Resolved>>();
 let generation = 0;
 
 function setRes(id: number, e: ResEntry) {
@@ -55,8 +56,31 @@ function setRes(id: number, e: ResEntry) {
   });
 }
 
+// Prefetch path: match-only. No yt-dlp -g URL extract until user plays.
+function matchTrackOnly(t: Track): Promise<{ video_id: string }> {
+  const existing = matchPromises.get(t.id);
+  if (existing) return existing;
+  const p = invoke<{ video_id: string }>('match_track', {
+    trackId: t.id,
+    artist: t.artist.name,
+    title: t.title,
+    duration: t.duration,
+  });
+  matchPromises.set(t.id, p);
+  setRes(t.id, { status: 'resolving' });
+  p.then(
+    () => setRes(t.id, { status: 'resolved' }),
+    (e) => {
+      matchPromises.delete(t.id);
+      setRes(t.id, { status: 'failed', error: e?.message ?? String(e) });
+    },
+  );
+  return p;
+}
+
+// Play path: full resolve (match + URL extract).
 function resolveTrack(t: Track): Promise<Resolved> {
-  const existing = promises.get(t.id);
+  const existing = urlPromises.get(t.id);
   if (existing) return existing;
   const p = invoke<Resolved>('resolve_track', {
     trackId: t.id,
@@ -64,12 +88,12 @@ function resolveTrack(t: Track): Promise<Resolved> {
     title: t.title,
     duration: t.duration,
   });
-  promises.set(t.id, p);
+  urlPromises.set(t.id, p);
   setRes(t.id, { status: 'resolving' });
   p.then(
     (r) => setRes(t.id, { status: 'resolved', url: r.url }),
     (e) => {
-      promises.delete(t.id);
+      urlPromises.delete(t.id);
       setRes(t.id, { status: 'failed', error: e?.message ?? String(e) });
     },
   );
@@ -79,9 +103,9 @@ function resolveTrack(t: Track): Promise<Resolved> {
 function pump() {
   while (inFlight < MAX_CONCURRENT && queue.length > 0) {
     const t = queue.shift()!;
-    if (promises.has(t.id)) continue;
+    if (matchPromises.has(t.id)) continue;
     inFlight++;
-    resolveTrack(t).finally(() => {
+    matchTrackOnly(t).finally(() => {
       inFlight--;
       pump();
     });
@@ -92,7 +116,7 @@ export function prefetch(tracks: Track[]) {
   const gen = ++generation;
   queue.length = 0;
   for (const t of tracks) {
-    if (promises.has(t.id)) continue;
+    if (matchPromises.has(t.id)) continue;
     queue.push(t);
   }
   if (gen === generation) pump();
@@ -152,7 +176,8 @@ export function attachAudio(el: HTMLAudioElement) {
     if (!el.error || el.error.code === 3) return; // no source = transient
     const st = get(player);
     if (!st.current) return;
-    promises.delete(st.current.id);
+    urlPromises.delete(st.current.id);
+    matchPromises.delete(st.current.id);
     setRes(st.current.id, { status: 'failed', error: 'playback failed' });
     next();
   });
