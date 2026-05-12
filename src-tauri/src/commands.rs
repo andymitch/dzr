@@ -1,5 +1,5 @@
 use crate::AppState;
-use dzr_core::{Paged, Playlist, Resolved, Track, User};
+use dzr_core::{Album, Artist, Paged, Playlist, Resolved, Track, User};
 use serde_json::Value;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, Runtime};
@@ -63,6 +63,60 @@ pub async fn deezer_playlist_tracks<R: Runtime>(
 pub async fn deezer_chart_tracks<R: Runtime>(app: AppHandle<R>) -> Result<Paged<Track>, String> {
     let s = state(&app);
     s.deezer.chart_tracks().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn deezer_user_albums<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> Result<Paged<Album>, String> {
+    let s = state(&app);
+    s.deezer.user_albums(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn deezer_user_artists<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> Result<Paged<Artist>, String> {
+    let s = state(&app);
+    s.deezer.user_artists(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn deezer_album_tracks<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> Result<Paged<Track>, String> {
+    let s = state(&app);
+    s.deezer.album_tracks(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn deezer_artist_top<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> Result<Paged<Track>, String> {
+    let s = state(&app);
+    s.deezer.artist_top(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn deezer_artist<R: Runtime>(app: AppHandle<R>, id: i64) -> Result<Artist, String> {
+    let s = state(&app);
+    s.deezer.artist(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn deezer_artist_albums<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> Result<Paged<Album>, String> {
+    let s = state(&app);
+    s.deezer
+        .artist_albums(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

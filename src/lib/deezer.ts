@@ -16,6 +16,23 @@ export type Playlist = {
   picture_medium: string;
 };
 
+export type Album = {
+  id: number;
+  title: string;
+  cover_medium: string;
+  cover_big: string;
+  artist: { id: number; name: string };
+  nb_tracks: number;
+};
+
+export type Artist = {
+  id: number;
+  name: string;
+  picture_medium: string;
+  nb_album: number;
+  nb_fan: number;
+};
+
 export type User = {
   id: number;
   name: string;
@@ -41,6 +58,12 @@ export const userFlow = (id: number) => invoke<Paged<Track>>('deezer_user_flow',
 export const playlistTracks = (id: number) =>
   invoke<Paged<Track>>('deezer_playlist_tracks', { id });
 export const chartTracks = () => invoke<Paged<Track>>('deezer_chart_tracks');
+export const userAlbums = (id: number) => invoke<Paged<Album>>('deezer_user_albums', { id });
+export const userArtists = (id: number) => invoke<Paged<Artist>>('deezer_user_artists', { id });
+export const albumTracks = (id: number) => invoke<Paged<Track>>('deezer_album_tracks', { id });
+export const artistTop = (id: number) => invoke<Paged<Track>>('deezer_artist_top', { id });
+export const artistInfo = (id: number) => invoke<Artist>('deezer_artist', { id });
+export const artistAlbums = (id: number) => invoke<Paged<Album>>('deezer_artist_albums', { id });
 
 export const resolveTrack = (
   trackId: number,

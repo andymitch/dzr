@@ -11,17 +11,21 @@ where
     Ok(Option::<String>::deserialize(d)?.unwrap_or_default())
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ArtistRef {
+    #[serde(default)]
     pub id: i64,
+    #[serde(default)]
     pub name: String,
     #[serde(default, deserialize_with = "null_to_empty")]
     pub picture_small: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct AlbumRef {
+    #[serde(default)]
     pub id: i64,
+    #[serde(default)]
     pub title: String,
     #[serde(default, deserialize_with = "null_to_empty")]
     pub cover_medium: String,
@@ -36,7 +40,9 @@ pub struct Track {
     pub duration: u64,
     #[serde(default, deserialize_with = "null_to_empty")]
     pub preview: String,
+    #[serde(default)]
     pub artist: ArtistRef,
+    #[serde(default)]
     pub album: AlbumRef,
 }
 
@@ -130,7 +136,30 @@ impl DeezerClient {
     }
 
     pub async fn user_flow(&self, id: i64) -> Result<Paged<Track>> {
-        self.get(&format!("/user/{id}/flow?limit=40")).await
+        // Deezer's Flow endpoint caps each response at 12 tracks regardless of `limit`.
+        // Pull multiple pages with increasing index and dedupe to build a larger pool.
+        use std::collections::HashSet;
+        let mut seen: HashSet<i64> = HashSet::new();
+        let mut out: Vec<Track> = Vec::new();
+        for index in (0..60).step_by(12) {
+            let page: Paged<Track> = self
+                .get(&format!("/user/{id}/flow?limit=50&index={index}"))
+                .await?;
+            if page.data.is_empty() {
+                break;
+            }
+            for t in page.data {
+                if seen.insert(t.id) {
+                    out.push(t);
+                }
+            }
+        }
+        let total = out.len() as u64;
+        Ok(Paged {
+            data: out,
+            total,
+            next: None,
+        })
     }
 
     pub async fn playlist_tracks(&self, id: i64) -> Result<Paged<Track>> {
@@ -140,6 +169,56 @@ impl DeezerClient {
     pub async fn chart_tracks(&self) -> Result<Paged<Track>> {
         self.get("/chart/0/tracks?limit=100").await
     }
+
+    pub async fn user_albums(&self, id: i64) -> Result<Paged<Album>> {
+        self.get(&format!("/user/{id}/albums?limit=200")).await
+    }
+
+    pub async fn user_artists(&self, id: i64) -> Result<Paged<Artist>> {
+        self.get(&format!("/user/{id}/artists?limit=200")).await
+    }
+
+    pub async fn album_tracks(&self, id: i64) -> Result<Paged<Track>> {
+        self.get(&format!("/album/{id}/tracks?limit=200")).await
+    }
+
+    pub async fn artist_top(&self, id: i64) -> Result<Paged<Track>> {
+        self.get(&format!("/artist/{id}/top?limit=50")).await
+    }
+
+    pub async fn artist(&self, id: i64) -> Result<Artist> {
+        self.get(&format!("/artist/{id}")).await
+    }
+
+    pub async fn artist_albums(&self, id: i64) -> Result<Paged<Album>> {
+        self.get(&format!("/artist/{id}/albums?limit=50")).await
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Album {
+    pub id: i64,
+    pub title: String,
+    #[serde(default, deserialize_with = "null_to_empty")]
+    pub cover_medium: String,
+    #[serde(default, deserialize_with = "null_to_empty")]
+    pub cover_big: String,
+    #[serde(default)]
+    pub artist: ArtistRef,
+    #[serde(default)]
+    pub nb_tracks: u64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Artist {
+    pub id: i64,
+    pub name: String,
+    #[serde(default, deserialize_with = "null_to_empty")]
+    pub picture_medium: String,
+    #[serde(default)]
+    pub nb_album: u64,
+    #[serde(default)]
+    pub nb_fan: u64,
 }
 
 impl Default for DeezerClient {

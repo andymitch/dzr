@@ -14,3 +14,4 @@ src-tauri/binaries/*
 target/
 Cargo.lock.local
 /tmp/
+src-tauri/icons/android

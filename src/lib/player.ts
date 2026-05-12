@@ -39,6 +39,7 @@ export const resolutions = writable<Map<number, ResEntry>>(new Map());
 
 let audio: HTMLAudioElement | null = null;
 let pendingPlayId: number | null = null;
+let transitioning = false;
 
 const MAX_CONCURRENT = 3;
 let inFlight = 0;
@@ -97,28 +98,77 @@ export function prefetch(tracks: Track[]) {
   if (gen === generation) pump();
 }
 
+let userWantsPlay = false;
+let endedForTrackId: number | null = null;
+
 export function attachAudio(el: HTMLAudioElement) {
   audio = el;
-  el.addEventListener('play', () => player.update((s) => ({ ...s, playing: true })));
-  el.addEventListener('pause', () => player.update((s) => ({ ...s, playing: false })));
-  el.addEventListener('timeupdate', () =>
-    player.update((s) => ({ ...s, position: el.currentTime })),
-  );
+  el.addEventListener('play', () => {
+    // WebKit / OS sometimes calls play() on window focus or media-session
+    // restore. Only stay playing if user explicitly asked for it.
+    if (!userWantsPlay) {
+      el.pause();
+      return;
+    }
+    player.update((s) => ({ ...s, playing: true }));
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
+  });
+  el.addEventListener('pause', () => {
+    player.update((s) => ({ ...s, playing: false }));
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
+  });
+  el.addEventListener('timeupdate', () => {
+    player.update((s) => ({ ...s, position: el.currentTime }));
+    // YouTube DASH m4a often reports inflated `audio.duration` (mvhd) so the
+    // native 'ended' event never fires. Use Deezer's `track.duration` as
+    // authoritative and advance manually.
+    const st = get(player);
+    const trackDur = st.current?.duration ?? 0;
+    if (
+      st.current &&
+      trackDur > 0 &&
+      el.currentTime >= trackDur - 0.4 &&
+      endedForTrackId !== st.current.id
+    ) {
+      endedForTrackId = st.current.id;
+      next();
+    }
+  });
   el.addEventListener('loadedmetadata', () =>
     player.update((s) => ({ ...s, duration: el.duration || 0 })),
   );
-  el.addEventListener('ended', () => next());
-  el.addEventListener('error', async () => {
+  el.addEventListener('ended', () => {
+    const st = get(player);
+    if (st.current && endedForTrackId === st.current.id) return; // already advanced
+    if (st.current) endedForTrackId = st.current.id;
+    next();
+  });
+  el.addEventListener('error', () => {
+    if (transitioning) return; // ignore spurious errors during src swap
+    if (!el.error || el.error.code === 3) return; // no source = transient
     const st = get(player);
     if (!st.current) return;
     promises.delete(st.current.id);
-    try {
-      await invoke('resolver_invalidate', { trackId: st.current.id });
-      await loadIndex(st.index);
-    } catch (e: any) {
-      player.update((s) => ({ ...s, error: e?.message ?? String(e) }));
-    }
+    setRes(st.current.id, { status: 'failed', error: 'playback failed' });
+    next();
   });
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => {
+      userWantsPlay = true;
+      el.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      userWantsPlay = false;
+      el.pause();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => next());
+    navigator.mediaSession.setActionHandler('previoustrack', () => prev());
+  }
 }
 
 async function loadIndex(idx: number) {
@@ -126,6 +176,7 @@ async function loadIndex(idx: number) {
   if (idx < 0 || idx >= st.queue.length) return;
   const track = st.queue[idx];
   pendingPlayId = track.id;
+  transitioning = true;
   if (audio) {
     audio.pause();
     audio.removeAttribute('src');
@@ -142,16 +193,33 @@ async function loadIndex(idx: number) {
   }));
   try {
     const resolved = await resolveTrack(track);
-    if (pendingPlayId !== track.id) return;
+    if (pendingPlayId !== track.id) {
+      transitioning = false;
+      return;
+    }
     if (audio) {
       audio.src = resolved.url;
+      userWantsPlay = true;
+      transitioning = false;
       audio.play().catch((e) => {
         player.update((s) => ({ ...s, error: e?.message ?? String(e) }));
       });
     }
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist.name,
+        album: track.album.title,
+        artwork: track.album.cover_medium
+          ? [{ src: track.album.cover_medium }]
+          : [],
+      });
+    }
   } catch (e: any) {
+    transitioning = false;
     if (pendingPlayId !== track.id) return;
-    player.update((s) => ({ ...s, error: e?.message ?? String(e) }));
+    setRes(track.id, { status: 'failed', error: e?.message ?? String(e) });
+    next();
   }
 }
 
@@ -161,15 +229,22 @@ export function playQueue(tracks: Track[], startIdx = 0) {
 }
 
 export function pause() {
+  userWantsPlay = false;
   audio?.pause();
 }
 export function resume() {
+  userWantsPlay = true;
   audio?.play();
 }
 export function togglePlay() {
   if (!audio) return;
-  if (audio.paused) audio.play();
-  else audio.pause();
+  if (audio.paused) {
+    userWantsPlay = true;
+    audio.play();
+  } else {
+    userWantsPlay = false;
+    audio.pause();
+  }
 }
 export function seek(positionSec: number) {
   if (audio && Number.isFinite(positionSec)) audio.currentTime = positionSec;
@@ -177,13 +252,27 @@ export function seek(positionSec: number) {
 export function next() {
   const st = get(player);
   if (st.queue.length === 0) return;
+  // skip past failed tracks so autoplay marches down the list
+  const resmap = get(resolutions);
+  const skip = (i: number): number => {
+    let n = i;
+    let guard = 0;
+    while (n < st.queue.length && guard < st.queue.length) {
+      const id = st.queue[n].id;
+      if (resmap.get(id)?.status !== 'failed') return n;
+      n++;
+      guard++;
+    }
+    return st.queue.length;
+  };
   if (st.shuffle && st.queue.length > 1) {
     let idx = Math.floor(Math.random() * st.queue.length);
     if (idx === st.index) idx = (idx + 1) % st.queue.length;
     loadIndex(idx);
     return;
   }
-  if (st.index + 1 < st.queue.length) loadIndex(st.index + 1);
+  const target = skip(st.index + 1);
+  if (target < st.queue.length) loadIndex(target);
 }
 
 export function toggleShuffle() {
