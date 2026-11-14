@@ -11,6 +11,7 @@ struct MainView: View {
     @State private var query = ""
     @State private var submitted = ""
     @FocusState private var searchFocused: Bool
+    @State private var sidebarInset: CGFloat = 0
 
     var body: some View {
         NavigationSplitView {
@@ -28,8 +29,10 @@ struct MainView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
             NavigationStack(path: $path) {
-                root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying() }
+                root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying().environment(\.sidebarInset, sidebarInset) }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.leading } action: { sidebarInset = $0 }
+            .environment(\.sidebarInset, sidebarInset)
         }
         .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums")
         .searchFocused($searchFocused)
@@ -70,6 +73,7 @@ extension View {
         contentMargins(.bottom, 96, for: .scrollContent)
             .scrollEdgeEffectHidden(true, for: .top)
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            .modifier(UnderSidebar())
             .overlay(alignment: .top) { HeaderFade() }
             .overlay(alignment: .bottom) { NowPlayingBar().padding(.horizontal, 20).padding(.bottom, 14) }
     }
@@ -88,6 +92,20 @@ struct HeaderFade: View {
         .ignoresSafeArea(edges: .top)
         .allowsHitTesting(false)
     }
+}
+
+struct UnderSidebar: ViewModifier {
+    @Environment(\.sidebarInset) private var inset
+
+    func body(content: Content) -> some View {
+        content
+            .contentMargins(.leading, inset, for: .scrollContent)
+            .ignoresSafeArea(.container, edges: .leading)
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var sidebarInset: CGFloat = 0
 }
 
 struct Loader<T, Content: View>: View {
