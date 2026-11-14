@@ -68,7 +68,25 @@ struct MainView: View {
 extension View {
     func withNowPlaying() -> some View {
         contentMargins(.bottom, 96, for: .scrollContent)
+            .scrollEdgeEffectHidden(true, for: .top)
+            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            .overlay(alignment: .top) { HeaderFade() }
             .overlay(alignment: .bottom) { NowPlayingBar().padding(.horizontal, 20).padding(.bottom, 14) }
+    }
+}
+
+struct HeaderFade: View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.ultraThinMaterial)
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+            Rectangle().fill(.regularMaterial)
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom))
+            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
+        }
+        .frame(height: 96)
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
     }
 }
 
