@@ -1218,6 +1218,8 @@ class PlayerViewModel @Inject constructor(
     var searchQuery by mutableStateOf("")
         private set
 
+    fun refreshRecentlySearched() = searchStateHolder.fetchRecentlySearched()
+
     fun updateSearchQuery(query: String) {
         searchQuery = query
         searchStateHolder.updateSearchQuery(query)

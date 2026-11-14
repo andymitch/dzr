@@ -44,6 +44,13 @@ class LibraryViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Lazily, emptyList())
 
+    private val _recentlyPlayed = kotlinx.coroutines.flow.MutableStateFlow<List<Pair<String, com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylist>>>(emptyList())
+    val recentlyPlayed: kotlinx.coroutines.flow.StateFlow<List<Pair<String, com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylist>>> = _recentlyPlayed
+
+    fun refreshRecentlyPlayed() {
+        viewModelScope.launch { _recentlyPlayed.value = deezerRepository.getRecentlyPlayed() }
+    }
+
     private val _yourDiscovery = kotlinx.coroutines.flow.MutableStateFlow<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylistDetailData?>(null)
     val yourDiscovery: kotlinx.coroutines.flow.StateFlow<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylistDetailData?> = _yourDiscovery
 
@@ -60,12 +67,15 @@ class LibraryViewModel @Inject constructor(
             val mixes = mutableListOf<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylistDetailData>()
             for (i in 1..5) {
                 val mix = deezerRepository.getInspiredByMix(i)?.data
-                if (mix != null) {
-                    mixes.add(mix.copy(id = "your_mix_$i"))
+                if (mix != null && mix.included.isNotEmpty()) {
+                    val featuring = mix.attributes?.title.orEmpty()
+                    val lead = featuring.removePrefix("Featuring ").substringBefore(",").trim()
+                    mixes.add(mix.copy(id = "your_mix_$i", attributes = mix.attributes?.copy(title = "Inspired by $lead", description = featuring)))
                 }
             }
             _yourMixes.value = mixes
         }
+        refreshRecentlyPlayed()
         viewModelScope.launch {
             val discovery = deezerRepository.getDiscoveryMix()?.data
             _yourDiscovery.value = discovery

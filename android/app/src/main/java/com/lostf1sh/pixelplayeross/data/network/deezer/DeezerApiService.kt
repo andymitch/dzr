@@ -106,6 +106,12 @@ interface DeezerApiService {
         @retrofit2.http.Header("authorization") auth: String
     ): DeezerMultiFlowResponse
 
+    @GET("platform/gcast/user/{user_id}/recently-played")
+    suspend fun getRecentlyPlayed(
+        @retrofit2.http.Path("user_id") userId: Long,
+        @retrofit2.http.Header("authorization") auth: String
+    ): com.google.gson.JsonObject
+
     @GET("platform/gcast/user/{user_id}/search/recently-searched")
     suspend fun getRecentlySearched(
         @retrofit2.http.Path("user_id") userId: Long,

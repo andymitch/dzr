@@ -83,7 +83,6 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.CollagePattern
 import com.lostf1sh.pixelplayeross.presentation.components.AlbumArtCollage
-import com.lostf1sh.pixelplayeross.presentation.components.BetaInfoBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.ChangelogBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.DailyMixSection
 import com.lostf1sh.pixelplayeross.presentation.components.HomeGradientTopBar
@@ -155,6 +154,8 @@ fun HomeScreen(
     val yourMixes by libraryViewModel.yourMixes.collectAsState()
     val yourMixSongs by libraryViewModel.yourMixSongs.collectAsState()
     val yourDiscovery by libraryViewModel.yourDiscovery.collectAsState()
+    val recentlyPlayed by libraryViewModel.recentlyPlayed.collectAsState()
+    LaunchedEffect(Unit) { libraryViewModel.refreshRecentlyPlayed() }
     
     val flowConfigs = flowConfigsState?.data?.included ?: emptyList()
     val recommendedPlaylists = playlists?.data?.included ?: emptyList()
@@ -230,10 +231,8 @@ fun HomeScreen(
 
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
-    var showBetaInfoBottomSheet by remember { mutableStateOf(false) }
     var showStreamingProviderSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
-    val betaSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     LocalContext.current
 
@@ -295,9 +294,6 @@ fun HomeScreen(
                     },
                     onMoreOptionsClick = {
                         showChangelogBottomSheet = true
-                    },
-                    onBetaClick = {
-                        showBetaInfoBottomSheet = true
                     },
                     onStreamingClick = {
                           showStreamingProviderSheet = true
@@ -402,6 +398,32 @@ fun HomeScreen(
                                 )
                                 DeezerHomePlaylistItem(playlist = playlist, onClick = {
                                     navController.navigate(Screen.SmartTrackList.createRoute(mix.id))
+                                })
+                            }
+                        }
+                    }
+                }
+
+                if (recentlyPlayed.isNotEmpty()) {
+                    item(key = "recently_played_header", contentType = "deezer_playlists_header") {
+                        Text(
+                            text = "Recently Played",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                    item(key = "recently_played_list", contentType = "deezer_playlists_list") {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            itemsIndexed(recentlyPlayed, key = { index, _ -> "recent_$index" }) { _, (type, item) ->
+                                DeezerHomePlaylistItem(playlist = item, onClick = {
+                                    when (type) {
+                                        "album" -> navController.navigateSafely(Screen.AlbumDetail.createRoute(item.id))
+                                        "artist" -> navController.navigateSafely(Screen.ArtistDetail.createRoute(item.id))
+                                        else -> navController.navigate(Screen.PlaylistDetail.createRoute("deezer_${item.id}"))
+                                    }
                                 })
                             }
                         }
@@ -554,15 +576,6 @@ fun HomeScreen(
             sheetState = sheetState
         ) {
             ChangelogBottomSheet()
-        }
-    }
-    if (showBetaInfoBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBetaInfoBottomSheet = false },
-            sheetState = betaSheetState,
-            //contentWindowInsets = { WindowInsets.statusBars.only(WindowInsets.statusBars) }
-        ) {
-            BetaInfoBottomSheet()
         }
     }
 }

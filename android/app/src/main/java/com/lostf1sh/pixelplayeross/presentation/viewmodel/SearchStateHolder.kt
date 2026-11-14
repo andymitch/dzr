@@ -94,7 +94,7 @@ class SearchStateHolder @Inject constructor(
         fetchRecentlySearched()
     }
 
-    private fun fetchRecentlySearched() {
+    fun fetchRecentlySearched() {
         scope?.launch {
             try {
                 val res = deezerRepository.getRecentlySearched()

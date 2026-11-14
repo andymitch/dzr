@@ -186,6 +186,7 @@ fun SearchScreen(
 
     LaunchedEffect(Unit) {
         onSearchBarActiveChange(false)
+        playerViewModel.refreshRecentlySearched()
     }
 
     LaunchedEffect(playerViewModel, keyboardController) {
@@ -395,7 +396,11 @@ fun SearchScreen(
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(stringResource(R.string.recent_searches), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Search for tracks, artists, albums and playlists",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 } else {

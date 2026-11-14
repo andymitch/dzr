@@ -1603,9 +1603,9 @@ constructor(
             preferences[PreferencesKeys.DEEZER_AUDIO_QUALITY]
                 ?.let {
                     try { DeezerAudioQuality.valueOf(it) }
-                    catch (e: Exception) { DeezerAudioQuality.HIGH }
+                    catch (e: Exception) { DeezerAudioQuality.HIFI }
                 }
-                ?: DeezerAudioQuality.HIGH
+                ?: DeezerAudioQuality.HIFI
         }
 
     suspend fun setDeezerAudioQuality(quality: DeezerAudioQuality) {

@@ -12,6 +12,9 @@ import com.lostf1sh.pixelplayeross.data.network.deezer.DeezerGenericSearchRespon
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
+import com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylist
+import com.lostf1sh.pixelplayeross.data.network.deezer.DeezerPlaylistAttributes
+import com.lostf1sh.pixelplayeross.data.network.deezer.DeezerImage
 import javax.inject.Singleton
 
 @Singleton
@@ -176,6 +179,31 @@ class DeezerRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    suspend fun getRecentlyPlayed(): List<Pair<String, DeezerPlaylist>> {
+        val auth = getAuthHeader() ?: return emptyList()
+        val userId = getUserId() ?: return emptyList()
+        return try {
+            val included = deezerApiService.getRecentlyPlayed(userId, auth)
+                .getAsJsonObject("data")?.getAsJsonArray("included") ?: return emptyList()
+            included.mapNotNull { el ->
+                val o = el.asJsonObject
+                val type = o.get("type")?.asString ?: return@mapNotNull null
+                val a = o.getAsJsonObject("attributes") ?: return@mapNotNull null
+                fun str(k: String) = a.get(k)?.takeIf { it.isJsonPrimitive }?.asString
+                val title = when (type) {
+                    "album" -> str("albumName")
+                    "artist" -> str("artistName")
+                    else -> str("title") ?: str("name")
+                } ?: return@mapNotNull null
+                val image = a.getAsJsonObject("image")?.let { com.google.gson.Gson().fromJson(it, DeezerImage::class.java) }
+                type to DeezerPlaylist(id = o.get("id").asString, attributes = DeezerPlaylistAttributes(title = title, image = image))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DeezerRepository", "getRecentlyPlayed error: ${e.message}", e)
+            emptyList()
         }
     }
 
