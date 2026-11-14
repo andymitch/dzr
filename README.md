@@ -26,10 +26,11 @@ The macOS and terminal apps share one session at `~/Library/Application Support/
 ## Build
 
 ```sh
-# Terminal
-cd tui && go build -o dzr . && ./dzr            # -quality flac|320|128, -logout
+# Terminal: installs `dzr` into ~/go/bin (on PATH)
+cd tui && go build -o ~/go/bin/dzr . && dzr     # -quality flac|320|128, -logout
 
-# macOS (Command Line Tools are enough, no Xcode needed)
+# macOS 26+ (Command Line Tools are enough, no Xcode needed). Lives in the menu bar too;
+# toggle "Show in Dock" from the app menu or the menu bar player to run menu-bar only.
 cd macos && ./bundle.sh && open build/dzr.app
 
 # Android (JDK 21, Android SDK)

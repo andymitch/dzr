@@ -27,6 +27,13 @@ final class Player {
     var onUnauthorized: () -> Void = {}
 
     var current: Item? { queue.indices.contains(index) ? queue[index] : nil }
+    var upNext: ArraySlice<Item> { queue.indices.contains(index + 1) ? queue[(index + 1)...] : [] }
+
+    func jump(to i: Int) {
+        guard queue.indices.contains(i) else { return }
+        index = i
+        load()
+    }
 
     init(deezer: Deezer) {
         self.deezer = deezer

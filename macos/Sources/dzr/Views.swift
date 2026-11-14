@@ -1,0 +1,347 @@
+import SwiftUI
+
+enum Destination: Hashable {
+    case home, search, playlists, albums, artists
+}
+
+struct MainView: View {
+    @State private var selection: Destination? = .home
+    @State private var path = NavigationPath()
+    @State private var query = ""
+    @State private var submitted = ""
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        NavigationSplitView {
+            List(selection: $selection) {
+                Label("Home", systemImage: "house").tag(Destination.home)
+                Label("Search", systemImage: "magnifyingglass").tag(Destination.search)
+                Section("Library") {
+                    Label("Playlists", systemImage: "music.note.list").tag(Destination.playlists)
+                    Label("Albums", systemImage: "square.stack").tag(Destination.albums)
+                    Label("Artists", systemImage: "music.microphone").tag(Destination.artists)
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+        } detail: {
+            NavigationStack(path: $path) {
+                root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying() }
+            }
+        }
+        .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums")
+        .searchFocused($searchFocused)
+        .background { Button("Find") { searchFocused = true }.keyboardShortcut("f").opacity(0) }
+        .onSubmit(of: .search) {
+            submitted = query
+            selection = .search
+            path = NavigationPath()
+        }
+        .onChange(of: selection) { path = NavigationPath() }
+        .tint(.accent)
+    }
+
+    @ViewBuilder private var root: some View {
+        switch selection ?? .home {
+        case .home: ShelvesPage(title: "Home") { try await $0.home() }
+        case .search:
+            if submitted.isEmpty {
+                ContentUnavailableView("Search Deezer", systemImage: "magnifyingglass", description: Text("Find tracks, artists, albums and playlists."))
+                    .navigationTitle("Search")
+            } else {
+                ShelvesPage(title: submitted) { [submitted] in try await $0.search(submitted) }.id(submitted)
+            }
+        case .playlists: GridPage(title: "Playlists") { try await $0.playlists() }
+        case .albums: GridPage(title: "Albums") { try await $0.albums() }
+        case .artists: GridPage(title: "Artists") { try await $0.artists() }
+        }
+    }
+}
+
+extension View {
+    func withNowPlaying() -> some View {
+        contentMargins(.bottom, 96, for: .scrollContent)
+            .overlay(alignment: .bottom) { NowPlayingBar().padding(.horizontal, 20).padding(.bottom, 14) }
+    }
+}
+
+struct Loader<T, Content: View>: View {
+    @Environment(AppModel.self) private var model
+    let title: String
+    let load: (Deezer) async throws -> T
+    @ViewBuilder let content: (T) -> Content
+    @State private var value: T?
+    @State private var error: String?
+
+    var body: some View {
+        Group {
+            if let value {
+                content(value)
+            } else if let error {
+                ContentUnavailableView("Couldn't Load", systemImage: "exclamationmark.triangle", description: Text(error))
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationTitle(title)
+        .task {
+            switch await model.run({ try await load(model.deezer) }) {
+            case .success(let v): value = v
+            case .failure(let e): error = e.localizedDescription
+            }
+        }
+    }
+}
+
+struct ShelvesPage: View {
+    let title: String
+    let load: (Deezer) async throws -> [Shelf]
+
+    var body: some View {
+        Loader(title: title, load: load) { shelves in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 28) {
+                    ForEach(shelves.filter { !$0.items.isEmpty }) { shelf in
+                        if shelf.items.first?.kind == .track {
+                            TrackList(title: shelf.title, tracks: Array(shelf.items.prefix(8)), numbered: false)
+                        } else {
+                            ShelfRow(shelf: shelf)
+                        }
+                    }
+                }
+                .padding(.vertical, 20)
+            }
+        }
+    }
+}
+
+struct GridPage: View {
+    let title: String
+    let load: (Deezer) async throws -> [Item]
+
+    var body: some View {
+        Loader(title: title, load: load) { items in
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 20)], alignment: .leading, spacing: 24) {
+                    ForEach(items) { Card(item: $0) }
+                }
+                .padding(24)
+            }
+        }
+    }
+}
+
+struct ShelfRow: View {
+    let shelf: Shelf
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(shelf.title).font(.title2.bold()).padding(.horizontal, 24)
+            ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: 18) {
+                    ForEach(shelf.items) { Card(item: $0).frame(width: 160) }
+                }
+                .padding(.horizontal, 24)
+            }
+            .scrollIndicators(.never)
+        }
+    }
+}
+
+struct Card: View {
+    let item: Item
+    @State private var hover = false
+
+    var body: some View {
+        NavigationLink(value: item) {
+            VStack(alignment: item.kind == .artist ? .center : .leading, spacing: 8) {
+                Artwork(url: item.artwork, round: item.kind == .artist, radius: 14)
+                    .aspectRatio(1, contentMode: .fit)
+                    .shadow(color: .black.opacity(hover ? 0.35 : 0.15), radius: hover ? 14 : 6, y: hover ? 8 : 3)
+                    .scaleEffect(hover ? 1.03 : 1)
+                VStack(alignment: item.kind == .artist ? .center : .leading, spacing: 2) {
+                    Text(item.title).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(item.kind == .flow ? "Flow" : item.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { h in withAnimation(.snappy(duration: 0.2)) { hover = h } }
+    }
+}
+
+struct DetailPage: View {
+    let item: Item
+
+    var body: some View {
+        Loader(title: item.title, load: { try await $0.open(item) }) { shelves in
+            let tracks = shelves.first { $0.items.first?.kind == .track }?.items ?? []
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    Hero(item: item, tracks: tracks)
+                    ForEach(shelves.filter { !$0.items.isEmpty }) { shelf in
+                        if shelf.items.first?.kind == .track {
+                            TrackList(title: item.kind == .artist ? shelf.title : nil, tracks: item.kind == .artist ? Array(shelf.items.prefix(10)) : shelf.items, numbered: item.kind == .album)
+                        } else {
+                            ShelfRow(shelf: shelf)
+                        }
+                    }
+                }
+                .padding(.bottom, 20)
+            }
+            .ignoresSafeArea(edges: .top)
+        }
+    }
+}
+
+struct Hero: View {
+    @Environment(Player.self) private var player
+    let item: Item
+    let tracks: [Item]
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 24) {
+            Artwork(url: item.artwork, round: item.kind == .artist, radius: 18)
+                .frame(width: 200, height: 200)
+                .shadow(color: .black.opacity(0.35), radius: 20, y: 10)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(item.kind.label.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text(item.title).font(.system(size: 34, weight: .bold)).lineLimit(2)
+                if item.kind != .flow && item.kind != .mix {
+                    Text(item.subtitle).foregroundStyle(.secondary)
+                }
+                HStack(spacing: 10) {
+                    Button { player.shuffle = false; player.play(tracks, at: 0) } label: {
+                        Label("Play", systemImage: "play.fill").padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.glassProminent)
+                    Button { player.shuffle = true; player.play(tracks, at: Int.random(in: 0..<max(1, tracks.count))) } label: {
+                        Label("Shuffle", systemImage: "shuffle").padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.glass)
+                }
+                .controlSize(.large)
+                .disabled(tracks.isEmpty)
+                .padding(.top, 6)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 28)
+        .padding(.top, 72)
+        .padding(.bottom, 8)
+        .background(alignment: .top) {
+            Artwork(url: item.artwork, radius: 0)
+                .scaledToFill()
+                .frame(height: 340)
+                .blur(radius: 70)
+                .opacity(0.55)
+                .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+                .clipped()
+        }
+    }
+}
+
+extension Kind {
+    var label: String {
+        switch self {
+        case .track: "Track"
+        case .album: "Album"
+        case .playlist: "Playlist"
+        case .artist: "Artist"
+        case .flow: "Flow"
+        case .mix: "Mix"
+        }
+    }
+}
+
+struct TrackList: View {
+    var title: String?
+    let tracks: [Item]
+    var numbered: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let title { Text(title).font(.title2.bold()).padding(.horizontal, 24) }
+            LazyVStack(spacing: 0) {
+                ForEach(Array(tracks.enumerated()), id: \.offset) { i, t in
+                    TrackRow(track: t, number: numbered ? i + 1 : nil, tracks: tracks, index: i)
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+    }
+}
+
+struct TrackRow: View {
+    @Environment(AppModel.self) private var model
+    @Environment(Player.self) private var player
+    let track: Item
+    let number: Int?
+    let tracks: [Item]
+    let index: Int
+    @State private var hover = false
+
+    var body: some View {
+        let playing = player.current?.id == track.id
+        HStack(spacing: 12) {
+            ZStack {
+                if hover && !playing {
+                    Image(systemName: "play.fill").font(.caption)
+                } else if playing {
+                    Image(systemName: player.isPlaying ? "waveform" : "pause.fill")
+                        .symbolEffect(.variableColor.iterative, isActive: player.isPlaying)
+                        .foregroundStyle(Color.accent)
+                } else if let number {
+                    Text("\(number)").monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 22)
+            if number == nil { Artwork(url: track.artwork, radius: 6).frame(width: 40, height: 40) }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(track.title).fontWeight(playing ? .semibold : .regular).foregroundStyle(playing ? Color.accent : .primary).lineLimit(1)
+                Text(track.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            Button { model.toggleLike(track) } label: {
+                Image(systemName: model.liked.contains(track.id) ? "heart.fill" : "heart")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(model.liked.contains(track.id) ? Color.accent : .secondary)
+            .opacity(hover || model.liked.contains(track.id) ? 1 : 0)
+            Text(format(track.duration)).monospacedDigit().font(.callout).foregroundStyle(.secondary).frame(width: 44, alignment: .trailing)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(hover ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 10))
+        .contentShape(.rect)
+        .opacity(track.readable ? 1 : 0.4)
+        .onHover { hover = $0 }
+        .onTapGesture(count: 2) { player.play(tracks, at: index) }
+        .contextMenu {
+            Button("Play") { player.play(tracks, at: index) }
+            Button("Add to Queue") { player.enqueue(track) }
+            Button(model.liked.contains(track.id) ? "Unlike" : "Like") { model.toggleLike(track) }
+            Divider()
+            if track.albumId != 0 {
+                NavigationLink("Go to Album", value: Item(kind: .album, id: String(track.albumId), title: track.subtitle.components(separatedBy: " · ").last ?? "", subtitle: track.subtitle.components(separatedBy: " · ").first ?? "", artwork: track.artwork))
+            }
+            if track.artistId != 0 {
+                NavigationLink("Go to Artist", value: Item(kind: .artist, id: String(track.artistId), title: track.subtitle.components(separatedBy: " · ").first ?? "", subtitle: ""))
+            }
+        }
+    }
+}
+
+struct Artwork: View {
+    let url: URL?
+    var round = false
+    var radius: CGFloat = 8
+
+    var body: some View {
+        AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: {
+            Rectangle().fill(Color.accent.opacity(0.12))
+                .overlay(Image(systemName: "music.note").foregroundStyle(Color.accent.opacity(0.6)))
+        }
+        .clipShape(round ? AnyShape(.circle) : AnyShape(.rect(cornerRadius: radius)))
+    }
+}

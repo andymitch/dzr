@@ -91,7 +91,7 @@ private struct Resource: Decodable {
     var item: Item {
         let a = attributes
         let img = a?.image ?? a?.pictures ?? a?.images?["square"]
-        var it = Item(kind: .track, id: id, title: a?.title ?? a?.name ?? "", subtitle: "", artwork: (img?.medium ?? img?.large).flatMap(URL.init(string:)), readable: a?.readable ?? true)
+        var it = Item(kind: .track, id: id, title: a?.title ?? a?.name ?? "", subtitle: "", artwork: (img?.large ?? img?.medium).flatMap(URL.init(string:)), readable: a?.readable ?? true)
         switch type.hasSuffix("s") ? String(type.dropLast()) : type {
         case "track":
             it.subtitle = "\(a?.artistName ?? "") · \(a?.albumName ?? "")"
@@ -183,8 +183,20 @@ final class Deezer {
     func home() async throws -> [Shelf] {
         async let flows = one("\(user)/multiflow")
         async let recs = one("\(castUser)/recommended-playlists")
-        let mixes = [Item(kind: .mix, id: "discovery", title: "Discovery", subtitle: "Mix")]
-            + (0..<3).map { Item(kind: .mix, id: "inspired-by-\($0)", title: "Inspired by #\($0 + 1)", subtitle: "Mix") }
+        let mixes = await withTaskGroup(of: (Int, Item).self) { group in
+            let ids = ["discovery"] + (0..<3).map { "inspired-by-\($0)" }
+            for (i, id) in ids.enumerated() {
+                group.addTask {
+                    var it = Item(kind: .mix, id: id, title: i == 0 ? "Discovery" : "Inspired by #\(i)", subtitle: "Mix")
+                    if let r = try? await self.one("platform/generic/smarttracklist/\(id)") {
+                        it.artwork = r.item.artwork
+                        it.subtitle = r.attributes?.title ?? it.subtitle
+                    }
+                    return (i, it)
+                }
+            }
+            return await group.reduce(into: []) { $0.append($1) }.sorted { $0.0 < $1.0 }.map(\.1)
+        }
         return try await [
             Shelf(title: "Flow", items: items(flows.included)),
             Shelf(title: "Mixes", items: mixes),
