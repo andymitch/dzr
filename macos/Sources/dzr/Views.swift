@@ -70,23 +70,18 @@ extension View {
         contentMargins(.bottom, 96, for: .scrollContent)
             .scrollEdgeEffectHidden(true, for: .top)
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-            .overlay(alignment: .top) { HeaderFade() }
             .overlay(alignment: .bottom) { NowPlayingBar().padding(.horizontal, 20).padding(.bottom, 14) }
     }
 }
 
-struct HeaderFade: View {
-    var body: some View {
-        ZStack {
-            Rectangle().fill(.ultraThinMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
-            Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom))
-            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
+extension View {
+    func blursUnderHeader() -> some View {
+        visualEffect { content, proxy in
+            content.layerEffect(
+                ShaderLibrary.default.headerBlur(.float(proxy.frame(in: .global).minY), .float(16), .float(10), .float(90)),
+                maxSampleOffset: CGSize(width: 16, height: 16)
+            )
         }
-        .frame(height: 96)
-        .ignoresSafeArea(edges: .top)
-        .allowsHitTesting(false)
     }
 }
 
@@ -156,9 +151,13 @@ struct TracksPage: View {
                             .foregroundStyle(.white)
                             .frame(width: 110, height: 110)
                             .background(LinearGradient(colors: [Color(red: 0.78, green: 0.42, blue: 1), .accent, Color(red: 0.42, green: 0.12, blue: 0.82)], startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 18))
+                            .blursUnderHeader()
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(title).font(.system(size: 30, weight: .bold))
-                            Text("\(tracks.count) tracks").foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(title).font(.system(size: 30, weight: .bold))
+                                Text("\(tracks.count) tracks").foregroundStyle(.secondary)
+                            }
+                            .blursUnderHeader()
                             PlayButtons(tracks: tracks)
                         }
                     }
@@ -205,7 +204,7 @@ struct GridPage: View {
         Loader(title: title, load: load) { items in
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 20)], alignment: .leading, spacing: 24) {
-                    ForEach(items) { Card(item: $0) }
+                    ForEach(items) { Card(item: $0).blursUnderHeader() }
                 }
                 .padding(24)
             }
@@ -218,10 +217,10 @@ struct ShelfRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(shelf.title).font(.title2.bold()).padding(.horizontal, 24)
+            Text(shelf.title).font(.title2.bold()).padding(.horizontal, 24).blursUnderHeader()
             ScrollView(.horizontal) {
                 LazyHStack(alignment: .top, spacing: 18) {
-                    ForEach(shelf.items) { Card(item: $0).frame(width: 160) }
+                    ForEach(shelf.items) { Card(item: $0).frame(width: 160).blursUnderHeader() }
                 }
                 .padding(.horizontal, 24)
             }
@@ -297,12 +296,16 @@ struct Hero: View {
             Artwork(url: item.artwork, round: item.kind == .artist, radius: 18)
                 .frame(width: 200, height: 200)
                 .shadow(color: .black.opacity(0.35), radius: 20, y: 10)
+                .blursUnderHeader()
             VStack(alignment: .leading, spacing: 8) {
-                Text(item.kind.label.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(item.title).font(.system(size: 34, weight: .bold)).lineLimit(2)
-                if item.kind != .flow && item.kind != .mix {
-                    Text(item.subtitle).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(item.kind.label.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(item.title).font(.system(size: 34, weight: .bold)).lineLimit(2)
+                    if item.kind != .flow && item.kind != .mix {
+                        Text(item.subtitle).foregroundStyle(.secondary)
+                    }
                 }
+                .blursUnderHeader()
                 PlayButtons(tracks: tracks, extra: item.kind == .artist ? artistMix : nil)
             }
             Spacer(minLength: 0)
@@ -343,10 +346,10 @@ struct TrackList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let title { Text(title).font(.title2.bold()).padding(.horizontal, 24) }
+            if let title { Text(title).font(.title2.bold()).padding(.horizontal, 24).blursUnderHeader() }
             LazyVStack(spacing: 0) {
                 ForEach(Array(tracks.enumerated()), id: \.offset) { i, t in
-                    TrackRow(track: t, number: numbered ? i + 1 : nil, tracks: tracks, index: i)
+                    TrackRow(track: t, number: numbered ? i + 1 : nil, tracks: tracks, index: i).blursUnderHeader()
                 }
             }
             .padding(.horizontal, 12)
@@ -384,11 +387,10 @@ struct TrackRow: View {
                 Text(track.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Button { model.toggleLike(track) } label: {
-                Image(systemName: model.liked.contains(track.id) ? "heart.fill" : "heart")
-            }
-            .buttonStyle(.borderless)
-            .foregroundStyle(model.liked.contains(track.id) ? Color.accent : .secondary)
+            Image(systemName: model.liked.contains(track.id) ? "heart.fill" : "heart")
+                .contentShape(.rect)
+                .onTapGesture { model.toggleLike(track) }
+                .foregroundStyle(model.liked.contains(track.id) ? Color.accent : .secondary)
             .opacity(hover || model.liked.contains(track.id) ? 1 : 0)
             Text(format(track.duration)).monospacedDigit().font(.callout).foregroundStyle(.secondary).frame(width: 44, alignment: .trailing)
         }

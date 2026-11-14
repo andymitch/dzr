@@ -25,7 +25,7 @@ The macOS app keeps its session at `~/Library/Application Support/dzr/session.js
 ## Build
 
 ```sh
-# macOS 26+ (Command Line Tools are enough, no Xcode needed). Lives in the menu bar too;
+# macOS 26+, needs Xcode with the Metal toolchain (for the header blur shader). Lives in the menu bar too;
 # toggle "Show in Dock" from the app menu or the menu bar player to run menu-bar only.
 cd macos && ./bundle.sh && open build/dzr.app
 
