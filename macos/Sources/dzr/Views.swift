@@ -80,6 +80,8 @@ extension View {
 }
 
 struct HeaderFade: View {
+    @Environment(\.pageInsets) private var insets
+
     var body: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial)
@@ -88,7 +90,7 @@ struct HeaderFade: View {
                 .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom))
             LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
         }
-        .frame(height: 96)
+        .frame(height: max(insets.top, 40) + 8)
         .ignoresSafeArea(edges: [.top, .leading])
         .allowsHitTesting(false)
     }
