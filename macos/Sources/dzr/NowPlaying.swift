@@ -133,6 +133,7 @@ extension Quality {
 }
 
 struct NowPlayingBar: View {
+    @Environment(AppModel.self) private var model
     @Environment(Player.self) private var player
     @State private var showQueue = false
 
@@ -158,6 +159,10 @@ struct NowPlayingBar: View {
 
             HStack(spacing: 12) {
                 QualityMenu()
+                Button { model.showLyrics.toggle() } label: { Image(systemName: "quote.bubble") }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(model.showLyrics ? Color.accent : .secondary)
+                    .help("Lyrics")
                 Button { showQueue.toggle() } label: { Image(systemName: "list.bullet") }
                     .buttonStyle(.borderless)
                     .help("Up Next")
@@ -234,5 +239,56 @@ struct MiniPlayer: View {
         .padding(16)
         .frame(width: 288)
         .tint(.accent)
+    }
+}
+
+struct LyricsView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(Player.self) private var player
+    @State private var lines: [Deezer.LyricLine]?
+    @State private var loadedFor: String?
+
+    private var currentIndex: Int? {
+        guard let lines else { return nil }
+        return lines.lastIndex { ($0.time ?? .infinity) <= player.position + 0.3 }
+    }
+
+    var body: some View {
+        Group {
+            if player.current == nil {
+                ContentUnavailableView("Lyrics", systemImage: "quote.bubble", description: Text("Play something to see its lyrics."))
+            } else if let lines, !lines.isEmpty {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            ForEach(Array(lines.enumerated()), id: \.offset) { i, l in
+                                Text(l.line)
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(i == currentIndex ? .primary : .tertiary)
+                                    .scaleEffect(i == currentIndex ? 1 : 0.97, anchor: .leading)
+                                    .animation(.smooth, value: currentIndex)
+                                    .id(i)
+                                    .onTapGesture { if let t = l.time { player.seek(to: t) } }
+                            }
+                        }
+                        .padding(20)
+                        .padding(.bottom, 200)
+                    }
+                    .onChange(of: currentIndex) { _, i in
+                        if let i { withAnimation(.smooth) { proxy.scrollTo(i, anchor: .center) } }
+                    }
+                }
+            } else if lines != nil {
+                ContentUnavailableView("No Lyrics", systemImage: "quote.bubble", description: Text("Deezer has no lyrics for this track."))
+            } else {
+                ProgressView()
+            }
+        }
+        .task(id: player.current?.id) {
+            guard let id = player.current?.id, id != loadedFor else { return }
+            lines = nil
+            loadedFor = id
+            lines = (try? await model.deezer.lyrics(id)) ?? []
+        }
     }
 }

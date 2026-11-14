@@ -100,13 +100,15 @@ private struct Resource: Decodable {
             it.albumId = a?.albumId ?? 0
         case "album":
             it.kind = .album
-            it.subtitle = [a?.artist?.name, a?.release_date.map { String($0.prefix(4)) }].compactMap { $0 }.joined(separator: " · ")
+            if it.title.isEmpty { it.title = a?.albumName ?? "" }
+            it.subtitle = [a?.artist?.name ?? a?.artistName, a?.release_date.map { String($0.prefix(4)) }].compactMap { $0 }.joined(separator: " · ")
         case "playlist":
             it.kind = .playlist
-            it.subtitle = "\(a?.creator?.name ?? "") · \(a?.nb_tracks ?? 0) tracks"
+            it.subtitle = [a?.creator?.name, a?.nb_tracks.map { "\($0) tracks" }].compactMap { $0 }.joined(separator: " · ")
         case "artist":
             it.kind = .artist
-            it.subtitle = "\((a?.nbFans ?? 0).formatted()) fans"
+            if it.title.isEmpty { it.title = a?.artistName ?? "" }
+            it.subtitle = a?.nbFans.map { "\($0.formatted()) fans" } ?? "Artist"
         default:
             it.kind = .flow
             it.subtitle = "Flow"
@@ -183,21 +185,21 @@ final class Deezer {
     func home() async throws -> [Shelf] {
         async let flows = one("\(user)/multiflow")
         async let recs = one("\(castUser)/recommended-playlists")
-        let mixes = await withTaskGroup(of: (Int, Item).self) { group in
-            let ids = ["discovery"] + (0..<3).map { "inspired-by-\($0)" }
+        async let recents = try? one("\(castUser)/recently-played")
+        let mixes = await withTaskGroup(of: (Int, Item?).self) { group in
+            let ids = ["discovery"] + (1...8).map { "inspired-by-\($0)" }
             for (i, id) in ids.enumerated() {
                 group.addTask {
-                    var it = Item(kind: .mix, id: id, title: i == 0 ? "Discovery" : "Inspired by #\(i)", subtitle: "Mix")
-                    if let r = try? await self.one("platform/generic/smarttracklist/\(id)") {
-                        it.artwork = r.item.artwork
-                        it.subtitle = r.attributes?.title ?? it.subtitle
-                    }
-                    return (i, it)
+                    guard let r = try? await self.one("platform/generic/smarttracklist/\(id)"), !(r.included ?? []).isEmpty else { return (i, nil) }
+                    let featuring = r.attributes?.title ?? ""
+                    let lead = featuring.replacingOccurrences(of: "Featuring ", with: "").components(separatedBy: ",").first ?? ""
+                    return (i, Item(kind: .mix, id: id, title: i == 0 ? "Discovery" : "Inspired by \(lead)", subtitle: featuring, artwork: r.item.artwork))
                 }
             }
-            return await group.reduce(into: []) { $0.append($1) }.sorted { $0.0 < $1.0 }.map(\.1)
+            return await group.reduce(into: []) { $0.append($1) }.sorted { $0.0 < $1.0 }.compactMap(\.1)
         }
         return try await [
+            Shelf(title: "Recently played", items: items(recents?.included)),
             Shelf(title: "Flow", items: items(flows.included)),
             Shelf(title: "Mixes", items: mixes),
             Shelf(title: "Recommended playlists", items: items(recs.included)),
@@ -208,6 +210,45 @@ final class Deezer {
     func albums() async throws -> [Item] { try await items(one("\(castUser)/loved-albums?start=0&limit=500").included) }
     func artists() async throws -> [Item] { try await items(one("\(castUser)/loved-artists").included) }
     func likedIds() async throws -> Set<String> { try await Set((one("\(castUser)/loved-tracks").included ?? []).map(\.id)) }
+
+    private struct Classic: Decodable {
+        var data: [T]
+        struct T: Decodable {
+            var id: Int64
+            var title: String
+            var duration: Int
+            var readable: Bool?
+            var artist: A
+            var album: B
+            struct A: Decodable { var id: Int64; var name: String }
+            struct B: Decodable { var id: Int64; var title: String; var cover_xl: String? }
+        }
+    }
+
+    private func classic(_ path: String) async throws -> [Item] {
+        let sep = path.contains("?") ? "&" : "?"
+        let url = Self.api.appendingPathComponent("").absoluteString + path + sep + "access_token=\(session?.accessToken ?? "")"
+        let c: Classic = try await Self.fetch(URLRequest(url: URL(string: url)!))
+        return c.data.map {
+            Item(kind: .track, id: String($0.id), title: $0.title, subtitle: "\($0.artist.name) · \($0.album.title)", duration: TimeInterval($0.duration),
+                 artistId: $0.artist.id, albumId: $0.album.id, artwork: $0.album.cover_xl.flatMap(URL.init(string:)), readable: $0.readable ?? true)
+        }
+    }
+
+    func history() async throws -> [Item] { try await classic("user/me/history?limit=100") }
+    func artistRadio(_ id: String) async throws -> [Item] { try await classic("artist/\(id)/radio?limit=100") }
+    func lovedTracks() async throws -> [Item] { try await items(one("\(castUser)/loved-tracks").included) }
+
+    struct LyricLine: Decodable {
+        var milliseconds: String?
+        var line: String
+        var time: TimeInterval? { milliseconds.flatMap(Double.init).map { $0 / 1000 } }
+    }
+
+    func lyrics(_ trackId: String) async throws -> [LyricLine] {
+        struct R: Decodable { var data: D; struct D: Decodable { var attributes: A }; struct A: Decodable { var items: [LyricLine]? } }
+        return try await ((Self.fetch(request("platform/generic/lyrics/\(trackId)")) as R).data.attributes.items ?? []).filter { !$0.line.isEmpty }
+    }
 
     func search(_ q: String) async throws -> [Shelf] {
         let q = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q

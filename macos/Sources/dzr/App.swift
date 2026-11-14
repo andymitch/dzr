@@ -59,6 +59,7 @@ final class AppModel {
     let player: Player
     var signedIn: Bool
     var liked: Set<String> = []
+    var showLyrics = false
 
     init() {
         player = Player(deezer: deezer)

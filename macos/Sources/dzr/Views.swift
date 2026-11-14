@@ -1,10 +1,11 @@
 import SwiftUI
 
 enum Destination: Hashable {
-    case home, search, playlists, albums, artists
+    case home, search, liked, recent, playlists, albums, artists
 }
 
 struct MainView: View {
+    @Environment(AppModel.self) private var model
     @State private var selection: Destination? = .home
     @State private var path = NavigationPath()
     @State private var query = ""
@@ -17,6 +18,8 @@ struct MainView: View {
                 Label("Home", systemImage: "house").tag(Destination.home)
                 Label("Search", systemImage: "magnifyingglass").tag(Destination.search)
                 Section("Library") {
+                    Label("Liked Songs", systemImage: "heart").tag(Destination.liked)
+                    Label("Recently Played", systemImage: "clock").tag(Destination.recent)
                     Label("Playlists", systemImage: "music.note.list").tag(Destination.playlists)
                     Label("Albums", systemImage: "square.stack").tag(Destination.albums)
                     Label("Artists", systemImage: "music.microphone").tag(Destination.artists)
@@ -37,6 +40,9 @@ struct MainView: View {
             path = NavigationPath()
         }
         .onChange(of: selection) { path = NavigationPath() }
+        .inspector(isPresented: Bindable(model).showLyrics) {
+            LyricsView().inspectorColumnWidth(min: 260, ideal: 320, max: 420)
+        }
         .tint(.accent)
     }
 
@@ -50,6 +56,8 @@ struct MainView: View {
             } else {
                 ShelvesPage(title: submitted) { [submitted] in try await $0.search(submitted) }.id(submitted)
             }
+        case .liked: TracksPage(title: "Liked Songs", symbol: "heart.fill") { try await $0.lovedTracks() }
+        case .recent: TracksPage(title: "Recently Played", symbol: "clock.fill") { try await $0.history() }
         case .playlists: GridPage(title: "Playlists") { try await $0.playlists() }
         case .albums: GridPage(title: "Albums") { try await $0.albums() }
         case .artists: GridPage(title: "Artists") { try await $0.artists() }
@@ -111,6 +119,63 @@ struct ShelvesPage: View {
                 .padding(.vertical, 20)
             }
         }
+    }
+}
+
+struct TracksPage: View {
+    @Environment(Player.self) private var player
+    let title: String
+    let symbol: String
+    let load: (Deezer) async throws -> [Item]
+
+    var body: some View {
+        Loader(title: title, load: load) { tracks in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(spacing: 18) {
+                        Image(systemName: symbol)
+                            .font(.system(size: 40, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 110, height: 110)
+                            .background(LinearGradient(colors: [Color(red: 0.78, green: 0.42, blue: 1), .accent, Color(red: 0.42, green: 0.12, blue: 0.82)], startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 18))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(title).font(.system(size: 30, weight: .bold))
+                            Text("\(tracks.count) tracks").foregroundStyle(.secondary)
+                            PlayButtons(tracks: tracks)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    TrackList(tracks: tracks, numbered: false)
+                }
+                .padding(.vertical, 20)
+            }
+        }
+    }
+}
+
+struct PlayButtons: View {
+    @Environment(Player.self) private var player
+    let tracks: [Item]
+    var extra: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button { player.shuffle = false; player.play(tracks, at: 0) } label: {
+                Label("Play", systemImage: "play.fill").padding(.horizontal, 6)
+            }
+            .buttonStyle(.glassProminent)
+            Button { player.shuffle = true; player.play(tracks, at: Int.random(in: 0..<max(1, tracks.count))) } label: {
+                Label("Shuffle", systemImage: "shuffle").padding(.horizontal, 6)
+            }
+            .buttonStyle(.glass)
+            if let extra {
+                Button(action: extra) { Label("Artist Mix", systemImage: "dot.radiowaves.left.and.right").padding(.horizontal, 6) }
+                    .buttonStyle(.glass)
+            }
+        }
+        .controlSize(.large)
+        .disabled(tracks.isEmpty)
+        .padding(.top, 4)
     }
 }
 
@@ -195,9 +260,19 @@ struct DetailPage: View {
 }
 
 struct Hero: View {
+    @Environment(AppModel.self) private var model
     @Environment(Player.self) private var player
     let item: Item
     let tracks: [Item]
+
+    private func artistMix() {
+        Task {
+            if case .success(let radio) = await model.run({ try await model.deezer.artistRadio(item.id) }), !radio.isEmpty {
+                player.shuffle = false
+                player.play(radio, at: 0)
+            }
+        }
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 24) {
@@ -210,19 +285,7 @@ struct Hero: View {
                 if item.kind != .flow && item.kind != .mix {
                     Text(item.subtitle).foregroundStyle(.secondary)
                 }
-                HStack(spacing: 10) {
-                    Button { player.shuffle = false; player.play(tracks, at: 0) } label: {
-                        Label("Play", systemImage: "play.fill").padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.glassProminent)
-                    Button { player.shuffle = true; player.play(tracks, at: Int.random(in: 0..<max(1, tracks.count))) } label: {
-                        Label("Shuffle", systemImage: "shuffle").padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.glass)
-                }
-                .controlSize(.large)
-                .disabled(tracks.isEmpty)
-                .padding(.top, 6)
+                PlayButtons(tracks: tracks, extra: item.kind == .artist ? artistMix : nil)
             }
             Spacer(minLength: 0)
         }
@@ -316,7 +379,7 @@ struct TrackRow: View {
         .contentShape(.rect)
         .opacity(track.readable ? 1 : 0.4)
         .onHover { hover = $0 }
-        .onTapGesture(count: 2) { player.play(tracks, at: index) }
+        .onTapGesture { player.play(tracks, at: index) }
         .contextMenu {
             Button("Play") { player.play(tracks, at: index) }
             Button("Add to Queue") { player.enqueue(track) }
