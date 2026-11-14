@@ -182,6 +182,39 @@ class DeezerRepository @Inject constructor(
         }
     }
 
+    suspend fun getArtistRadio(artistId: Long): List<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerTrack> {
+        val token = getRawToken() ?: return emptyList()
+        return try {
+            deezerApiService.getArtistRadio(artistId, token).getAsJsonArray("data")?.map { el ->
+                val o = el.asJsonObject
+                val artist = o.getAsJsonObject("artist")
+                val album = o.getAsJsonObject("album")
+                com.lostf1sh.pixelplayeross.data.network.deezer.DeezerTrack(
+                    id = o.get("id").asString,
+                    type = "track",
+                    attributes = com.lostf1sh.pixelplayeross.data.network.deezer.DeezerTrackAttributes(
+                        title = o.get("title")?.asString,
+                        artistName = artist?.get("name")?.asString,
+                        artistId = artist?.get("id")?.asLong,
+                        albumName = album?.get("title")?.asString,
+                        albumId = album?.get("id")?.asLong,
+                        duration = o.get("duration")?.asInt ?: 0,
+                        image = DeezerImage(
+                            small = album?.get("cover_small")?.asString,
+                            medium = album?.get("cover_medium")?.asString,
+                            large = album?.get("cover_big")?.asString,
+                            full = album?.get("cover_xl")?.asString
+                        ),
+                        explicitLyrics = o.get("explicit_lyrics")?.asBoolean
+                    )
+                )
+            } ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("DeezerRepository", "getArtistRadio error: ${e.message}", e)
+            emptyList()
+        }
+    }
+
     suspend fun getRecentlyPlayed(): List<Pair<String, DeezerPlaylist>> {
         val auth = getAuthHeader() ?: return emptyList()
         val userId = getUserId() ?: return emptyList()

@@ -501,6 +501,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val appColor: StateFlow<String> = themePreferencesRepository.appColorFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lostf1sh.pixelplayeross.data.preferences.AppColor.DYNAMIC)
+
+    fun setAppColor(color: String) {
+        viewModelScope.launch { themePreferencesRepository.setAppColor(color) }
+    }
+
     fun setAppThemeMode(mode: String) {
         viewModelScope.launch {
             themePreferencesRepository.setAppThemeMode(mode)

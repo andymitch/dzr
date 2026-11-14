@@ -67,6 +67,9 @@ class ArtistDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    suspend fun artistMix(artistId: Long): List<com.lostf1sh.pixelplayeross.data.model.Song> =
+        deezerRepository.getArtistRadio(artistId).map { com.lostf1sh.pixelplayeross.presentation.screens.mapDeezerTrackToSong(it) }
+
     private val _uiState = MutableStateFlow(ArtistDetailUiState())
     val uiState: StateFlow<ArtistDetailUiState> = _uiState.asStateFlow()
 

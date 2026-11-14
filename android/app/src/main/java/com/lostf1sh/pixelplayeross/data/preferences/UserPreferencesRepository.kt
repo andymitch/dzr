@@ -41,6 +41,19 @@ object ThemePreference {
     const val GLOBAL = "global"
 }
 
+object AppColor {
+    const val DYNAMIC = "dynamic"
+    val presets = linkedMapOf(
+        "purple" to 0xFFA238FF,
+        "pink" to 0xFFE84393,
+        "red" to 0xFFE53935,
+        "orange" to 0xFFFB8C00,
+        "green" to 0xFF43A047,
+        "teal" to 0xFF00897B,
+        "blue" to 0xFF1E88E5
+    )
+}
+
 object AppThemeMode {
     const val FOLLOW_SYSTEM = "follow_system"
     const val LIGHT = "light"

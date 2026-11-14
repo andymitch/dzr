@@ -6,11 +6,10 @@ Personal Deezer clients. Private, unofficial, for my own use.
 | --- | --- | --- |
 | Android | `android/` | Kotlin, Jetpack Compose, Media3 (fork of [Pixer](https://github.com/Minuga-RC/Pixer), itself a fork of [PixelPlayer](https://github.com/PixelPlayerHQ/PixelPlayer)) |
 | macOS | `macos/` | Swift, SwiftUI, AVFoundation |
-| Terminal | `tui/` | Go, Bubble Tea, Lip Gloss, Bubbles, beep |
 
 ## How it talks to Deezer
 
-All three sign in with Deezer's TV device login (the app shows a short code, you approve it at
+Both sign in with Deezer's TV device login (the app shows a short code, you approve it at
 dzr.fm/tv) and use the same endpoints Deezer's TV and Cast apps use:
 
 - `connect.deezer.com/2.0/smartlogin` issues and polls the login code.
@@ -20,15 +19,12 @@ dzr.fm/tv) and use the same endpoints Deezer's TV and Cast apps use:
 
 This needs a paid Deezer plan for streaming and can break whenever Deezer changes those endpoints.
 
-The macOS and terminal apps share one session at `~/Library/Application Support/dzr/session.json`
-(mode 600), so signing in to one signs in to both.
+The macOS app keeps its session at `~/Library/Application Support/dzr/session.json`
+(mode 600).
 
 ## Build
 
 ```sh
-# Terminal: installs `dzr` into ~/go/bin (on PATH)
-cd tui && go build -o ~/go/bin/dzr . && dzr     # -quality flac|320|128, -logout
-
 # macOS 26+ (Command Line Tools are enough, no Xcode needed). Lives in the menu bar too;
 # toggle "Show in Dock" from the app menu or the menu bar player to run menu-bar only.
 cd macos && ./bundle.sh && open build/dzr.app

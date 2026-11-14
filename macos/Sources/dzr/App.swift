@@ -7,13 +7,18 @@ struct DzrApp: App {
     @State private var model = AppModel()
     @AppStorage("showInDock") private var showInDock = true
 
+    init() {
+        UserDefaults.standard.set("WhenScrolling", forKey: "AppleShowScrollBars")
+    }
+
     var body: some Scene {
         Window("dzr", id: "main") {
             RootView()
                 .environment(model)
                 .environment(model.player)
                 .frame(minWidth: 900, minHeight: 560)
-                .onAppear { applyDockPolicy() }
+                .onAppear { applyDockPolicy(); Theme.shared.apply() }
+                .onChange(of: model.player.current?.artwork) { _, url in Theme.shared.follow(url) }
                 .onChange(of: showInDock) { applyDockPolicy() }
         }
         .commands {
@@ -28,9 +33,12 @@ struct DzrApp: App {
                 Button("Like") { model.toggleLike() }.keyboardShortcut("l", modifiers: .command)
             }
             CommandGroup(after: .appSettings) {
-                Toggle("Show in Dock", isOn: $showInDock)
                 Button("Sign Out") { model.signOut() }.disabled(!model.signedIn)
             }
+        }
+
+        Settings {
+            SettingsView()
         }
 
         MenuBarExtra {
@@ -99,10 +107,6 @@ final class AppModel {
             return .failure(DeezerError.unauthorized)
         } catch { return .failure(error) }
     }
-}
-
-extension Color {
-    static let accent = Color(red: 0.635, green: 0.22, blue: 1)
 }
 
 extension NSImage {

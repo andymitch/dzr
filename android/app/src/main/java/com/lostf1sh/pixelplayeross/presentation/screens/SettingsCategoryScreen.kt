@@ -66,6 +66,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -469,6 +470,7 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
+                            val appColor by settingsViewModel.appColor.collectAsStateWithLifecycle()
 
                             SettingsSubsection(title = stringResource(R.string.setcat_global_theme)) {
                                 ThemeSelectorItem(
@@ -482,6 +484,15 @@ fun SettingsCategoryScreen(
                                     selectedKey = uiState.appThemeMode,
                                     onSelectionChanged = { settingsViewModel.setAppThemeMode(it) },
                                     leadingIcon = { Icon(Icons.Outlined.LightMode, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                ThemeSelectorItem(
+                                    label = "App color",
+                                    description = "Wallpaper colors, or a fixed accent for the whole app.",
+                                    options = linkedMapOf(com.lostf1sh.pixelplayeross.data.preferences.AppColor.DYNAMIC to "Wallpaper") +
+                                        com.lostf1sh.pixelplayeross.data.preferences.AppColor.presets.keys.associateWith { it.replaceFirstChar(Char::uppercase) },
+                                    selectedKey = appColor,
+                                    onSelectionChanged = settingsViewModel::setAppColor,
+                                    leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_smooth_corners_title),

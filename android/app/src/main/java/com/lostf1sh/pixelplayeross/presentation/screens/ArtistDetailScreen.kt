@@ -89,6 +89,14 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import com.lostf1sh.pixelplayeross.utils.shapes.RoundedStarShape
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
@@ -428,6 +436,24 @@ fun ArtistDetailScreen(
 
                         // Top Tracks Section
                         if (uiState.topTracks.isNotEmpty()) {
+                            item(key = "artist_mix") {
+                                val scope = rememberCoroutineScope()
+                                FilledTonalButton(
+                                    onClick = {
+                                        scope.launch {
+                                            val id = artistId.removePrefix("deezer_").toLongOrNull() ?: return@launch
+                                            val mix = viewModel.artistMix(id)
+                                            mix.firstOrNull()?.let { playerViewModel.playSongs(mix, it, queueName = "${artist?.name ?: ""} Mix") }
+                                        }
+                                    },
+                                    shapes = ButtonDefaults.shapes(),
+                                    modifier = Modifier.padding(top = 16.dp)
+                                ) {
+                                    Icon(painterResource(R.drawable.rounded_all_inclusive_24), contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Artist Mix")
+                                }
+                            }
                             item {
                                 Text(
                                     text = "Top Tracks",

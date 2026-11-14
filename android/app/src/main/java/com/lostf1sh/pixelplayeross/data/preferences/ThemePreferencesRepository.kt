@@ -19,7 +19,17 @@ class ThemePreferencesRepository @Inject constructor(
         val ALBUM_ART_PALETTE_STYLE = stringPreferencesKey("album_art_palette_style_v1")
         val ALBUM_ART_COLOR_ACCURACY = intPreferencesKey("album_art_color_accuracy_v1")
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
+        val APP_COLOR = stringPreferencesKey("app_color_v1")
     }
+
+    val appColorFlow: Flow<String> = dataStore.data.map { preferences ->
+        preferences[Keys.APP_COLOR] ?: AppColor.DYNAMIC
+    }
+
+    suspend fun setAppColor(color: String) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_COLOR] = color
+        }
 
     val appThemeModeFlow: Flow<String> = dataStore.data.map { preferences ->
         preferences[Keys.APP_THEME_MODE] ?: AppThemeMode.FOLLOW_SYSTEM

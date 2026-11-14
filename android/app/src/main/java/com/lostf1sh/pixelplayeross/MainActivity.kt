@@ -205,6 +205,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
+            val appColor by themePreferencesRepository.appColorFlow.collectAsStateWithLifecycle(initialValue = com.lostf1sh.pixelplayeross.data.preferences.AppColor.DYNAMIC)
+            val appColorScheme = remember(appColor) {
+                com.lostf1sh.pixelplayeross.data.preferences.AppColor.presets[appColor]?.let {
+                    com.lostf1sh.pixelplayeross.ui.theme.generateColorSchemeFromSeed(androidx.compose.ui.graphics.Color(it))
+                }
+            }
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -251,7 +257,8 @@ class MainActivity : ComponentActivity() {
             }
 
             PixelPlayerTheme(
-                darkTheme = useDarkTheme
+                darkTheme = useDarkTheme,
+                colorSchemePairOverride = appColorScheme
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(

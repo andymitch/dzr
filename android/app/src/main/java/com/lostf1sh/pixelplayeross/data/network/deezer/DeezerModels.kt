@@ -51,7 +51,9 @@ data class DeezerTrack(
 data class DeezerTrackAttributes(
     @SerializedName("title") val title: String? = null,
     @SerializedName("artistName") val artistName: String? = null,
+    @SerializedName("artistId") val artistId: Long? = null,
     @SerializedName("albumName") val albumName: String? = null,
+    @SerializedName("albumId") val albumId: Long? = null,
     @SerializedName("duration") val duration: Int = 0,
     @SerializedName("image") val image: DeezerImage? = null,
     @SerializedName("explicit") val explicit: Boolean? = null,

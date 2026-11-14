@@ -247,6 +247,8 @@ struct LyricsView: View {
     @Environment(Player.self) private var player
     @State private var lines: [Deezer.LyricLine]?
     @State private var loadedFor: String?
+    @State private var lineMids: [Int: CGFloat] = [:]
+    @State private var scrollNudge: CGFloat = 0
 
     private var currentIndex: Int? {
         guard let lines else { return nil }
@@ -258,26 +260,29 @@ struct LyricsView: View {
             if player.current == nil {
                 ContentUnavailableView("Lyrics", systemImage: "quote.bubble", description: Text("Play something to see its lyrics."))
             } else if let lines, !lines.isEmpty {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
-                            ForEach(Array(lines.enumerated()), id: \.offset) { i, l in
-                                Text(l.line)
-                                    .font(.title3.weight(.bold))
-                                    .foregroundStyle(i == currentIndex ? .primary : .tertiary)
-                                    .scaleEffect(i == currentIndex ? 1 : 0.97, anchor: .leading)
-                                    .animation(.smooth, value: currentIndex)
-                                    .id(i)
-                                    .onTapGesture { if let t = l.time { player.seek(to: t) } }
-                            }
+                GeometryReader { geo in
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(lines.enumerated()), id: \.offset) { i, l in
+                            Text(l.line)
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(i == currentIndex ? .primary : .tertiary)
+                                .blur(radius: abs(i - (currentIndex ?? 0)) > 2 ? 0.6 : 0)
+                                .scaleEffect(i == currentIndex ? 1 : 0.97, anchor: .leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(.rect)
+                                .onTapGesture { if let t = l.time { player.seek(to: t) } }
+                                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("lyrics")).midY } action: { lineMids[i] = $0 }
                         }
-                        .padding(20)
-                        .padding(.bottom, 200)
                     }
-                    .onChange(of: currentIndex) { _, i in
-                        if let i { withAnimation(.smooth) { proxy.scrollTo(i, anchor: .center) } }
-                    }
+                    .padding(.horizontal, 20)
+                    .offset(y: geo.size.height * 0.38 - (currentIndex.flatMap { lineMids[$0] } ?? 0) + scrollNudge)
+                    .animation(.spring(duration: 0.7, bounce: 0.12), value: currentIndex)
+                    .coordinateSpace(name: "lyrics")
                 }
+                .clipped()
+                .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.12), .init(color: .black, location: 0.85), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+                .onScrollWheel { scrollNudge += $0 }
+                .onChange(of: currentIndex) { scrollNudge = 0 }
             } else if lines != nil {
                 ContentUnavailableView("No Lyrics", systemImage: "quote.bubble", description: Text("Deezer has no lyrics for this track."))
             } else {
@@ -287,8 +292,27 @@ struct LyricsView: View {
         .task(id: player.current?.id) {
             guard let id = player.current?.id, id != loadedFor else { return }
             lines = nil
+            lineMids = [:]
             loadedFor = id
             lines = (try? await model.deezer.lyrics(id)) ?? []
         }
+    }
+}
+
+private struct ScrollWheel: NSViewRepresentable {
+    let onScroll: (CGFloat) -> Void
+
+    final class View: NSView {
+        var onScroll: (CGFloat) -> Void = { _ in }
+        override func scrollWheel(with event: NSEvent) { onScroll(event.scrollingDeltaY) }
+    }
+
+    func makeNSView(context: Context) -> View { View() }
+    func updateNSView(_ v: View, context: Context) { v.onScroll = onScroll }
+}
+
+extension View {
+    func onScrollWheel(_ action: @escaping (CGFloat) -> Void) -> some View {
+        overlay(ScrollWheel(onScroll: action).allowsHitTesting(true))
     }
 }
