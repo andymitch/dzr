@@ -6,8 +6,6 @@ APP=build/dzr.app
 rm -rf "$APP" build/icon.iconset
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build/icon.iconset
 cp .build/release/dzr "$APP/Contents/MacOS/dzr"
-xcrun metal -c Shaders/HeaderBlur.metal -o build/HeaderBlur.air
-xcrun metallib build/HeaderBlur.air -o "$APP/Contents/Resources/default.metallib"
 
 qlmanage -t -s 1024 -o build ../assets/icon.svg >/dev/null
 for s in 16 32 128 256 512; do
