@@ -85,12 +85,10 @@ struct HeaderFade: View {
     var body: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
-            Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom))
-            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
+                .mask(LinearGradient(stops: [.init(color: .black.opacity(0.85), location: 0), .init(color: .black.opacity(0.5), location: 0.5), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.3), .clear], startPoint: .top, endPoint: .bottom)
         }
-        .frame(height: max(insets.top, 40) + 8)
+        .frame(height: max(insets.top, 40) + 14)
         .ignoresSafeArea(edges: [.top, .leading])
         .allowsHitTesting(false)
     }
