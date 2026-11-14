@@ -77,16 +77,19 @@ extension View {
 
 struct HeaderFade: View {
     var body: some View {
-        ZStack {
-            Rectangle().fill(.ultraThinMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
-            Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .clear, location: 0.6)], startPoint: .top, endPoint: .bottom))
-            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
+        LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.7), .clear], startPoint: .top, endPoint: .bottom)
+            .frame(height: 70)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+    }
+}
+
+extension View {
+    func blursUnderHeader() -> some View {
+        scrollTransition(.interactive, axis: .vertical) { content, phase in
+            let t = max(0, -phase.value)
+            return content.blur(radius: t * 14).opacity(1 - t * 0.6)
         }
-        .frame(height: 96)
-        .ignoresSafeArea(edges: .top)
-        .allowsHitTesting(false)
     }
 }
 
@@ -130,7 +133,7 @@ struct ShelvesPage: View {
                         if shelf.items.first?.kind == .track {
                             TrackList(title: shelf.title, tracks: Array(shelf.items.prefix(8)), numbered: false)
                         } else {
-                            ShelfRow(shelf: shelf)
+                            ShelfRow(shelf: shelf).blursUnderHeader()
                         }
                     }
                 }
@@ -163,6 +166,7 @@ struct TracksPage: View {
                         }
                     }
                     .padding(.horizontal, 24)
+                    .blursUnderHeader()
                     TrackList(tracks: tracks, numbered: false)
                 }
                 .padding(.vertical, 20)
@@ -205,7 +209,7 @@ struct GridPage: View {
         Loader(title: title, load: load) { items in
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 20)], alignment: .leading, spacing: 24) {
-                    ForEach(items) { Card(item: $0) }
+                    ForEach(items) { Card(item: $0).blursUnderHeader() }
                 }
                 .padding(24)
             }
@@ -261,12 +265,12 @@ struct DetailPage: View {
             let tracks = shelves.first { $0.items.first?.kind == .track }?.items ?? []
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    Hero(item: item, tracks: tracks)
+                    Hero(item: item, tracks: tracks).blursUnderHeader()
                     ForEach(shelves.filter { !$0.items.isEmpty }) { shelf in
                         if shelf.items.first?.kind == .track {
                             TrackList(title: item.kind == .artist ? shelf.title : nil, tracks: item.kind == .artist ? Array(shelf.items.prefix(10)) : shelf.items, numbered: item.kind == .album)
                         } else {
-                            ShelfRow(shelf: shelf)
+                            ShelfRow(shelf: shelf).blursUnderHeader()
                         }
                     }
                 }
@@ -342,10 +346,10 @@ struct TrackList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let title { Text(title).font(.title2.bold()).padding(.horizontal, 24) }
+            if let title { Text(title).font(.title2.bold()).padding(.horizontal, 24).blursUnderHeader() }
             LazyVStack(spacing: 0) {
                 ForEach(Array(tracks.enumerated()), id: \.offset) { i, t in
-                    TrackRow(track: t, number: numbered ? i + 1 : nil, tracks: tracks, index: i)
+                    TrackRow(track: t, number: numbered ? i + 1 : nil, tracks: tracks, index: i).blursUnderHeader()
                 }
             }
             .padding(.horizontal, 12)
