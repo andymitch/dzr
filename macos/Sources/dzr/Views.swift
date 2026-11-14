@@ -11,7 +11,7 @@ struct MainView: View {
     @State private var query = ""
     @State private var submitted = ""
     @FocusState private var searchFocused: Bool
-    @State private var sidebarInset: CGFloat = 0
+    @State private var safeInsets = EdgeInsets()
 
     var body: some View {
         NavigationSplitView {
@@ -29,10 +29,10 @@ struct MainView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
             NavigationStack(path: $path) {
-                root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying().environment(\.sidebarInset, sidebarInset) }
+                root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying().environment(\.pageInsets, safeInsets) }
             }
-            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.leading } action: { sidebarInset = $0 }
-            .environment(\.sidebarInset, sidebarInset)
+            .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { safeInsets = $0 }
+            .environment(\.pageInsets, safeInsets)
         }
         .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums")
         .searchFocused($searchFocused)
@@ -89,23 +89,24 @@ struct HeaderFade: View {
             LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
         }
         .frame(height: 96)
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea(edges: [.top, .leading])
         .allowsHitTesting(false)
     }
 }
 
 struct UnderSidebar: ViewModifier {
-    @Environment(\.sidebarInset) private var inset
+    @Environment(\.pageInsets) private var insets
 
     func body(content: Content) -> some View {
         content
-            .contentMargins(.leading, inset, for: .scrollContent)
-            .ignoresSafeArea(.container, edges: .leading)
+            .contentMargins(.leading, insets.leading, for: .scrollContent)
+            .contentMargins(.top, insets.top, for: .scrollContent)
+            .ignoresSafeArea(.container, edges: [.leading, .top])
     }
 }
 
 extension EnvironmentValues {
-    @Entry var sidebarInset: CGFloat = 0
+    @Entry var pageInsets = EdgeInsets()
 }
 
 struct Loader<T, Content: View>: View {
@@ -290,7 +291,7 @@ struct DetailPage: View {
                 }
                 .padding(.bottom, 20)
             }
-            .ignoresSafeArea(edges: .top)
+            .contentMargins(.top, 0, for: .scrollContent)
         }
     }
 }
