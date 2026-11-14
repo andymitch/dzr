@@ -318,6 +318,7 @@ struct Hero: View {
                 .opacity(0.55)
                 .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
                 .clipped()
+                .backgroundExtensionEffect()
         }
     }
 }
