@@ -56,7 +56,7 @@ fun ChangelogBottomSheet(
     mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val changelogUrl = "https://github.com/Minuga-RC/Pixer"
+    val changelogUrl = "https://github.com/andymitch/dzr"
     val changelogs by mainViewModel.changelogs.collectAsStateWithLifecycle()
 
     val fabCornerRadius = 16.dp

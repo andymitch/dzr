@@ -12,9 +12,9 @@ data class GitHubRelease(
 )
 
 interface GitHubApiService {
-    @GET("repos/Minuga-RC/Pixer/releases/latest")
+    @GET("repos/andymitch/dzr/releases/latest")
     suspend fun getLatestRelease(): GitHubRelease
 
-    @GET("repos/Minuga-RC/Pixer/releases")
+    @GET("repos/andymitch/dzr/releases")
     suspend fun getReleases(): List<GitHubRelease>
 }
