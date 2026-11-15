@@ -32,6 +32,9 @@ struct DzrApp: App {
                 Button("Repeat") { model.player.cycleRepeat() }.keyboardShortcut("r", modifiers: .command)
                 Button("Like") { model.toggleLike() }.keyboardShortcut("l", modifiers: .command)
             }
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { Task { await Updates.check(manual: true) } }
+            }
             CommandGroup(after: .appSettings) {
                 Button("Sign Out") { model.signOut() }.disabled(!model.signedIn)
             }
@@ -59,6 +62,10 @@ struct DzrApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Task { await Updates.check(manual: false) }
+    }
 }
 
 @MainActor @Observable
