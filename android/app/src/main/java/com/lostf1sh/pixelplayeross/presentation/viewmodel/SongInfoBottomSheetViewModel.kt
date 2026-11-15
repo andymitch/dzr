@@ -34,7 +34,13 @@ import kotlin.coroutines.resume
 @HiltViewModel
 class SongInfoBottomSheetViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
+    private val deezerRepository: com.lostf1sh.pixelplayeross.data.repository.DeezerRepository,
 ) : ViewModel() {
+
+    suspend fun trackMix(song: Song): List<Song> =
+        song.id.toLongOrNull()?.let { id ->
+            deezerRepository.getTrackMix(id).map { com.lostf1sh.pixelplayeross.presentation.screens.mapDeezerTrackToSong(it) }
+        }.orEmpty()
 
     data class SongLocationInfo(
         val label: String,

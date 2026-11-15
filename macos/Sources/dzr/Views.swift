@@ -421,6 +421,14 @@ struct TrackRow: View {
         .contextMenu {
             Button("Play") { player.play(tracks, at: index) }
             Button("Add to Queue") { player.enqueue(track) }
+            Button("Play Track Mix") {
+                Task {
+                    if case .success(let mix) = await model.run({ try await model.deezer.trackMix(track.id) }), !mix.isEmpty {
+                        player.shuffle = false
+                        player.play(mix, at: 0)
+                    }
+                }
+            }
             Button(model.liked.contains(track.id) ? "Unlike" : "Like") { model.toggleLike(track) }
             Divider()
             if track.albumId != 0 {

@@ -182,6 +182,40 @@ class DeezerRepository @Inject constructor(
         }
     }
 
+    suspend fun getAllLovedTracks(): List<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerTrack> {
+        val auth = getAuthHeader() ?: return emptyList()
+        val userId = getUserId() ?: return emptyList()
+        return try {
+            deezerApiService.getAllGcastLovedTracks(userId, auth).data?.included.orEmpty()
+        } catch (e: Exception) {
+            android.util.Log.e("DeezerRepository", "getAllLovedTracks error: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getLovedTrackDates(): Map<Long, Long> {
+        val token = getRawToken() ?: return emptyMap()
+        return try {
+            deezerApiService.getLovedTrackDates(token).getAsJsonArray("data")?.associate { el ->
+                val o = el.asJsonObject
+                o.get("id").asLong to o.get("time_add").asLong * 1000L
+            }.orEmpty()
+        } catch (e: Exception) {
+            android.util.Log.e("DeezerRepository", "getLovedTrackDates error: ${e.message}", e)
+            emptyMap()
+        }
+    }
+
+    suspend fun getTrackMix(trackId: Long): List<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerTrack> {
+        val auth = getAuthHeader() ?: return emptyList()
+        return try {
+            deezerApiService.getTrackMix(trackId, auth).data?.included.orEmpty()
+        } catch (e: Exception) {
+            android.util.Log.e("DeezerRepository", "getTrackMix error: ${e.message}", e)
+            emptyList()
+        }
+    }
+
     suspend fun getArtistRadio(artistId: Long): List<com.lostf1sh.pixelplayeross.data.network.deezer.DeezerTrack> {
         val token = getRawToken() ?: return emptyList()
         return try {

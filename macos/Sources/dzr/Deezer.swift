@@ -237,6 +237,7 @@ final class Deezer {
 
     func history() async throws -> [Item] { try await classic("user/me/history?limit=100") }
     func artistRadio(_ id: String) async throws -> [Item] { try await classic("artist/\(id)/radio?limit=100") }
+    func trackMix(_ id: String) async throws -> [Item] { try await items(one("platform/generic/track/\(id)/mix").included) }
     func lovedTracks() async throws -> [Item] { try await items(one("\(castUser)/loved-tracks").included) }
 
     struct LyricLine: Decodable {

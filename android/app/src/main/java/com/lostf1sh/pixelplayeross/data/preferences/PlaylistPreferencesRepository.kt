@@ -73,27 +73,16 @@ class PlaylistPreferencesRepository @Inject constructor(
     suspend fun syncLovedTracks() {
         android.util.Log.d("SyncDebug", "syncLovedTracks() started")
         try {
-            var currentPage = 1
-            val limit = 50
             val allLovedSongs = mutableListOf<SongEntity>()
             val allFavorites = mutableListOf<FavoritesEntity>()
+            val deezerTracks = deezerRepository.getAllLovedTracks()
+            val likedAt = deezerRepository.getLovedTrackDates()
+            val now = System.currentTimeMillis()
 
-            while (true) {
-                android.util.Log.d("SyncDebug", "syncLovedTracks() fetching page $currentPage")
-                val response = deezerRepository.getGcastLovedTracks(page = currentPage, limit = limit)
-                val deezerTracks = response?.data?.included
-                
-                android.util.Log.d("SyncDebug", "syncLovedTracks() response tracks: ${deezerTracks?.size}")
-
-                if (deezerTracks.isNullOrEmpty()) {
-                    android.util.Log.d("SyncDebug", "syncLovedTracks() no more tracks, breaking loop")
-                    break
-                }
-
-                deezerTracks.forEach { track ->
-                    val trackIdStr = track.id
-                    val songId = trackIdStr.toLongOrNull() ?: return@forEach
-                    val song = SongEntity(
+            deezerTracks.forEachIndexed { index, track ->
+                val songId = track.id.toLongOrNull() ?: return@forEachIndexed
+                allLovedSongs.add(
+                    SongEntity(
                         id = songId,
                         title = track.attributes?.title ?: "Unknown Title",
                         artistName = track.attributes?.artistName ?: "Unknown Artist",
@@ -111,14 +100,8 @@ class PlaylistPreferencesRepository @Inject constructor(
                         sourceType = com.lostf1sh.pixelplayeross.data.database.SourceType.DEEZER,
                         isExplicit = track.attributes?.explicit ?: false
                     )
-                    allLovedSongs.add(song)
-                    allFavorites.add(FavoritesEntity(songId = songId, isFavorite = true, timestamp = System.currentTimeMillis() - (allFavorites.size * 1000L)))
-                }
-                
-                if (deezerTracks.size < limit) {
-                    break
-                }
-                currentPage++
+                )
+                allFavorites.add(FavoritesEntity(songId = songId, isFavorite = true, timestamp = likedAt[songId] ?: (now - index * 1000L)))
             }
 
             android.util.Log.d("SyncDebug", "syncLovedTracks() fetching done. Total: ${allLovedSongs.size}")

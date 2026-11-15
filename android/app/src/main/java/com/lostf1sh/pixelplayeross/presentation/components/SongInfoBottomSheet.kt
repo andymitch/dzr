@@ -517,6 +517,31 @@ fun SongInfoBottomSheet(
                                                 }
                                             }
                                         }
+                                        if (song.contentUriString.startsWith("deezer://")) {
+                                            item {
+                                                val activity = androidx.activity.compose.LocalActivity.current as androidx.activity.ComponentActivity
+                                                val playerViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel = hiltViewModel(activity)
+                                                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                                                FilledTonalButton(
+                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 66.dp),
+                                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                                    shape = CircleShape,
+                                                    onClick = {
+                                                        scope.launch {
+                                                            val mix = songInfoViewModel.trackMix(song)
+                                                            mix.firstOrNull()?.let {
+                                                                playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix")
+                                                                onDismiss()
+                                                            }
+                                                        }
+                                                    }
+                                                ) {
+                                                    Icon(painterResource(R.drawable.rounded_all_inclusive_24), contentDescription = null)
+                                                    Spacer(Modifier.width(14.dp))
+                                                    Text("Track Mix")
+                                                }
+                                            }
+                                        }
 
                                         item {
                                             Row(

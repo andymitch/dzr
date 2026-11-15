@@ -106,6 +106,24 @@ interface DeezerApiService {
         @retrofit2.http.Header("authorization") auth: String
     ): DeezerMultiFlowResponse
 
+    @GET("platform/gcast/user/{user_id}/loved-tracks")
+    suspend fun getAllGcastLovedTracks(
+        @retrofit2.http.Path("user_id") userId: Long,
+        @retrofit2.http.Header("authorization") auth: String
+    ): DeezerPlaylistDetailResponse
+
+    @GET("user/me/tracks")
+    suspend fun getLovedTrackDates(
+        @Query("access_token") token: String,
+        @Query("limit") limit: Int = 10000
+    ): com.google.gson.JsonObject
+
+    @GET("platform/generic/track/{track_id}/mix")
+    suspend fun getTrackMix(
+        @retrofit2.http.Path("track_id") trackId: Long,
+        @retrofit2.http.Header("authorization") auth: String
+    ): DeezerPlaylistDetailResponse
+
     @GET("artist/{artist_id}/radio")
     suspend fun getArtistRadio(
         @retrofit2.http.Path("artist_id") artistId: Long,
