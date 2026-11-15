@@ -181,14 +181,12 @@
 
     <!-- About -->
     <string name="about_app_name">dzr</string>
-    <string name="about_tagline">A free, open-source alternative client for Deezer.</string>
+    <string name="about_tagline">A personal Deezer client.</string>
     <string name="about_version_format">Version v%1$s</string>
     <string name="about_contributions_format">%1$d contrib.</string>
     <string name="screen_about">About</string>
-    <string name="about_maintainer_title">Maintainers</string>
-    <string name="about_maintainer_subtitle">FOSS and original/non-FOSS maintainership.</string>
-    <string name="about_signal_open_source">Open source</string>
-    <string name="about_signal_community_first">Community-first</string>
+    <string name="about_signal_open_source">Lossless streaming</string>
+    <string name="about_signal_community_first">Flow and mixes</string>
     <string name="about_signal_material3">Material 3 expressive</string>
     <string name="cd_open_github_profile">Open GitHub profile</string>
     <string name="cd_open_telegram_profile">Open Telegram profile</string>

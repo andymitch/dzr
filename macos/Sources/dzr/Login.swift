@@ -7,7 +7,7 @@ struct RootView: View {
 
     var body: some View {
         if model.signedIn {
-            MainView().task { await model.refreshLiked() }
+            MainView().task { await model.refreshLiked(); await model.refreshPlaylists() }
         } else {
             LoginView()
         }

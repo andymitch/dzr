@@ -47,6 +47,7 @@ struct Item: Identifiable, Hashable {
     var albumId: Int64 = 0
     var artwork: URL?
     var readable = true
+    var creatorId: Int64 = 0
 }
 
 struct Shelf: Identifiable {
@@ -79,7 +80,7 @@ private struct Attributes: Decodable {
     var artist: Named?
     var creator: Named?
 
-    struct Named: Decodable { var name: String? }
+    struct Named: Decodable { var id: Int64?; var name: String? }
 }
 
 private struct Resource: Decodable {
@@ -104,6 +105,7 @@ private struct Resource: Decodable {
             it.subtitle = [a?.artist?.name ?? a?.artistName, a?.release_date.map { String($0.prefix(4)) }].compactMap { $0 }.joined(separator: " · ")
         case "playlist":
             it.kind = .playlist
+            it.creatorId = a?.creator?.id ?? 0
             it.subtitle = [a?.creator?.name, a?.nb_tracks.map { "\($0) tracks" }].compactMap { $0 }.joined(separator: " · ")
         case "artist":
             it.kind = .artist
@@ -199,14 +201,24 @@ final class Deezer {
             return await group.reduce(into: []) { $0.append($1) }.sorted { $0.0 < $1.0 }.compactMap(\.1)
         }
         return try await [
-            Shelf(title: "Recently played", items: items(recents?.included)),
+            Shelf(title: "Recently played", items: await renamingLoved(items(recents?.included))),
             Shelf(title: "Flow", items: items(flows.included)),
             Shelf(title: "Mixes", items: mixes),
             Shelf(title: "Recommended playlists", items: items(recs.included)),
         ]
     }
 
-    func playlists() async throws -> [Item] { try await items(one("\(castUser)/playlists").included) }
+    private var lovedId: String?
+
+    func lovedPlaylistId() async -> String? {
+        if lovedId == nil { lovedId = try? await one("\(castUser)/loved-tracks").id }
+        return lovedId
+    }
+
+    func playlists() async throws -> [Item] {
+        let loved = await lovedPlaylistId()
+        return try await items(one("\(castUser)/playlists").included).filter { $0.id != loved }
+    }
     func albums() async throws -> [Item] { try await items(one("\(castUser)/loved-albums?start=0&limit=500").included) }
     func artists() async throws -> [Item] { try await items(one("\(castUser)/loved-artists").included) }
     func likedIds() async throws -> Set<String> { try await Set((one("\(castUser)/loved-tracks").included ?? []).map(\.id)) }
@@ -224,6 +236,30 @@ final class Deezer {
             struct B: Decodable { var id: Int64; var title: String; var cover_xl: String? }
         }
     }
+
+    @discardableResult
+    private func write(_ method: String, _ path: String, _ query: [String: String] = [:]) async throws -> Data {
+        var c = URLComponents(url: Self.api.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
+        c.queryItems = [URLQueryItem(name: "access_token", value: session?.accessToken)] + query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        var req = URLRequest(url: c.url!)
+        req.httpMethod = method
+        req.httpBody = Data()
+        let (data, res) = try await URLSession.shared.data(for: req)
+        let code = (res as? HTTPURLResponse)?.statusCode ?? 0
+        if code >= 300 || String(data: data, encoding: .utf8)?.contains("\"error\"") == true { throw DeezerError.http(code) }
+        return data
+    }
+
+    func createPlaylist(_ title: String, tracks: [String] = []) async throws -> String {
+        struct R: Decodable { var id: Int64 }
+        let id = String(try JSONDecoder().decode(R.self, from: await write("POST", "user/me/playlists", ["title": title])).id)
+        if !tracks.isEmpty { try await addToPlaylist(id, tracks) }
+        return id
+    }
+    func addToPlaylist(_ id: String, _ tracks: [String]) async throws { try await write("POST", "playlist/\(id)/tracks", ["songs": tracks.joined(separator: ",")]) }
+    func removeFromPlaylist(_ id: String, _ tracks: [String]) async throws { try await write("DELETE", "playlist/\(id)/tracks", ["songs": tracks.joined(separator: ",")]) }
+    func renamePlaylist(_ id: String, _ title: String) async throws { try await write("POST", "playlist/\(id)", ["title": title]) }
+    func deletePlaylist(_ id: String) async throws { try await write("DELETE", "playlist/\(id)") }
 
     private func classic(_ path: String) async throws -> [Item] {
         let sep = path.contains("?") ? "&" : "?"
@@ -251,6 +287,11 @@ final class Deezer {
         return try await ((Self.fetch(request("platform/generic/lyrics/\(trackId)")) as R).data.attributes.items ?? []).filter { !$0.line.isEmpty }
     }
 
+    private func renamingLoved(_ list: [Item]) async -> [Item] {
+        let loved = await lovedPlaylistId()
+        return list.map { var i = $0; if i.id == loved { i.title = "Liked Songs" }; return i }
+    }
+
     func search(_ q: String) async throws -> [Shelf] {
         let q = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q
         async let tracks = many("platform/generic/search/track?q=\(q)")
@@ -268,7 +309,9 @@ final class Deezer {
     func open(_ it: Item) async throws -> [Shelf] {
         switch it.kind {
         case .track: return []
-        case .playlist: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/playlist/\(it.id)").included))]
+        case .playlist:
+            if it.id == (await lovedPlaylistId()) { return try await [Shelf(title: "Tracks", items: lovedTracks())] }
+            return try await [Shelf(title: "Tracks", items: items(one("platform/generic/playlist/\(it.id)").included))]
         case .album: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/album/\(it.id)").included))]
         case .flow: return try await [Shelf(title: "Tracks", items: items(one("\(user)/multiflow/\(it.id)").included))]
         case .mix: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/smarttracklist/\(it.id)").included))]

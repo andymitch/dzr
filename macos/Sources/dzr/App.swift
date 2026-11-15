@@ -68,6 +68,9 @@ final class AppModel {
     var signedIn: Bool
     var liked: Set<String> = []
     var showLyrics = false
+    var myPlaylists: [Item] = []
+    var playlistsVersion = 0
+    var newPlaylistTracks: [String]?
 
     init() {
         player = Player(deezer: deezer)
@@ -84,6 +87,19 @@ final class AppModel {
         Session.clear()
         deezer.session = nil
         signedIn = false
+    }
+
+    func refreshPlaylists() async {
+        guard let mine = try? await deezer.playlists() else { return }
+        myPlaylists = mine.filter { $0.creatorId == deezer.session?.userId }
+        playlistsVersion += 1
+    }
+
+    func playlistAction(_ f: @escaping () async throws -> Void) {
+        Task {
+            _ = await run(f)
+            await refreshPlaylists()
+        }
     }
 
     func refreshLiked() async {

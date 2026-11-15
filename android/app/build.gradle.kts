@@ -19,9 +19,9 @@ val keystoreProperties = Properties().apply {
 }
 
 val releaseSigningStoreFile = rootProject.file(
-    keystoreProperties.getProperty("storeFile") ?: "vz-pixelplay.jks"
+    keystoreProperties.getProperty("storeFile") ?: "release.jks"
 )
-val disableReleaseSigning = providers.gradleProperty("pixelplayer.disableReleaseSigning")
+val disableReleaseSigning = providers.gradleProperty("dzr.disableReleaseSigning")
     .getOrElse("false")
     .toBoolean()
 val hasReleaseSigningConfig = !disableReleaseSigning &&
@@ -30,17 +30,17 @@ val hasReleaseSigningConfig = !disableReleaseSigning &&
     keystoreProperties.getProperty("keyAlias") != null &&
     keystoreProperties.getProperty("keyPassword") != null
 
-val enableAbiSplits = providers.gradleProperty("pixelplayer.enableAbiSplits")
+val enableAbiSplits = providers.gradleProperty("dzr.enableAbiSplits")
     .getOrElse("true")
     .toBoolean()
 
-val enableComposeCompilerReports = providers.gradleProperty("pixelplayer.enableComposeCompilerReports")
+val enableComposeCompilerReports = providers.gradleProperty("dzr.enableComposeCompilerReports")
     .getOrElse("false")
     .toBoolean()
 
 @Suppress("DEPRECATION")
 android {
-    namespace = "com.lostf1sh.pixelplayeross"
+    namespace = "com.andymitch.dzr"
     compileSdk = 37
 
     sourceSets {
@@ -74,8 +74,8 @@ android {
         applicationId = "com.andymitch.dzr"
         minSdk = 30
         targetSdk = 37
-        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 2
-        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "0.2.0"
+        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 3
+        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "0.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

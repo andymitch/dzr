@@ -78,8 +78,8 @@ struct QueueList: View {
             if player.upNext.isEmpty {
                 Text("Nothing queued").foregroundStyle(.secondary)
             }
-            ForEach(Array(player.upNext.prefix(30).enumerated()), id: \.offset) { offset, t in
-                Button { player.jump(to: player.index + 1 + offset) } label: {
+            List {
+                ForEach(Array(player.upNext.enumerated()), id: \.offset) { offset, t in
                     HStack(spacing: 8) {
                         Artwork(url: t.artwork, radius: 4).frame(width: 28, height: 28)
                         VStack(alignment: .leading, spacing: 0) {
@@ -87,14 +87,25 @@ struct QueueList: View {
                             Text(t.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
+                        Button { player.jump(to: player.index + 1 + offset) } label: { Image(systemName: "play.fill") }
+                            .buttonStyle(.borderless)
+                            .help("Play now")
                     }
-                    .contentShape(.rect)
+                    .contextMenu {
+                        Button("Play Now") { player.jump(to: player.index + 1 + offset) }
+                        Button("Remove from Up Next") { player.removeUpNext(at: [offset]) }
+                    }
                 }
-                .buttonStyle(.plain)
+                .onMove { player.moveUpNext(from: $0, to: $1) }
+                .onDelete { player.removeUpNext(at: $0) }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .frame(height: min(CGFloat(max(player.upNext.count, 1)) * 40, 420))
+            Text("Drag to reorder").font(.caption2).foregroundStyle(.tertiary)
         }
         .padding(14)
-        .frame(width: 300)
+        .frame(width: 320)
     }
 }
 

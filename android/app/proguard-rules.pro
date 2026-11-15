@@ -58,27 +58,27 @@
 -dontwarn com.softsynth.**
 
 # Mantener clases de datos y sus miembros para evitar que R8 Full elimine campos
--keepclassmembers class com.lostf1sh.pixelplayeross.data.model.** { *; }
--keepclassmembers class com.lostf1sh.pixelplayeross.domain.model.** { *; }
+-keepclassmembers class com.andymitch.dzr.data.model.** { *; }
+-keepclassmembers class com.andymitch.dzr.domain.model.** { *; }
 
 -keepattributes Signature, InnerClasses, EnclosingMethod, AnnotationDefault, *Annotation*
 
 # Cast framework classes loaded via manifest/reflective entry points.
--keep class com.lostf1sh.pixelplayeross.data.service.cast.CastOptionsProvider { *; }
+-keep class com.andymitch.dzr.data.service.cast.CastOptionsProvider { *; }
 -keep class * implements com.google.android.gms.cast.framework.OptionsProvider
 
 # Gson generic type capture for backup/restore in release builds.
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
--keep class com.lostf1sh.pixelplayeross.data.preferences.PreferenceBackupEntry { *; }
--keep class com.lostf1sh.pixelplayeross.data.backup.model.** { *; }
--keep class com.lostf1sh.pixelplayeross.data.backup.module.** { *; }
+-keep class com.andymitch.dzr.data.preferences.PreferenceBackupEntry { *; }
+-keep class com.andymitch.dzr.data.backup.model.** { *; }
+-keep class com.andymitch.dzr.data.backup.module.** { *; }
 # Backup payload entities are part of the persisted .pxpl contract.
--keep class com.lostf1sh.pixelplayeross.data.database.FavoritesEntity { *; }
--keep class com.lostf1sh.pixelplayeross.data.database.SongEngagementEntity { *; }
--keep class com.lostf1sh.pixelplayeross.data.database.LyricsEntity { *; }
--keep class com.lostf1sh.pixelplayeross.data.database.SearchHistoryEntity { *; }
--keep class com.lostf1sh.pixelplayeross.data.database.TransitionRuleEntity { *; }
+-keep class com.andymitch.dzr.data.database.FavoritesEntity { *; }
+-keep class com.andymitch.dzr.data.database.SongEngagementEntity { *; }
+-keep class com.andymitch.dzr.data.database.LyricsEntity { *; }
+-keep class com.andymitch.dzr.data.database.SearchHistoryEntity { *; }
+-keep class com.andymitch.dzr.data.database.TransitionRuleEntity { *; }
 
 # Netty channel classes are instantiated reflectively and require public no-arg constructors.
 # Without these, release builds can fail with:

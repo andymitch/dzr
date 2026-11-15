@@ -100,7 +100,7 @@
     <string name="song_info_set_ringtone">Set as ringtone</string>
     <string name="cd_set_song_as_ringtone">Set song as ringtone</string>
     <string name="song_info_tone_picker_title">Use this song as</string>
-    <string name="song_info_tone_picker_body">Choose where PixelPlayerOSS should install this sound.</string>
+    <string name="song_info_tone_picker_body">Choose where dzr should install this sound.</string>
     <string name="song_info_tone_ringtone_title">Phone ringtone</string>
     <string name="song_info_tone_ringtone_subtitle">Incoming calls</string>
     <string name="song_info_tone_notification_title">Notification sound</string>
@@ -114,7 +114,7 @@
     <string name="song_info_tone_ringtone_label">ringtone</string>
     <string name="song_info_tone_notification_label">notification sound</string>
     <string name="song_info_tone_alarm_label">alarm sound</string>
-    <string name="song_info_ringtone_permission_prompt">Enable Modify system settings, then return to PixelPlayerOSS to finish automatically.</string>
+    <string name="song_info_ringtone_permission_prompt">Enable Modify system settings, then return to dzr to finish automatically.</string>
     <string name="song_info_ringtone_permission_missing">Modify system settings was not enabled.</string>
     <string name="song_info_ringtone_success">Set \"%1$s\" as your ringtone</string>
     <string name="song_info_ringtone_local_only">Only local songs can be used as ringtones.</string>

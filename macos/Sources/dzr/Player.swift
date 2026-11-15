@@ -56,6 +56,21 @@ final class Player {
         load()
     }
 
+    func playNext(_ t: Item) {
+        guard current != nil else { return play([t], at: 0) }
+        queue.insert(t, at: index + 1)
+        original.append(t)
+    }
+
+    func moveUpNext(from: IndexSet, to: Int) {
+        let base = index + 1
+        queue.move(fromOffsets: IndexSet(from.map { $0 + base }), toOffset: to + base)
+    }
+
+    func removeUpNext(at offsets: IndexSet) {
+        queue.remove(atOffsets: IndexSet(offsets.map { $0 + index + 1 }))
+    }
+
     func enqueue(_ t: Item) {
         queue.append(t)
         original.append(t)

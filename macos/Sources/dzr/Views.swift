@@ -12,6 +12,7 @@ struct MainView: View {
     @State private var submitted = ""
     @FocusState private var searchFocused: Bool
     @State private var safeInsets = EdgeInsets()
+    @State private var newPlaylistName = ""
 
     var body: some View {
         NavigationSplitView {
@@ -43,6 +44,16 @@ struct MainView: View {
             path = NavigationPath()
         }
         .onChange(of: selection) { path = NavigationPath() }
+        .alert("New Playlist", isPresented: Binding(get: { model.newPlaylistTracks != nil }, set: { if !$0 { model.newPlaylistTracks = nil } })) {
+            TextField("Name", text: $newPlaylistName)
+            Button("Create") {
+                let name = newPlaylistName.isEmpty ? "New Playlist" : newPlaylistName
+                let tracks = model.newPlaylistTracks ?? []
+                newPlaylistName = ""
+                model.playlistAction { _ = try await model.deezer.createPlaylist(name, tracks: tracks) }
+            }
+            Button("Cancel", role: .cancel) { newPlaylistName = "" }
+        }
         .inspector(isPresented: Bindable(model).showLyrics) {
             LyricsView().inspectorColumnWidth(min: 260, ideal: 320, max: 420)
         }
@@ -61,7 +72,10 @@ struct MainView: View {
             }
         case .liked: TracksPage(title: "Liked Songs", symbol: "heart.fill") { try await $0.lovedTracks() }
         case .recent: TracksPage(title: "Recently Played", symbol: "clock.fill") { try await $0.history() }
-        case .playlists: GridPage(title: "Playlists") { try await $0.playlists() }
+        case .playlists:
+            GridPage(title: "Playlists") { try await $0.playlists() }
+                .id(model.playlistsVersion)
+                .toolbar { Button { model.newPlaylistTracks = [] } label: { Label("New Playlist", systemImage: "plus") } }
         case .albums: GridPage(title: "Albums") { try await $0.albums() }
         case .artists: GridPage(title: "Artists") { try await $0.artists() }
         }
@@ -272,10 +286,44 @@ struct Card: View {
     }
 }
 
+extension EnvironmentValues {
+    @Entry var currentPlaylist: Item?
+}
+
 struct DetailPage: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     let item: Item
+    @State private var renaming: String?
+
+    private var owned: Bool { item.kind == .playlist && model.myPlaylists.contains { $0.id == item.id } }
 
     var body: some View {
+        content
+            .id(item.kind == .playlist ? model.playlistsVersion : 0)
+            .environment(\.currentPlaylist, item.kind == .playlist ? item : nil)
+            .toolbar {
+                if owned {
+                    Menu {
+                        Button("Rename…") { renaming = item.title }
+                        Button("Delete Playlist", role: .destructive) {
+                            model.playlistAction { try await model.deezer.deletePlaylist(item.id) }
+                            dismiss()
+                        }
+                    } label: { Label("Playlist", systemImage: "ellipsis.circle") }
+                }
+            }
+            .alert("Rename Playlist", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+                TextField("Name", text: Binding(get: { renaming ?? "" }, set: { renaming = $0 }))
+                Button("Rename") {
+                    let name = renaming ?? ""
+                    model.playlistAction { try await model.deezer.renamePlaylist(item.id, name) }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+    }
+
+    private var content: some View {
         Loader(title: item.title, load: { try await $0.open(item) }) { shelves in
             let tracks = shelves.first { $0.items.first?.kind == .track }?.items ?? []
             ScrollView {
@@ -376,6 +424,7 @@ struct TrackList: View {
 struct TrackRow: View {
     @Environment(AppModel.self) private var model
     @Environment(Player.self) private var player
+    @Environment(\.currentPlaylist) private var playlist
     let track: Item
     let number: Int?
     let tracks: [Item]
@@ -420,7 +469,18 @@ struct TrackRow: View {
         .onTapGesture { player.play(tracks, at: index) }
         .contextMenu {
             Button("Play") { player.play(tracks, at: index) }
+            Button("Play Next") { player.playNext(track) }
             Button("Add to Queue") { player.enqueue(track) }
+            Menu("Add to Playlist") {
+                Button("New Playlist…") { model.newPlaylistTracks = [track.id] }
+                if !model.myPlaylists.isEmpty { Divider() }
+                ForEach(model.myPlaylists) { p in
+                    Button(p.title) { model.playlistAction { try await model.deezer.addToPlaylist(p.id, [track.id]) } }
+                }
+            }
+            if let p = playlist, model.myPlaylists.contains(where: { $0.id == p.id }) {
+                Button("Remove from Playlist") { model.playlistAction { try await model.deezer.removeFromPlaylist(p.id, [track.id]) } }
+            }
             Button("Play Track Mix") {
                 Task {
                     if case .success(let mix) = await model.run({ try await model.deezer.trackMix(track.id) }), !mix.isEmpty {
