@@ -39,6 +39,11 @@ val enableComposeCompilerReports = providers.gradleProperty("dzr.enableComposeCo
     .toBoolean()
 
 @Suppress("DEPRECATION")
+val latestTag: String = providers.exec {
+    commandLine("git", "describe", "--tags", "--match", "v*", "--abbrev=0")
+    isIgnoreExitValue = true
+}.standardOutput.asText.get().trim().ifEmpty { "v0" }
+
 android {
     namespace = "com.andymitch.dzr"
     compileSdk = 37
@@ -74,8 +79,8 @@ android {
         applicationId = "com.andymitch.dzr"
         minSdk = 30
         targetSdk = 37
-        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 4
-        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "0.4.0"
+        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 1
+        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "${latestTag.removePrefix("v")}-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -2,6 +2,10 @@
 set -eu
 cd "$(dirname "$0")"
 swift build -c release
+if [ -z "${VERSION:-}" ]; then
+  TAG=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || echo v0)
+  VERSION="${TAG#v}-dev"
+fi
 APP=build/dzr.app
 rm -rf "$APP" build/icon.iconset
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build/icon.iconset
@@ -25,8 +29,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>dzr</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.4.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
+  <key>CFBundleVersion</key><string>$VERSION</string>
   <key>LSMinimumSystemVersion</key><string>26.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
   <key>NSHighResolutionCapable</key><true/>

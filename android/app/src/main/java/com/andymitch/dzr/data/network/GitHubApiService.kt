@@ -8,13 +8,12 @@ data class GitHubRelease(
     @SerializedName("name") val name: String? = null,
     @SerializedName("html_url") val htmlUrl: String,
     @SerializedName("body") val body: String? = null,
-    @SerializedName("published_at") val publishedAt: String? = null
+    @SerializedName("published_at") val publishedAt: String? = null,
+    @SerializedName("prerelease") val prerelease: Boolean = false,
+    @SerializedName("draft") val draft: Boolean = false
 )
 
 interface GitHubApiService {
-    @GET("repos/andymitch/dzr/releases/latest")
-    suspend fun getLatestRelease(): GitHubRelease
-
-    @GET("repos/andymitch/dzr/releases")
+    @GET("repos/andymitch/dzr/releases?per_page=20")
     suspend fun getReleases(): List<GitHubRelease>
 }

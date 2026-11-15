@@ -68,6 +68,15 @@ keyPassword=...
 
 Without it the release build is unsigned.
 
+## Versions
+
+Releases are tagged `vX` for a big feature or a batch of small ones, `vX.Y` for fixes and small changes, and `vX-beta.N` (published as a GitHub pre-release) for betas. Both apps check GitHub for a newer release at launch; betas are only offered to someone already running a beta. Local builds without a version are `<latest tag>-dev` and skip the check.
+
+```sh
+cd macos && VERSION=4.1 ./bundle.sh
+cd android && ./gradlew :app:assembleRelease -PAPP_VERSION_NAME=4.1 -PAPP_VERSION_CODE=5
+```
+
 ## Credits
 
 The Android app started as a fork of [Pixer](https://github.com/Minuga-RC/Pixer), which is based on [PixelPlayer](https://github.com/PixelPlayerHQ/PixelPlayer). Both are MIT licensed; their copyright notices are kept in `android/LICENSE` and the bundled third-party notices.
