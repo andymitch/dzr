@@ -29,11 +29,21 @@ struct MainView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
-            NavigationStack(path: $path) {
-                root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying().environment(\.pageInsets, safeInsets) }
+            HStack(spacing: 0) {
+                NavigationStack(path: $path) {
+                    root.withNowPlaying().navigationDestination(for: Item.self) { DetailPage(item: $0).withNowPlaying().environment(\.pageInsets, safeInsets) }
+                }
+                .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { safeInsets = $0 }
+                .environment(\.pageInsets, safeInsets)
+                if model.showLyrics {
+                    Divider().ignoresSafeArea()
+                    LyricsView()
+                        .frame(width: 420)
+                        .background(.background.secondary)
+                        .transition(.move(edge: .trailing))
+                }
             }
-            .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { safeInsets = $0 }
-            .environment(\.pageInsets, safeInsets)
+            .animation(.smooth(duration: 0.25), value: model.showLyrics)
         }
         .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums")
         .searchFocused($searchFocused)
@@ -53,9 +63,6 @@ struct MainView: View {
                 model.playlistAction { _ = try await model.deezer.createPlaylist(name, tracks: tracks) }
             }
             Button("Cancel", role: .cancel) { newPlaylistName = "" }
-        }
-        .inspector(isPresented: Bindable(model).showLyrics) {
-            LyricsView().inspectorColumnWidth(min: 260, ideal: 320, max: 420)
         }
         .tint(.accent)
     }

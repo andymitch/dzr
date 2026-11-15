@@ -91,6 +91,7 @@ class DzrApplication : Application(), ImageLoaderFactory, Configuration.Provider
             )
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.deleteNotificationChannel("pixelplayer_music_channel")
+            notificationManager.cancel(101)
             notificationManager.createNotificationChannel(channel)
         }
 

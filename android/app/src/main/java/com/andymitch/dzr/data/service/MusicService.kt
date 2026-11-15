@@ -212,7 +212,7 @@ class MusicService : MediaLibraryService() {
 
     companion object {
         private const val TAG = "MusicService_Dzr"
-        const val NOTIFICATION_ID = 101
+        const val NOTIFICATION_ID = androidx.media3.session.DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID
         const val ACTION_SLEEP_TIMER_EXPIRED = "com.andymitch.dzr.ACTION_SLEEP_TIMER_EXPIRED"
         const val EXTRA_FORCE_FOREGROUND_ON_START =
             "com.andymitch.dzr.extra.FORCE_FOREGROUND_ON_START"
