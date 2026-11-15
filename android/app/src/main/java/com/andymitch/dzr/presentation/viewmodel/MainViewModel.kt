@@ -32,9 +32,6 @@ class MainViewModel @Inject constructor(
     private val _updateAvailable = MutableStateFlow<GitHubRelease?>(null)
     val updateAvailable: StateFlow<GitHubRelease?> = _updateAvailable.asStateFlow()
 
-    private val _changelogs = MutableStateFlow<List<GitHubRelease>?>(null)
-    val changelogs: StateFlow<List<GitHubRelease>?> = _changelogs.asStateFlow()
-
     init {
         checkForUpdates()
     }
@@ -43,10 +40,6 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val update = updateCheckerRepository.getLatestReleaseIfNewer()
             _updateAvailable.value = update
-            
-            // Also fetch changelogs for the bottom sheet
-            val logs = updateCheckerRepository.getChangelogs()
-            _changelogs.value = logs
         }
     }
 

@@ -43,12 +43,4 @@ class UpdateCheckerRepository @Inject constructor(
         }
         return false
     }
-
-    suspend fun getChangelogs(): List<GitHubRelease> = withContext(Dispatchers.IO) {
-        try {
-            apiService.getReleases()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
 }

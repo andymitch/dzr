@@ -99,7 +99,6 @@ fun GenreGradientTopBar(
 @Composable
 fun HomeGradientTopBar(
     onNavigationIconClick: () -> Unit,
-    onMoreOptionsClick: () -> Unit,
     onStreamingClick: () -> Unit,
     onMenuClick: () -> Unit = {},
     isScrolled: Boolean = false,
@@ -134,13 +133,6 @@ fun HomeGradientTopBar(
                     }
                     FilledIconButton(colors = buttonColors, onClick = onLibraryClick) {
                         Icon(painterResource(R.drawable.rounded_library_music_24), contentDescription = "Library")
-                    }
-                } else {
-                    FilledIconButton(colors = buttonColors, onClick = onMoreOptionsClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.round_newspaper_24),
-                            contentDescription = stringResource(R.string.presentation_batch_g_topbar_cd_changelog)
-                        )
                     }
                 }
                 FilledIconButton(

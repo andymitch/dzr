@@ -85,7 +85,6 @@ import com.andymitch.dzr.R
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.CollagePattern
 import com.andymitch.dzr.presentation.components.AlbumArtCollage
-import com.andymitch.dzr.presentation.components.ChangelogBottomSheet
 import com.andymitch.dzr.presentation.components.DailyMixSection
 import com.andymitch.dzr.presentation.components.HomeGradientTopBar
 import com.andymitch.dzr.presentation.components.HomeOptionsBottomSheet
@@ -233,7 +232,6 @@ fun HomeScreen(
     val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode)
 
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
-    var showChangelogBottomSheet by remember { mutableStateOf(false) }
     var showStreamingProviderSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
@@ -308,9 +306,6 @@ fun HomeScreen(
                     HomeGradientTopBar(
                         onNavigationIconClick = {
                             navController.navigateSafely(Screen.Settings.route)
-                        },
-                        onMoreOptionsClick = {
-                            showChangelogBottomSheet = true
                         },
                         onStreamingClick = {
                               showStreamingProviderSheet = true
@@ -586,14 +581,6 @@ fun HomeScreen(
                     }
                 }
             )
-        }
-    }
-    if (showChangelogBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showChangelogBottomSheet = false },
-            sheetState = sheetState
-        ) {
-            ChangelogBottomSheet()
         }
     }
 }
