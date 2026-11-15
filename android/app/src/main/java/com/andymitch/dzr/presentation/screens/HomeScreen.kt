@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -155,6 +157,7 @@ fun HomeScreen(
     val yourMixSongs by libraryViewModel.yourMixSongs.collectAsState()
     val yourDiscovery by libraryViewModel.yourDiscovery.collectAsState()
     val recentlyPlayed by libraryViewModel.recentlyPlayed.collectAsState()
+    val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { libraryViewModel.refreshRecentlyPlayed() }
     
     val flowConfigs = flowConfigsState?.data?.included ?: emptyList()
@@ -286,24 +289,7 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                HomeGradientTopBar(
-                    onNavigationIconClick = {
-                        navController.navigateSafely(Screen.Settings.route)
-                    },
-                    onMoreOptionsClick = {
-                        showChangelogBottomSheet = true
-                    },
-                    onStreamingClick = {
-                          showStreamingProviderSheet = true
-                    },
-                    onMenuClick = {
-                        // onOpenSidebar() // Disabled
-                    },
-                    isScrolled = isScrolledPastThreshold.value
-                )
-            }
+            modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
 
             LazyColumn(
@@ -312,12 +298,35 @@ fun HomeScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
                 contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
+                    top = 0.dp,
                     bottom = paddingValuesParent.calculateBottomPadding()
                             + 38.dp + bottomPadding
                 ),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                item(key = "home_top_bar", contentType = "home_top_bar") {
+                    HomeGradientTopBar(
+                        onNavigationIconClick = {
+                            navController.navigateSafely(Screen.Settings.route)
+                        },
+                        onMoreOptionsClick = {
+                            showChangelogBottomSheet = true
+                        },
+                        onStreamingClick = {
+                              showStreamingProviderSheet = true
+                        },
+                        onMenuClick = {
+                            // onOpenSidebar() // Disabled
+                        },
+                        isScrolled = false,
+                    onSearchClick = if (navBarStyle == com.andymitch.dzr.data.preferences.NavBarStyle.NONE) {
+                        { navController.navigateSafely(Screen.Search.route) }
+                    } else null,
+                    onLibraryClick = if (navBarStyle == com.andymitch.dzr.data.preferences.NavBarStyle.NONE) {
+                        { navController.navigateSafely(Screen.Library.route) }
+                    } else null
+                    )
+                }
                 if (flowConfigs.isNotEmpty()) {
                     item(
                         key = "deezer_flow_header",
@@ -396,9 +405,11 @@ fun HomeScreen(
                                     id = mix.id,
                                     attributes = mix.attributes
                                 )
-                                DeezerHomePlaylistItem(playlist = playlist, onClick = {
-                                    navController.navigate(Screen.SmartTrackList.createRoute(mix.id))
-                                })
+                                DeezerHomePlaylistItem(
+                                    playlist = playlist,
+                                    artOverlay = mix.attributes?.title?.removePrefix("Inspired by ")?.trim(),
+                                    onClick = { navController.navigate(Screen.SmartTrackList.createRoute(mix.id)) }
+                                )
                             }
                         }
                     }
@@ -532,6 +543,13 @@ fun HomeScreen(
                 }
             }
         }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars)
+                .background(MaterialTheme.colorScheme.background)
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -944,20 +962,44 @@ fun DeezerHomeFlowConfigItem(config: com.andymitch.dzr.data.network.deezer.Deeze
 }
 
 @Composable
-fun DeezerHomePlaylistItem(playlist: DeezerPlaylist, onClick: () -> Unit) {
+fun DeezerHomePlaylistItem(playlist: DeezerPlaylist, artOverlay: String? = null, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(140.dp)
             .clickable { onClick() }
     ) {
-        AsyncImage(
-            model = playlist.attributes?.image?.medium ?: playlist.attributes?.image?.small,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(AbsoluteSmoothCornerShape(16.dp, 60))
-        )
+        Box(modifier = Modifier.size(140.dp).clip(AbsoluteSmoothCornerShape(16.dp, 60))) {
+            AsyncImage(
+                model = playlist.attributes?.image?.medium ?: playlist.attributes?.image?.small,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            if (artOverlay != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(70.dp)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "MIX",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black.copy(alpha = 0.55f)
+                    )
+                    Text(
+                        text = artOverlay,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black.copy(alpha = 0.85f),
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = playlist.attributes?.title ?: playlist.attributes?.name ?: "Unknown",

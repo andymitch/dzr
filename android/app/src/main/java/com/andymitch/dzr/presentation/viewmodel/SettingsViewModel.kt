@@ -504,6 +504,13 @@ class SettingsViewModel @Inject constructor(
     val appColor: StateFlow<String> = themePreferencesRepository.appColorFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.andymitch.dzr.data.preferences.AppColor.DYNAMIC)
 
+    val pureBlack: StateFlow<Boolean> = themePreferencesRepository.pureBlackFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setPureBlack(enabled: Boolean) {
+        viewModelScope.launch { themePreferencesRepository.setPureBlack(enabled) }
+    }
+
     fun setAppColor(color: String) {
         viewModelScope.launch { themePreferencesRepository.setAppColor(color) }
     }

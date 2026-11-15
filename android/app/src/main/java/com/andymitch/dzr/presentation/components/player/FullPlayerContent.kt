@@ -1556,7 +1556,29 @@ private fun SongMetadataDisplaySection(
                 }
             }
         } else {
-            // Portrait Mode: Just the Lyrics button (Queue is in TopBar)
+            // Portrait Mode: Track Mix and Lyrics buttons (Queue is in TopBar)
+            if (song?.contentUriString?.startsWith("deezer://") == true) {
+                val mixViewModel: com.andymitch.dzr.presentation.viewmodel.SongInfoBottomSheetViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+                val mixScope = androidx.compose.runtime.rememberCoroutineScope()
+                FilledIconButton(
+                    modifier = Modifier.size(width = 48.dp, height = 48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = chipColor,
+                        contentColor = chipContentColor
+                    ),
+                    onClick = {
+                        mixScope.launch {
+                            val mix = mixViewModel.trackMix(song)
+                            mix.firstOrNull()?.let { playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix") }
+                        }
+                    },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_all_inclusive_24),
+                        contentDescription = "Track Mix"
+                    )
+                }
+            }
             FilledIconButton(
                 modifier = Modifier
                     .size(width = 48.dp, height = 48.dp),

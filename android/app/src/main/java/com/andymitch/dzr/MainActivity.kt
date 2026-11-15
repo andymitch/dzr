@@ -1,5 +1,6 @@
 package com.andymitch.dzr
 
+import com.andymitch.dzr.ui.theme.pureBlack
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 // import androidx.compose.ui.platform.LocalView // No longer needed for this
@@ -206,21 +207,18 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val appColor by themePreferencesRepository.appColorFlow.collectAsStateWithLifecycle(initialValue = com.andymitch.dzr.data.preferences.AppColor.DYNAMIC)
-            val appColorScheme = remember(appColor) {
-                com.andymitch.dzr.data.preferences.AppColor.presets[appColor]?.let { argb ->
-                    val seed = androidx.compose.ui.graphics.Color(argb)
-                    val pair = com.andymitch.dzr.ui.theme.generateColorSchemeFromSeed(seed, com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle.VIBRANT)
-                    fun androidx.compose.material3.ColorScheme.vivid(container: androidx.compose.ui.graphics.Color, onContainer: androidx.compose.ui.graphics.Color) = copy(
-                        primary = seed, onPrimary = androidx.compose.ui.graphics.Color.White,
-                        tertiary = seed, onTertiary = androidx.compose.ui.graphics.Color.White,
-                        primaryContainer = container, onPrimaryContainer = onContainer,
-                        tertiaryContainer = container, onTertiaryContainer = onContainer
-                    )
-                    com.andymitch.dzr.presentation.viewmodel.ColorSchemePair(
-                        light = pair.light.vivid(androidx.compose.ui.graphics.lerp(seed, androidx.compose.ui.graphics.Color.White, 0.7f), androidx.compose.ui.graphics.Color.Black),
-                        dark = pair.dark.vivid(androidx.compose.ui.graphics.lerp(seed, androidx.compose.ui.graphics.Color.Black, 0.45f), androidx.compose.ui.graphics.Color.White)
-                    )
-                }
+            val pureBlack by themePreferencesRepository.pureBlackFlow.collectAsStateWithLifecycle(initialValue = false)
+            val themeContext = androidx.compose.ui.platform.LocalContext.current
+            val appColorScheme = remember(appColor, pureBlack) {
+                val base = com.andymitch.dzr.data.preferences.AppColor.presets[appColor]
+                    ?.let { com.andymitch.dzr.ui.theme.accentColorScheme(androidx.compose.ui.graphics.Color(it)) }
+                    ?: if (pureBlack && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        com.andymitch.dzr.presentation.viewmodel.ColorSchemePair(
+                            androidx.compose.material3.dynamicLightColorScheme(themeContext),
+                            androidx.compose.material3.dynamicDarkColorScheme(themeContext)
+                        )
+                    } else null
+                if (pureBlack && base != null) base.copy(dark = base.dark.pureBlack()) else base
             }
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
@@ -583,9 +581,12 @@ class MainActivity : ComponentActivity() {
                 Screen.WordDelimiterConfig.route
             )
         }
-        val shouldHideNavigationBar by remember(currentRoute, isSearchBarActive) {
+        val navBarStyleForVisibility by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
+        val shouldHideNavigationBar by remember(currentRoute, isSearchBarActive, navBarStyleForVisibility) {
             derivedStateOf {
-                if (currentRoute == Screen.Search.route && isSearchBarActive) {
+                if (navBarStyleForVisibility == NavBarStyle.NONE) {
+                    true
+                } else if (currentRoute == Screen.Search.route && isSearchBarActive) {
                     true
                 } else {
                     currentRoute?.let { route ->

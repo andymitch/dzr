@@ -103,6 +103,8 @@ fun HomeGradientTopBar(
     onStreamingClick: () -> Unit,
     onMenuClick: () -> Unit = {},
     isScrolled: Boolean = false,
+    onSearchClick: (() -> Unit)? = null,
+    onLibraryClick: (() -> Unit)? = null,
 ) {
     val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHighest
 
@@ -122,17 +124,24 @@ fun HomeGradientTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(end = 14.dp)
             ) {
-                FilledIconButton(
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    onClick = onMoreOptionsClick
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.round_newspaper_24),
-                        contentDescription = stringResource(R.string.presentation_batch_g_topbar_cd_changelog)
-                    )
+                val buttonColors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+                if (onSearchClick != null && onLibraryClick != null) {
+                    FilledIconButton(colors = buttonColors, onClick = onSearchClick) {
+                        Icon(painterResource(R.drawable.rounded_search_24), contentDescription = "Search")
+                    }
+                    FilledIconButton(colors = buttonColors, onClick = onLibraryClick) {
+                        Icon(painterResource(R.drawable.rounded_library_music_24), contentDescription = "Library")
+                    }
+                } else {
+                    FilledIconButton(colors = buttonColors, onClick = onMoreOptionsClick) {
+                        Icon(
+                            painter = painterResource(R.drawable.round_newspaper_24),
+                            contentDescription = stringResource(R.string.presentation_batch_g_topbar_cd_changelog)
+                        )
+                    }
                 }
                 FilledIconButton(
                     colors = IconButtonDefaults.filledIconButtonColors(

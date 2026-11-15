@@ -471,6 +471,7 @@ fun SettingsCategoryScreen(
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
                             val appColor by settingsViewModel.appColor.collectAsStateWithLifecycle()
+                            val pureBlack by settingsViewModel.pureBlack.collectAsStateWithLifecycle()
 
                             SettingsSubsection(title = stringResource(R.string.setcat_global_theme)) {
                                 ThemeSelectorItem(
@@ -487,11 +488,18 @@ fun SettingsCategoryScreen(
                                 )
                                 ThemeSelectorItem(
                                     label = "App color",
-                                    description = "Wallpaper colors, or a fixed accent for the whole app.",
+                                    description = "Wallpaper colors, or one accent over black and white.",
                                     options = linkedMapOf(com.andymitch.dzr.data.preferences.AppColor.DYNAMIC to "Wallpaper") +
                                         com.andymitch.dzr.data.preferences.AppColor.presets.keys.associateWith { it.replaceFirstChar(Char::uppercase) },
                                     selectedKey = appColor,
                                     onSelectionChanged = settingsViewModel::setAppColor,
+                                    leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) }
+                                )
+                                SwitchSettingItem(
+                                    title = "Pure black",
+                                    subtitle = "True black backgrounds in dark mode, for OLED screens.",
+                                    checked = pureBlack,
+                                    onCheckedChange = settingsViewModel::setPureBlack,
                                     leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) }
                                 )
                                 SwitchSettingItem(
@@ -548,7 +556,8 @@ fun SettingsCategoryScreen(
                                     description = stringResource(R.string.setcat_navbar_style_desc),
                                     options = mapOf(
                                         NavBarStyle.DEFAULT to stringResource(R.string.setcat_navbar_style_default),
-                                        NavBarStyle.FULL_WIDTH to stringResource(R.string.setcat_navbar_style_full_width)
+                                        NavBarStyle.FULL_WIDTH to stringResource(R.string.setcat_navbar_style_full_width),
+                                        NavBarStyle.NONE to "No nav bar (buttons in the Home header)"
                                     ),
                                     selectedKey = uiState.navBarStyle,
                                     onSelectionChanged = { settingsViewModel.setNavBarStyle(it) },

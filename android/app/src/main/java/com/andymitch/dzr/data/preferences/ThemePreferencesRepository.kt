@@ -20,7 +20,12 @@ class ThemePreferencesRepository @Inject constructor(
         val ALBUM_ART_COLOR_ACCURACY = intPreferencesKey("album_art_color_accuracy_v1")
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
         val APP_COLOR = stringPreferencesKey("app_color_v1")
+        val PURE_BLACK = androidx.datastore.preferences.core.booleanPreferencesKey("pure_black_v1")
     }
+
+    val pureBlackFlow: Flow<Boolean> = dataStore.data.map { it[Keys.PURE_BLACK] ?: false }
+
+    suspend fun setPureBlack(enabled: Boolean) = dataStore.edit { it[Keys.PURE_BLACK] = enabled }
 
     val appColorFlow: Flow<String> = dataStore.data.map { preferences ->
         preferences[Keys.APP_COLOR] ?: AppColor.DYNAMIC

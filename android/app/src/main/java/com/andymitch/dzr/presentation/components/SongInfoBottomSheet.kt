@@ -558,6 +558,21 @@ fun SongInfoBottomSheet(
                                                     Spacer(Modifier.width(14.dp))
                                                     Text("Track Mix")
                                                 }
+                                                FilledTonalButton(
+                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(top = 8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                                    shape = CircleShape,
+                                                    onClick = {
+                                                        scope.launch {
+                                                            val saved = songInfoViewModel.saveTrackMix(song)
+                                                            android.widget.Toast.makeText(context, if (saved) "Saved \"${song.title} Mix\" to your playlists" else "Couldn't save the mix", android.widget.Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                ) {
+                                                    Icon(painterResource(R.drawable.rounded_playlist_add_24), contentDescription = null)
+                                                    Spacer(Modifier.width(14.dp))
+                                                    Text("Save Track Mix as playlist")
+                                                }
                                             }
                                         }
 

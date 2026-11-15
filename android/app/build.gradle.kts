@@ -74,8 +74,8 @@ android {
         applicationId = "com.andymitch.dzr"
         minSdk = 30
         targetSdk = 37
-        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 3
-        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "0.3.0"
+        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 4
+        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "0.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
