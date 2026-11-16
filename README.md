@@ -70,11 +70,15 @@ Without it the release build is unsigned.
 
 ## Versions
 
-Releases are tagged `vX` for a big feature or a batch of small ones, `vX.Y` for fixes and small changes, and `vX-beta.N` (published as a GitHub pre-release) for betas. Both apps check GitHub for a newer release at launch; betas are only offered to someone already running a beta. Local builds without a version are `<latest tag>-dev` and skip the check.
+dzr is in beta, so every release is the next `v0.X`, fixes included. From v1 on, a big feature or a batch of small ones is the next `vX` and a fix or small change is `vX.Y`.
+
+Releases are cut by the Release workflow (Actions > Release > Run workflow). It tags the next version, builds the macOS zip and the signed Android APK, and publishes notes grouped by each closed issue's label. Commits name the issues they close (`Closes #25`) so they show up in the notes.
+
+Both apps check GitHub for a newer release at launch. Local builds are `<latest tag>-dev` and skip the check. To build a specific version locally:
 
 ```sh
-cd macos && VERSION=4.1 ./bundle.sh
-cd android && ./gradlew :app:assembleRelease -PAPP_VERSION_NAME=4.1 -PAPP_VERSION_CODE=5
+cd macos && VERSION=0.6 ./bundle.sh
+cd android && ./gradlew :app:assembleRelease -PAPP_VERSION_NAME=0.6 -PAPP_VERSION_CODE=6
 ```
 
 ## Credits
