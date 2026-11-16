@@ -1536,7 +1536,7 @@ private fun SongMetadataDisplaySection(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.rounded_lyrics_24),
+                        painter = painterResource(R.drawable.rounded_lyrics_mic_24),
                         contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics),
                         tint = chipContentColor
                     )
@@ -1565,6 +1565,20 @@ private fun SongMetadataDisplaySection(
             }
         } else {
             FilledIconButton(
+                modifier = Modifier
+                    .size(width = 48.dp, height = 48.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = chipColor,
+                    contentColor = chipContentColor
+                ),
+                onClick = onClickLyrics,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.rounded_lyrics_mic_24),
+                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
+                )
+            }
+            FilledIconButton(
                 modifier = Modifier.size(width = 48.dp, height = 48.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = chipColor,
@@ -1575,20 +1589,6 @@ private fun SongMetadataDisplaySection(
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "Song details"
-                )
-            }
-            FilledIconButton(
-                modifier = Modifier
-                    .size(width = 48.dp, height = 48.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = chipColor,
-                    contentColor = chipContentColor
-                ),
-                onClick = onClickLyrics,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.rounded_lyrics_24),
-                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
                 )
             }
         }

@@ -156,6 +156,7 @@ fun HomeScreen(
     val yourMixSongs by libraryViewModel.yourMixSongs.collectAsState()
     val yourDiscovery by libraryViewModel.yourDiscovery.collectAsState()
     val recentlyPlayed by libraryViewModel.recentlyPlayed.collectAsState()
+    val songMixSeeds by libraryViewModel.songMixSeeds.collectAsState()
     val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { libraryViewModel.refreshRecentlyPlayed() }
     
@@ -229,7 +230,6 @@ fun HomeScreen(
     // Bottom padding if there is a song playing
     val bottomPadding = if (currentSong != null) MiniPlayerHeight else 0.dp
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
-    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode)
 
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showStreamingProviderSheet by remember { mutableStateOf(false) }
@@ -380,6 +380,36 @@ fun HomeScreen(
                             }
                         }
                     )
+                }
+                if (songMixSeeds.isNotEmpty()) {
+                    item(key = "song_mix_list", contentType = "your_mix_list") {
+                        val mixScope = rememberCoroutineScope()
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        ) {
+                            itemsIndexed(songMixSeeds, key = { _, song -> "songmix_${song.id}" }) { _, song ->
+                                DeezerHomePlaylistItem(
+                                    playlist = com.andymitch.dzr.data.network.deezer.DeezerPlaylist(
+                                        id = "songmix_${song.id}",
+                                        attributes = com.andymitch.dzr.data.network.deezer.DeezerPlaylistAttributes(
+                                            title = "${song.title} Mix",
+                                            image = com.andymitch.dzr.data.network.deezer.DeezerImage(
+                                                medium = song.highResAlbumArtUriString ?: song.albumArtUriString
+                                            )
+                                        )
+                                    ),
+                                    onClick = {
+                                        mixScope.launch {
+                                            val mix = libraryViewModel.trackMix(song)
+                                            mix.firstOrNull()?.let { playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix") }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
                 item(
                     key = "your_mix_list",
@@ -545,24 +575,6 @@ fun HomeScreen(
                 .windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars)
                 .background(MaterialTheme.colorScheme.background)
         )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .height(bottomGradientHeight)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.0f to Color.Transparent,
-                            0.2f to Color.Transparent,
-                            0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
-                            1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
-                        )
-                    )
-                )
-        ) {
-
-        }
     }
     if (showOptionsBottomSheet) {
         ModalBottomSheet(

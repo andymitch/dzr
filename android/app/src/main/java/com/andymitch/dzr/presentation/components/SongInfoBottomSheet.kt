@@ -19,7 +19,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,6 +53,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -283,12 +284,18 @@ fun SongInfoBottomSheet(
         songInfoViewModel.getSongLocationInfo(song)
     }
 
+    val activity = androidx.activity.compose.LocalActivity.current as androidx.activity.ComponentActivity
+    val playerViewModel: com.andymitch.dzr.presentation.viewmodel.PlayerViewModel = hiltViewModel(activity)
+    val playingSongId by remember(playerViewModel) {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val isCurrentSong = playingSongId == song.id
+
     LaunchedEffect(song.id) {
         songInfoViewModel.loadAudioMeta(song)
         songInfoViewModel.loadArtistsForSong(song)
     }
 
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 2 })
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     ModalBottomSheet(
@@ -366,415 +373,282 @@ fun SongInfoBottomSheet(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Swipeable Content
-                    Box(
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .animateContentSize(
-                                animationSpec = tween(durationMillis = 280),
-                                alignment = Alignment.TopCenter
-                            )
+                            .navigationBarsPadding(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .wrapContentHeight()
-                                .fillMaxWidth(),
-                            verticalAlignment = Alignment.Top
-                        ) { page ->
-                            when (page) {
-                                0 -> { // Options / Actions
-                                    LazyColumn(
+                        if (!isCurrentSong) {
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    MediumExtendedFloatingActionButton(
                                         modifier = Modifier
-                                            .fillMaxWidth(),
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                            .weight(0.5f)
+                                            .fillMaxHeight(),
+                                        onClick = onPlaySong,
+                                        elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                                        shape = playButtonShape,
+                                        icon = {
+                                            Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.cd_play_song_action))
+                                        },
+                                        text = {
+                                            Text(
+                                                modifier = Modifier.padding(end = 10.dp),
+                                                text = stringResource(R.string.play_playback)
+                                            )
+                                        }
+                                    )
+
+                                    FilledIconButton(
+                                        modifier = Modifier
+                                            .weight(0.25f)
+                                            .fillMaxHeight(),
+                                        onClick = onToggleFavorite,
+                                        shape = favoriteButtonShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = favoriteButtonContainerColor,
+                                            contentColor = favoriteButtonContentColor
+                                        )
                                     ) {
-                                        item {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(IntrinsicSize.Min),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                MediumExtendedFloatingActionButton(
-                                                    modifier = Modifier
-                                                        .weight(0.5f)
-                                                        .fillMaxHeight(),
-                                                    onClick = onPlaySong,
-                                                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
-                                                    shape = playButtonShape,
-                                                    icon = {
-                                                        Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.cd_play_song_action))
-                                                    },
-                                                    text = {
-                                                        Text(
-                                                            modifier = Modifier.padding(end = 10.dp),
-                                                            text = stringResource(R.string.play_playback)
-                                                        )
-                                                    }
-                                                )
-
-                                                FilledIconButton(
-                                                    modifier = Modifier
-                                                        .weight(0.25f)
-                                                        .fillMaxHeight(),
-                                                    onClick = onToggleFavorite,
-                                                    shape = favoriteButtonShape,
-                                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                                        containerColor = favoriteButtonContainerColor,
-                                                        contentColor = favoriteButtonContentColor
-                                                    )
-                                                ) {
-                                                    Icon(
-                                                        modifier = Modifier.size(FloatingActionButtonDefaults.LargeIconSize),
-                                                        imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                                        contentDescription = stringResource(
-                                                            if (isFavorite) R.string.cd_remove_from_favorites else R.string.cd_add_to_favorites
-                                                        )
-                                                    )
-                                                }
-
-                                                FilledTonalIconButton(
-                                                    modifier = Modifier
-                                                        .weight(0.25f)
-                                                        .fillMaxHeight(),
-                                                    onClick = {
-                                                        try {
-                                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                                type = "audio/*"
-                                                                putExtra(Intent.EXTRA_STREAM, song.contentUriString.toUri())
-                                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                            }
-                                                            context.startActivity(
-                                                                Intent.createChooser(
-                                                                    shareIntent,
-                                                                    context.getString(R.string.song_info_share_chooser_title)
-                                                                )
-                                                            )
-                                                        } catch (e: Exception) {
-                                                            Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.error_share_song_format, e.localizedMessage ?: ""),
-                                                            Toast.LENGTH_LONG
-                                                        ).show()
-                                                        }
-                                                    },
-                                                    shape = CircleShape
-                                                ) {
-                                                    Icon(
-                                                        modifier = Modifier.size(FloatingActionButtonDefaults.LargeIconSize),
-                                                        imageVector = Icons.Rounded.Share,
-                                                        contentDescription = stringResource(R.string.cd_share_song_file)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        item {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(IntrinsicSize.Min),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                FilledTonalButton(
-                                                    modifier = Modifier
-                                                        .weight(0.6f)
-                                                        .heightIn(min = 66.dp),
-                                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                                                    ),
-                                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                                    shape = CircleShape,
-                                                    onClick = onAddToQueue
-                                                ) {
-                                                    Icon(
-                                                        Icons.AutoMirrored.Rounded.QueueMusic,
-                                                        contentDescription = stringResource(R.string.cd_add_to_queue)
-                                                    )
-                                                    Spacer(Modifier.width(14.dp))
-                                                    Text(stringResource(R.string.action_add_to_queue))
-                                                }
-                                                FilledTonalButton(
-                                                    modifier = Modifier
-                                                        .weight(0.4f)
-                                                        .heightIn(min = 66.dp),
-                                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                                        containerColor = MaterialTheme.colorScheme.tertiary,
-                                                        contentColor = MaterialTheme.colorScheme.onTertiary
-                                                    ),
-                                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                                    shape = CircleShape,
-                                                    onClick = onAddNextToQueue
-                                                ) {
-                                                    Icon(
-                                                        Icons.AutoMirrored.Filled.QueueMusic,
-                                                        contentDescription = stringResource(R.string.cd_play_next_in_queue)
-                                                    )
-                                                    Spacer(Modifier.width(8.dp))
-                                                    Text(stringResource(R.string.action_queue_next))
-                                                }
-                                            }
-                                        }
-                                        if (onRemoveFromPlaylist != null) {
-                                            item {
-                                                FilledTonalButton(
-                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 66.dp),
-                                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                                    shape = CircleShape,
-                                                    onClick = {
-                                                        onRemoveFromPlaylist()
-                                                        onDismiss()
-                                                    }
-                                                ) {
-                                                    Icon(painterResource(R.drawable.rounded_delete_24), contentDescription = null)
-                                                    Spacer(Modifier.width(14.dp))
-                                                    Text("Remove from playlist")
-                                                }
-                                            }
-                                        }
-                                        if (song.contentUriString.startsWith("deezer://")) {
-                                            item {
-                                                val activity = androidx.activity.compose.LocalActivity.current as androidx.activity.ComponentActivity
-                                                val playerViewModel: com.andymitch.dzr.presentation.viewmodel.PlayerViewModel = hiltViewModel(activity)
-                                                val scope = androidx.compose.runtime.rememberCoroutineScope()
-                                                FilledTonalButton(
-                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 66.dp),
-                                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                                    shape = CircleShape,
-                                                    onClick = {
-                                                        scope.launch {
-                                                            val mix = songInfoViewModel.trackMix(song)
-                                                            mix.firstOrNull()?.let {
-                                                                playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix")
-                                                                onDismiss()
-                                                            }
-                                                        }
-                                                    }
-                                                ) {
-                                                    Icon(painterResource(R.drawable.rounded_all_inclusive_24), contentDescription = null)
-                                                    Spacer(Modifier.width(14.dp))
-                                                    Text("Track Mix")
-                                                }
-                                                FilledTonalButton(
-                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(top = 8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                                    shape = CircleShape,
-                                                    onClick = {
-                                                        scope.launch {
-                                                            val saved = songInfoViewModel.saveTrackMix(song)
-                                                            android.widget.Toast.makeText(context, if (saved) "Saved \"${song.title} Mix\" to your playlists" else "Couldn't save the mix", android.widget.Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    }
-                                                ) {
-                                                    Icon(painterResource(R.drawable.rounded_playlist_add_24), contentDescription = null)
-                                                    Spacer(Modifier.width(14.dp))
-                                                    Text("Save Track Mix as playlist")
-                                                }
-                                                FilledTonalButton(
-                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(top = 8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                                    shape = CircleShape,
-                                                    onClick = {
-                                                        scope.launch {
-                                                            val banned = songInfoViewModel.banSong(song)
-                                                            if (banned) {
-                                                                playerViewModel.removeSongFromQueue(song.id)
-                                                                onDismiss()
-                                                            }
-                                                            android.widget.Toast.makeText(context, if (banned) "dzr won't play \"${song.title}\" again" else "Couldn't update Deezer", android.widget.Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    }
-                                                ) {
-                                                    Icon(Icons.Rounded.Block, contentDescription = null)
-                                                    Spacer(Modifier.width(14.dp))
-                                                    Text("Don't play this song")
-                                                }
-                                            }
-                                        }
-
-                                        item {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(IntrinsicSize.Min),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                FilledTonalButton(
-                                                    modifier = Modifier
-                                                        .weight(0.5f)
-                                                        .heightIn(min = 66.dp),
-                                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                                    ),
-                                                    shape = CircleShape,
-                                                    onClick = onAddToPlayList
-                                                ) {
-                                                    Icon(
-                                                        Icons.AutoMirrored.Rounded.PlaylistAdd,
-                                                        contentDescription = stringResource(R.string.cd_add_to_playlist)
-                                                    )
-                                                    Spacer(Modifier.width(8.dp))
-                                                    Text(stringResource(R.string.shortcut_playlist_short))
-                                                }
-
-                
-                                            }
-                                        }
-
-                                        item {
-                                            Spacer(Modifier.height(80.dp))
-                                        }
+                                        Icon(
+                                            modifier = Modifier.size(FloatingActionButtonDefaults.LargeIconSize),
+                                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                            contentDescription = stringResource(
+                                                if (isFavorite) R.string.cd_remove_from_favorites else R.string.cd_add_to_favorites
+                                            )
+                                        )
                                     }
                                 }
-                                1 -> { // Details / Info
-                                    LazyColumn(
+                            }
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    FilledTonalButton(
                                         modifier = Modifier
-                                            .fillMaxWidth(),
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            .weight(0.6f)
+                                            .heightIn(min = 66.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 0.dp),
+                                        shape = CircleShape,
+                                        onClick = onAddToQueue
                                     ) {
-                                        item {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(infoSegmentContainerShape),
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                SongInfoSegmentedListItem(
-                                                    headline = stringResource(R.string.song_info_label_duration),
-                                                    supporting = formatDuration(song.duration),
-                                                    icon = Icons.Rounded.Schedule,
-                                                    iconDescription = stringResource(R.string.cd_duration_icon),
-                                                    shape = infoSegmentItemShape,
-                                                )
-
-                                                if (!song.genre.isNullOrEmpty()) {
-                                                    SongInfoSegmentedListItem(
-                                                        headline = stringResource(R.string.song_field_genre),
-                                                        supporting = song.genre,
-                                                        icon = Icons.Rounded.MusicNote,
-                                                        iconDescription = stringResource(R.string.cd_genre_icon),
-                                                        shape = infoSegmentItemShape,
-                                                        onClick = onNavigateToGenre,
-                                                    )
-                                                }
-
-                                                SongInfoSegmentedListItem(
-                                                    headline = stringResource(R.string.song_field_album),
-                                                    supporting = song.album,
-                                                    icon = Icons.Rounded.Album,
-                                                    iconDescription = stringResource(R.string.cd_album_icon),
-                                                    shape = infoSegmentItemShape,
-                                                    onClick = onNavigateToAlbum,
-                                                )
-
-                                                SongInfoSegmentedListItem(
-                                                    headline = stringResource(R.string.song_field_artist),
-                                                    supporting = song.displayArtist,
-                                                    icon = Icons.Rounded.Person,
-                                                    iconDescription = stringResource(R.string.cd_artist_icon),
-                                                    shape = infoSegmentItemShape,
-                                                    onClick = {
-                                                        if (song.artists.size > 1) {
-                                                            showArtistPicker = true
-                                                        } else {
-                                                            onNavigateToArtist()
-                                                        }
-                                                    },
-                                                )
-
-                                                if (!audioMetaLabel.isNullOrEmpty()) {
-                                                    SongInfoSegmentedListItem(
-                                                        headline = stringResource(R.string.song_info_label_song_metadata),
-                                                        supporting = audioMetaLabel,
-                                                        icon = Icons.Rounded.Info,
-                                                        iconDescription = stringResource(R.string.cd_audio_format_icon),
-                                                        shape = infoSegmentItemShape,
-                                                    )
-                                                }
-
-                                            }
-                                        }
-                                        item {
-                                            Spacer(Modifier.height(80.dp))
-                                        }
+                                        Icon(
+                                            Icons.AutoMirrored.Rounded.QueueMusic,
+                                            contentDescription = stringResource(R.string.cd_add_to_queue)
+                                        )
+                                        Spacer(Modifier.width(14.dp))
+                                        Text(stringResource(R.string.action_add_to_queue))
+                                    }
+                                    FilledTonalButton(
+                                        modifier = Modifier
+                                            .weight(0.4f)
+                                            .heightIn(min = 66.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.tertiary,
+                                            contentColor = MaterialTheme.colorScheme.onTertiary
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 0.dp),
+                                        shape = CircleShape,
+                                        onClick = onAddNextToQueue
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.QueueMusic,
+                                            contentDescription = stringResource(R.string.cd_play_next_in_queue)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.action_queue_next))
                                     }
                                 }
                             }
                         }
-                    }
-                }
-
-                // Bottom Tab Bar
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .padding(5.dp),
-                    containerColor = Color.Transparent,
-                    divider = {},
-                    indicator = {}
-                ) {
-                    TabAnimation(
-                        index = 0,
-                        title = stringResource(R.string.song_info_tab_options),
-                        selectedIndex = pagerState.currentPage,
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(0)
+                        if (onRemoveFromPlaylist != null) {
+                            item {
+                                FilledTonalButton(
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 66.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    shape = CircleShape,
+                                    onClick = {
+                                        onRemoveFromPlaylist()
+                                        onDismiss()
+                                    }
+                                ) {
+                                    Icon(painterResource(R.drawable.rounded_delete_24), contentDescription = null)
+                                    Spacer(Modifier.width(14.dp))
+                                    Text("Remove from playlist")
+                                }
                             }
-                        },
-                        transformOrigin = TransformOrigin(0f, 0.5f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.Menu,
-                                contentDescription = stringResource(R.string.cd_options),
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                stringResource(R.string.song_info_tab_options_badge),
-                                fontFamily = RoundedSans,
-                                fontWeight = FontWeight.Bold,
-                            )
                         }
-                    }
-
-                    TabAnimation(
-                        index = 1,
-                        title = stringResource(R.string.song_info_tab_details),
-                        selectedIndex = pagerState.currentPage,
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(1)
+                        if (song.contentUriString.startsWith("deezer://")) {
+                            item {
+                                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                                FilledTonalButton(
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 66.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    shape = CircleShape,
+                                    onClick = {
+                                        scope.launch {
+                                            val mix = songInfoViewModel.trackMix(song)
+                                            mix.firstOrNull()?.let {
+                                                playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix")
+                                                onDismiss()
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Icon(painterResource(R.drawable.rounded_all_inclusive_24), contentDescription = null)
+                                    Spacer(Modifier.width(14.dp))
+                                    Text("Track Mix")
+                                }
+                                FilledTonalButton(
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(top = 8.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    shape = CircleShape,
+                                    onClick = {
+                                        scope.launch {
+                                            val saved = songInfoViewModel.saveTrackMix(song)
+                                            android.widget.Toast.makeText(context, if (saved) "Saved \"${song.title} Mix\" to your playlists" else "Couldn't save the mix", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                ) {
+                                    Icon(painterResource(R.drawable.rounded_playlist_add_24), contentDescription = null)
+                                    Spacer(Modifier.width(14.dp))
+                                    Text("Save Track Mix as playlist")
+                                }
                             }
-                        },
-                        transformOrigin = TransformOrigin(1f, 0.5f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.Info,
-                                contentDescription = stringResource(R.string.cd_details_tab),
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                stringResource(R.string.song_info_tab_info_badge),
-                                fontFamily = RoundedSans,
-                                fontWeight = FontWeight.Bold
-                            )
+                        }
+
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                FilledTonalButton(
+                                    modifier = Modifier
+                                        .weight(0.5f)
+                                        .heightIn(min = 66.dp),
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    shape = CircleShape,
+                                    onClick = onAddToPlayList
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Rounded.PlaylistAdd,
+                                        contentDescription = stringResource(R.string.cd_add_to_playlist)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.shortcut_playlist_short))
+                                }
+
+    
+                            }
+                        }
+
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(infoSegmentContainerShape),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                SongInfoSegmentedListItem(
+                                    headline = stringResource(R.string.song_info_label_duration),
+                                    supporting = formatDuration(song.duration),
+                                    icon = Icons.Rounded.Schedule,
+                                    iconDescription = stringResource(R.string.cd_duration_icon),
+                                    shape = infoSegmentItemShape,
+                                )
+
+                                if (!song.genre.isNullOrEmpty()) {
+                                    SongInfoSegmentedListItem(
+                                        headline = stringResource(R.string.song_field_genre),
+                                        supporting = song.genre,
+                                        icon = Icons.Rounded.MusicNote,
+                                        iconDescription = stringResource(R.string.cd_genre_icon),
+                                        shape = infoSegmentItemShape,
+                                        onClick = onNavigateToGenre,
+                                    )
+                                }
+
+                                SongInfoSegmentedListItem(
+                                    headline = stringResource(R.string.song_field_album),
+                                    supporting = song.album,
+                                    icon = Icons.Rounded.Album,
+                                    iconDescription = stringResource(R.string.cd_album_icon),
+                                    shape = infoSegmentItemShape,
+                                    onClick = onNavigateToAlbum,
+                                )
+
+                                SongInfoSegmentedListItem(
+                                    headline = stringResource(R.string.song_field_artist),
+                                    supporting = song.displayArtist,
+                                    icon = Icons.Rounded.Person,
+                                    iconDescription = stringResource(R.string.cd_artist_icon),
+                                    shape = infoSegmentItemShape,
+                                    onClick = {
+                                        if (song.artists.size > 1) {
+                                            showArtistPicker = true
+                                        } else {
+                                            onNavigateToArtist()
+                                        }
+                                    },
+                                )
+
+                                if (!audioMetaLabel.isNullOrEmpty()) {
+                                    SongInfoSegmentedListItem(
+                                        headline = stringResource(R.string.song_info_label_song_metadata),
+                                        supporting = audioMetaLabel,
+                                        icon = Icons.Rounded.Info,
+                                        iconDescription = stringResource(R.string.cd_audio_format_icon),
+                                        shape = infoSegmentItemShape,
+                                    )
+                                }
+
+                            }
+                        }
+                        if (song.contentUriString.startsWith("deezer://")) {
+                            item {
+                                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                                FilledTonalButton(
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    shape = CircleShape,
+                                    onClick = {
+                                        scope.launch {
+                                            val banned = songInfoViewModel.banSong(song)
+                                            if (banned) {
+                                                playerViewModel.removeSongFromQueue(song.id)
+                                                onDismiss()
+                                            }
+                                            android.widget.Toast.makeText(context, if (banned) "dzr won't play \"${song.title}\" again" else "Couldn't update Deezer", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Rounded.Block, contentDescription = null)
+                                    Spacer(Modifier.width(14.dp))
+                                    Text("Don't play this song")
+                                }
+                            }
                         }
                     }
                 }

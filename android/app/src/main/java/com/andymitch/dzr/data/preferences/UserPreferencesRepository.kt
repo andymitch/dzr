@@ -170,6 +170,7 @@ constructor(
         val RESUME_ON_HEADSET_RECONNECT = booleanPreferencesKey("resume_on_headset_reconnect")
         val SHOW_QUEUE_HISTORY = booleanPreferencesKey("show_queue_history")
         val PLAYBACK_QUEUE_SNAPSHOT = stringPreferencesKey("playback_queue_snapshot_v1")
+        val PLAYBACK_QUEUE_NAME = stringPreferencesKey("playback_queue_name")
         val FULL_PLAYER_SHOW_FILE_INFO = booleanPreferencesKey("full_player_show_file_info")
         val FULL_PLAYER_DELAY_ALL = booleanPreferencesKey("full_player_delay_all")
         val FULL_PLAYER_DELAY_ALBUM = booleanPreferencesKey("full_player_delay_album")
@@ -417,6 +418,13 @@ constructor(
 
     suspend fun getPlaybackQueueSnapshotOnce(): PlaybackQueueSnapshot? {
         return playbackQueueSnapshotFlow.first()
+    }
+
+    suspend fun getPlaybackQueueNameOnce(): String =
+        dataStore.data.first()[PreferencesKeys.PLAYBACK_QUEUE_NAME].orEmpty()
+
+    suspend fun setPlaybackQueueName(name: String) {
+        dataStore.edit { it[PreferencesKeys.PLAYBACK_QUEUE_NAME] = name }
     }
 
     suspend fun setPlaybackQueueSnapshot(snapshot: PlaybackQueueSnapshot?) {

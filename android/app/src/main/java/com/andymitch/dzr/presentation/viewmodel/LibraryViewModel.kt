@@ -50,6 +50,14 @@ class LibraryViewModel @Inject constructor(
     suspend fun history(): List<com.andymitch.dzr.data.model.Song> =
         deezerRepository.getHistory().map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }.distinctBy { it.id }
 
+    private val _songMixSeeds = kotlinx.coroutines.flow.MutableStateFlow<List<com.andymitch.dzr.data.model.Song>>(emptyList())
+    val songMixSeeds: kotlinx.coroutines.flow.StateFlow<List<com.andymitch.dzr.data.model.Song>> = _songMixSeeds
+
+    suspend fun trackMix(song: com.andymitch.dzr.data.model.Song): List<com.andymitch.dzr.data.model.Song> =
+        song.id.toLongOrNull()?.let { id ->
+            deezerRepository.getTrackMix(id).map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }
+        }.orEmpty()
+
     fun refreshRecentlyPlayed() {
         viewModelScope.launch { _recentlyPlayed.value = deezerRepository.getRecentlyPlayed() }
     }
@@ -79,6 +87,7 @@ class LibraryViewModel @Inject constructor(
             _yourMixes.value = mixes
         }
         refreshRecentlyPlayed()
+        viewModelScope.launch { _songMixSeeds.value = history().take(10) }
         viewModelScope.launch {
             val discovery = deezerRepository.getDiscoveryMix()?.data
             _yourDiscovery.value = discovery

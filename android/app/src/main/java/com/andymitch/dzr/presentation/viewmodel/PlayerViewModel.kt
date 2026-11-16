@@ -97,6 +97,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -1696,6 +1697,14 @@ class PlayerViewModel @Inject constructor(
 
         viewModelScope.launch {
             userPreferencesRepository.migrateTabOrder()
+        }
+
+        viewModelScope.launch {
+            val savedQueueName = userPreferencesRepository.getPlaybackQueueNameOnce()
+            _playerUiState.update { if (it.currentQueueSourceName.isBlank()) it.copy(currentQueueSourceName = savedQueueName) else it }
+            _playerUiState.map { it.currentQueueSourceName }.distinctUntilChanged().drop(1).collect {
+                userPreferencesRepository.setPlaybackQueueName(it)
+            }
         }
 
         viewModelScope.launch {

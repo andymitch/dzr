@@ -69,6 +69,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.andymitch.dzr.presentation.components.resolveMainScreenBottomGradientHeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.RectangleShape
@@ -855,6 +858,22 @@ class MainActivity : ComponentActivity() {
                                 userPreferencesRepository = userPreferencesRepository,
                                 onSearchBarActiveChange = { isSearchBarActive = it },
                                 onOpenSidebar = { scope.launch { drawerState.open() } }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.BottomCenter)
+                                    .height(resolveMainScreenBottomGradientHeight(navBarCompactMode))
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colorStops = arrayOf(
+                                                0.0f to Color.Transparent,
+                                                0.2f to Color.Transparent,
+                                                0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
+                                                1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
+                                            )
+                                        )
+                                    )
                             )
                         }
 

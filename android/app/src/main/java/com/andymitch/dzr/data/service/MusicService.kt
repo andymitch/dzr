@@ -1565,6 +1565,8 @@ class MusicService : MediaLibraryService() {
                     albumTitle = metadata.albumTitle?.toString(),
                     artworkUri = resolveStoredArtworkUriString(metadata),
                     durationMs = durationMs,
+                    artistId = metadata.extras?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_ARTIST_ID)?.takeIf { it > 0L },
+                    albumId = metadata.extras?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_ALBUM_ID)?.takeIf { it > 0L },
                 )
             )
         }
@@ -1716,6 +1718,8 @@ class MusicService : MediaLibraryService() {
             snapshotItem.durationMs?.takeIf { it > 0L }?.let {
                 putLong(MediaItemBuilder.EXTERNAL_EXTRA_DURATION, it)
             }
+            snapshotItem.artistId?.let { putLong(MediaItemBuilder.EXTERNAL_EXTRA_ARTIST_ID, it) }
+            snapshotItem.albumId?.let { putLong(MediaItemBuilder.EXTERNAL_EXTRA_ALBUM_ID, it) }
         }
         metadataBuilder.setExtras(extras)
 

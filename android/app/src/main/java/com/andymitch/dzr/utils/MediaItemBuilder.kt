@@ -96,6 +96,8 @@ object MediaItemBuilder {
     const val EXTERNAL_EXTRA_SAMPLE_RATE = EXTERNAL_EXTRA_PREFIX + "SAMPLE_RATE"
     const val EXTERNAL_EXTRA_FILE_PATH = EXTERNAL_EXTRA_PREFIX + "FILE_PATH"
     const val EXTERNAL_EXTRA_NAVIDROME_ID = EXTERNAL_EXTRA_PREFIX + "NAVIDROME_ID"
+    const val EXTERNAL_EXTRA_ARTIST_ID = EXTERNAL_EXTRA_PREFIX + "ARTIST_ID"
+    const val EXTERNAL_EXTRA_ALBUM_ID = EXTERNAL_EXTRA_PREFIX + "ALBUM_ID"
 
     fun build(song: Song): MediaItem {
         return MediaItem.Builder()
@@ -281,6 +283,8 @@ object MediaItemBuilder {
             putBoolean(EXTERNAL_EXTRA_FLAG, song.id.startsWith(EXTERNAL_MEDIA_ID_PREFIX))
             putString(EXTERNAL_EXTRA_ALBUM, song.album)
             putLong(EXTERNAL_EXTRA_DURATION, song.duration)
+            putLong(EXTERNAL_EXTRA_ARTIST_ID, song.artistId)
+            putLong(EXTERNAL_EXTRA_ALBUM_ID, song.albumId)
             putString(EXTERNAL_EXTRA_CONTENT_URI, song.contentUriString)
             (exposedArtworkUri?.toString() ?: song.albumArtUriString)?.let {
                 putString(EXTERNAL_EXTRA_ALBUM_ART, it)

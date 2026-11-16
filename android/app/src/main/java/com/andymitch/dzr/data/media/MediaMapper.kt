@@ -34,7 +34,7 @@ class MediaMapper @Inject constructor(
         val album = extras?.getString(MediaItemBuilder.EXTERNAL_EXTRA_ALBUM)?.takeIf { it.isNotBlank() }
             ?: metadata.albumTitle?.toString()?.takeIf { it.isNotBlank() }
             ?: context.getString(R.string.unknown_album)
-        val albumId = -1L
+        val albumId = extras?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_ALBUM_ID, -1L) ?: -1L
         val duration = extras?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_DURATION) ?: 0L
         val dateAdded = extras?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_DATE_ADDED) ?: System.currentTimeMillis()
         val filePath = extras?.getString(MediaItemBuilder.EXTERNAL_EXTRA_FILE_PATH)
@@ -53,7 +53,7 @@ class MediaMapper @Inject constructor(
             id = id,
             title = title,
             artist = artist,
-            artistId = -1L, // unknown from just MediaItem typically
+            artistId = extras?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_ARTIST_ID, -1L) ?: -1L,
             album = album,
             albumId = albumId,
             path = filePath,
