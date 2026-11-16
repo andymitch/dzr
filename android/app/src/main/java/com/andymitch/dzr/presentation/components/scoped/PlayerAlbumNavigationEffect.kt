@@ -6,7 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.navigation.NavHostController
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
+import com.andymitch.dzr.presentation.navigation.navigateFromPlayer
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.flow.collectLatest
 
@@ -23,10 +23,7 @@ internal fun PlayerAlbumNavigationEffect(
             sheetMotionController.snapCollapsed(latestSheetCollapsedTargetY)
             playerViewModel.collapsePlayerSheet()
 
-            navController.navigateSafelyReplacing(
-                route = Screen.AlbumDetail.createRoute(albumId),
-                patternToPop = Screen.AlbumDetail.route
-            )
+            navController.navigateFromPlayer(Screen.AlbumDetail.createRoute(albumId))
         }
     }
 }

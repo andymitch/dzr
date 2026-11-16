@@ -36,7 +36,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -740,7 +739,7 @@ fun YourMixHeader(
             )
         }
         // Play Button - color changes based on shuffle state
-        LargeExtendedFloatingActionButton(
+        androidx.compose.material3.LargeFloatingActionButton(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 12.dp),
@@ -761,7 +760,7 @@ fun YourMixHeader(
             Icon(
                 painter = painterResource(R.drawable.rounded_dice_24),
                 contentDescription = "Play a random mix",
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(72.dp)
             )
         }
     }

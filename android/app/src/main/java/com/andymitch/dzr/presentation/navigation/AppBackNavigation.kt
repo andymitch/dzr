@@ -3,6 +3,7 @@ package com.andymitch.dzr.presentation.navigation
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -15,7 +16,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
 @Composable
-fun ForegroundBackHandler(navController: NavHostController, enabled: Boolean) {
+fun AppBackNavigation(navController: NavHostController, enabled: Boolean, onReturnToPlayer: () -> Unit) {
     var foregroundEntryId by rememberSaveable { mutableStateOf<String?>(null) }
     DisposableEffect(navController) {
         val lifecycle = ProcessLifecycleOwner.get().lifecycle
@@ -34,9 +35,13 @@ fun ForegroundBackHandler(navController: NavHostController, enabled: Boolean) {
         onDispose { lifecycle.removeObserver(observer) }
     }
     val currentEntry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(currentEntry) {
+        if (currentEntry?.savedStateHandle?.remove<Boolean>(REOPEN_PLAYER_KEY) == true) onReturnToPlayer()
+    }
+    val atBottom = currentEntry != null && navController.previousBackStackEntry == null
     key(foregroundEntryId) {
         BackHandler(
-            enabled = enabled && currentEntry?.id == foregroundEntryId && currentEntry?.destination?.route != Screen.Home.route
+            enabled = enabled && (atBottom || currentEntry?.id == foregroundEntryId) && currentEntry?.destination?.route != Screen.Home.route
         ) {
             navController.navigateUpToHome()
         }

@@ -3,6 +3,7 @@
 package com.andymitch.dzr.presentation.screens
 
 import com.andymitch.dzr.presentation.navigation.navigateSafely
+import com.andymitch.dzr.presentation.navigation.navigateBack
 import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
 
 import android.os.Trace
@@ -641,7 +642,7 @@ fun LibraryScreen(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                 ),
-                                onClick = { navController.popBackStack() }
+                                onClick = { navController.navigateBack() }
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.rounded_arrow_back_24),

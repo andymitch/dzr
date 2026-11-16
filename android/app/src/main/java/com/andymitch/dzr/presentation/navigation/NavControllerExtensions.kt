@@ -32,6 +32,15 @@ fun NavController.navigateSafely(
     return true
 }
 
+const val REOPEN_PLAYER_KEY = "reopen_player"
+
+fun NavController.navigateFromPlayer(route: String) {
+    val from = currentBackStackEntry
+    if (navigateSafely(route) && currentBackStackEntry !== from) {
+        from?.savedStateHandle?.set(REOPEN_PLAYER_KEY, true)
+    }
+}
+
 fun NavController.navigateSafelyReplacing(
     route: String,
     patternToPop: String,
@@ -61,6 +70,10 @@ private val settingsChildRoutes = setOf(
     Screen.Equalizer.route,
     Screen.DeviceCapabilities.route
 )
+
+fun NavController.navigateBack() {
+    if (previousBackStackEntry != null) popBackStack() else navigateUpToHome()
+}
 
 fun NavController.navigateUpToHome() {
     if (currentDestination?.route in settingsChildRoutes) {

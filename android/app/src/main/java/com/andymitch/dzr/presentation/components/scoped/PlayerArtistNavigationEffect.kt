@@ -1,6 +1,6 @@
 package com.andymitch.dzr.presentation.components.scoped
 
-import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
+import com.andymitch.dzr.presentation.navigation.navigateFromPlayer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,10 +24,7 @@ internal fun PlayerArtistNavigationEffect(
             sheetMotionController.snapCollapsed(latestSheetCollapsedTargetY)
             playerViewModel.collapsePlayerSheet()
 
-            navController.navigateSafelyReplacing(
-                route = Screen.ArtistDetail.createRoute(artistId),
-                patternToPop = Screen.ArtistDetail.route
-            )
+            navController.navigateFromPlayer(Screen.ArtistDetail.createRoute(artistId))
         }
     }
 }

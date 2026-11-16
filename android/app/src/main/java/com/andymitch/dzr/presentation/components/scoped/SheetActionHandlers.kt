@@ -1,6 +1,6 @@
 package com.andymitch.dzr.presentation.components.scoped
 
-import com.andymitch.dzr.presentation.navigation.navigateSafely
+import com.andymitch.dzr.presentation.navigation.navigateFromPlayer
 
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
@@ -10,7 +10,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -82,11 +81,8 @@ internal fun rememberSheetActionHandlers(
             playerViewModelState.value.collapsePlayerSheet()
             queueSheetControllerState.value.animate(false)
             sheetModalOverlayControllerState.value.updateSelectedSongForInfo(null)
-            if (song.albumId != -1L) {
-                navController.navigateSafelyReplacing(
-                    route = Screen.AlbumDetail.createRoute(song.albumId),
-                    patternToPop = Screen.AlbumDetail.route
-                )
+            if (song.albumId > 0L) {
+                navController.navigateFromPlayer(Screen.AlbumDetail.createRoute(song.albumId))
             }
         }
     }
@@ -99,10 +95,7 @@ internal fun rememberSheetActionHandlers(
             queueSheetControllerState.value.animate(false)
             sheetModalOverlayControllerState.value.updateSelectedSongForInfo(null)
             if (song.artistId > 0L) {
-                navController.navigateSafelyReplacing(
-                    route = Screen.ArtistDetail.createRoute(song.artistId),
-                    patternToPop = Screen.ArtistDetail.route
-                )
+                navController.navigateFromPlayer(Screen.ArtistDetail.createRoute(song.artistId))
             }
         }
     }
@@ -116,10 +109,7 @@ internal fun rememberSheetActionHandlers(
             sheetModalOverlayControllerState.value.updateSelectedSongForInfo(null)
             if (!song.genre.isNullOrEmpty()) {
                 val encodedGenre = java.net.URLEncoder.encode(song.genre, "UTF-8")
-                navController.navigateSafelyReplacing(
-                    route = Screen.GenreDetail.createRoute(encodedGenre),
-                    patternToPop = Screen.GenreDetail.route
-                )
+                navController.navigateFromPlayer(Screen.GenreDetail.createRoute(encodedGenre))
             }
         }
     }

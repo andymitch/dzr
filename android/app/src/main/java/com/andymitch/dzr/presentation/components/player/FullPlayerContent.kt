@@ -108,6 +108,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -1527,49 +1529,24 @@ private fun SongMetadataDisplaySection(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (hasLyrics) {
+                val chips = buildList<Triple<Painter, String, () -> Unit>> {
+                    if (hasLyrics) add(Triple(painterResource(R.drawable.rounded_lyrics_mic_24), stringResource(R.string.presentation_batch_g_player_cd_lyrics), onClickLyrics))
+                    add(Triple(rememberVectorPainter(Icons.Rounded.MoreVert), "Song details", onClickInfo))
+                    add(Triple(painterResource(R.drawable.rounded_queue_music_24), stringResource(R.string.presentation_batch_g_player_cd_queue), onClickQueue))
+                }
+                chips.forEachIndexed { index, (icon, description, onClick) ->
+                    val start = if (index == 0) 50.dp else 6.dp
+                    val end = if (index == chips.lastIndex) 50.dp else 6.dp
                     Box(
                         modifier = Modifier
                             .size(height = 42.dp, width = 50.dp)
-                            .clip(
-                                RoundedCornerShape(
-                                    topStart = 50.dp,
-                                    topEnd = 6.dp,
-                                    bottomStart = 50.dp,
-                                    bottomEnd = 6.dp
-                                )
-                            )
+                            .clip(RoundedCornerShape(topStart = start, topEnd = end, bottomStart = start, bottomEnd = end))
                             .background(chipColor)
-                            .clickable { onClickLyrics() },
+                            .clickable { onClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.rounded_lyrics_mic_24),
-                            contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics),
-                            tint = chipContentColor
-                        )
+                        Icon(painter = icon, contentDescription = description, tint = chipContentColor)
                     }
-                }
-                Box(
-                    modifier = Modifier
-                        .size(height = 42.dp, width = 50.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = if (hasLyrics) 6.dp else 50.dp,
-                                topEnd = 50.dp,
-                                bottomStart = if (hasLyrics) 6.dp else 50.dp,
-                                bottomEnd = 50.dp
-                            )
-                        )
-                        .background(chipColor)
-                        .clickable { onClickQueue() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_queue_music_24),
-                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue),
-                        tint = chipContentColor
-                    )
                 }
             }
         } else {
