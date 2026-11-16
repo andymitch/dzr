@@ -37,12 +37,6 @@ class SongInfoBottomSheetViewModel @Inject constructor(
     private val deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository,
 ) : ViewModel() {
 
-    suspend fun saveTrackMix(song: Song): Boolean {
-        val id = song.id.toLongOrNull() ?: return false
-        val ids = deezerRepository.getTrackMix(id).map { it.id }
-        return ids.isNotEmpty() && deezerRepository.createPlaylist("${song.title} Mix", ids) != null
-    }
-
     suspend fun trackMix(song: Song): List<Song> =
         song.id.toLongOrNull()?.let { id ->
             deezerRepository.getTrackMix(id).map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }

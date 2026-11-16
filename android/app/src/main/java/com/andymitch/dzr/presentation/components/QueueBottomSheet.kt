@@ -1070,14 +1070,8 @@ fun QueueBottomSheet(
                                 onClick = {
                                     isFabExpanded = false
                                     val res = context.resources
-                                    val defaultName = if (currentQueueSourceName.isNotBlank()) {
-                                        res.getString(
-                                            R.string.presentation_batch_e_queue_named_suffix,
-                                            currentQueueSourceName
-                                        )
-                                    } else {
-                                        res.getString(R.string.presentation_batch_e_queue_current)
-                                    }
+                                    val defaultName = realQueueSourceName(currentQueueSourceName)
+                                        ?: res.getString(R.string.presentation_batch_e_queue_current)
                                     onRequestSaveAsPlaylist(
                                         queue,
                                         defaultName
@@ -1350,10 +1344,12 @@ private fun QueueHeader(
     }
 }
 
+internal fun realQueueSourceName(queueSourceName: String): String? =
+    queueSourceName.takeUnless { it.isBlank() || it == "None" || it == "Current Context" }
+
 @Composable
 internal fun queueSourceLabel(queueSourceName: String): String =
-    queueSourceName.takeUnless { it.isBlank() || it == "None" || it == "Current Context" }
-        ?: stringResource(R.string.presentation_batch_e_queue_source_fallback)
+    realQueueSourceName(queueSourceName) ?: stringResource(R.string.presentation_batch_e_queue_source_fallback)
 
 @Composable
 private fun QueueSourceBadge(

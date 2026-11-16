@@ -35,6 +35,13 @@ Android:
 - Three navigation styles, including one without a bottom bar
 - Save a Track Mix as a playlist
 
+## Known gaps
+
+dzr signs in with Deezer's TV login, which only reaches the API Deezer's TV and Cast apps use. A few things the official app does need its full account login, so dzr can't do them:
+
+- **Don't play this artist.** Songs can be banned ("Don't play this song"), but there's no artist ban on that API.
+- **Deezer's own song mixes on Home.** dzr builds song mixes from your recently played songs instead, using the same Track Mix Deezer plays.
+
 ## How it talks to Deezer
 
 Both apps sign in with Deezer's TV device login and use the endpoints Deezer's TV and Cast apps use:

@@ -494,61 +494,39 @@ fun SongInfoBottomSheet(
                                 }
                             }
                         }
-                        if (song.contentUriString.startsWith("deezer://")) {
-                            item {
-                                val scope = androidx.compose.runtime.rememberCoroutineScope()
-                                FilledTonalButton(
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 66.dp),
-                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                    shape = CircleShape,
-                                    onClick = {
-                                        scope.launch {
-                                            val mix = songInfoViewModel.trackMix(song)
-                                            mix.firstOrNull()?.let {
-                                                playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix")
-                                                onDismiss()
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Icon(painterResource(R.drawable.rounded_all_inclusive_24), contentDescription = null)
-                                    Spacer(Modifier.width(14.dp))
-                                    Text("Track Mix")
-                                }
-                                FilledTonalButton(
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(top = 8.dp),
-                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                    shape = CircleShape,
-                                    onClick = {
-                                        scope.launch {
-                                            val saved = songInfoViewModel.saveTrackMix(song)
-                                            android.widget.Toast.makeText(context, if (saved) "Saved \"${song.title} Mix\" to your playlists" else "Couldn't save the mix", android.widget.Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                ) {
-                                    Icon(painterResource(R.drawable.rounded_playlist_add_24), contentDescription = null)
-                                    Spacer(Modifier.width(14.dp))
-                                    Text("Save Track Mix as playlist")
-                                }
-                            }
-                        }
-
                         item {
+                            val scope = androidx.compose.runtime.rememberCoroutineScope()
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Min),
-                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
+                                if (song.contentUriString.startsWith("deezer://")) {
+                                    FilledTonalButton(
+                                        modifier = Modifier.weight(1f).heightIn(min = 66.dp),
+                                        contentPadding = PaddingValues(horizontal = 0.dp),
+                                        shape = CircleShape,
+                                        onClick = {
+                                            scope.launch {
+                                                val mix = songInfoViewModel.trackMix(song)
+                                                mix.firstOrNull()?.let {
+                                                    playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix")
+                                                    onDismiss()
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Icon(painterResource(R.drawable.rounded_all_inclusive_24), contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Track Mix")
+                                    }
+                                }
                                 FilledTonalButton(
-                                    modifier = Modifier
-                                        .weight(0.5f)
-                                        .heightIn(min = 66.dp),
+                                    modifier = Modifier.weight(1f).heightIn(min = 66.dp),
                                     colors = ButtonDefaults.filledTonalButtonColors(
                                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                                     ),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
                                     shape = CircleShape,
                                     onClick = onAddToPlayList
                                 ) {
@@ -559,11 +537,31 @@ fun SongInfoBottomSheet(
                                     Spacer(Modifier.width(8.dp))
                                     Text(stringResource(R.string.shortcut_playlist_short))
                                 }
-
-    
                             }
                         }
-
+                        if (song.contentUriString.startsWith("deezer://")) {
+                            item {
+                                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                                FilledTonalButton(
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    shape = CircleShape,
+                                    onClick = {
+                                        scope.launch {
+                                            val banned = songInfoViewModel.banSong(song)
+                                            if (banned) {
+                                                playerViewModel.removeSongFromQueue(song.id)
+                                                onDismiss()
+                                            }
+                                            android.widget.Toast.makeText(context, if (banned) "dzr won't play \"${song.title}\" again" else "Couldn't update Deezer", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Rounded.Block, contentDescription = null)
+                                    Spacer(Modifier.width(14.dp))
+                                    Text("Don't play this song")
+                                }
+                            }
                         item {
                             Column(
                                 modifier = Modifier
@@ -626,29 +624,6 @@ fun SongInfoBottomSheet(
 
                             }
                         }
-                        if (song.contentUriString.startsWith("deezer://")) {
-                            item {
-                                val scope = androidx.compose.runtime.rememberCoroutineScope()
-                                FilledTonalButton(
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                    shape = CircleShape,
-                                    onClick = {
-                                        scope.launch {
-                                            val banned = songInfoViewModel.banSong(song)
-                                            if (banned) {
-                                                playerViewModel.removeSongFromQueue(song.id)
-                                                onDismiss()
-                                            }
-                                            android.widget.Toast.makeText(context, if (banned) "dzr won't play \"${song.title}\" again" else "Couldn't update Deezer", android.widget.Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                ) {
-                                    Icon(Icons.Rounded.Block, contentDescription = null)
-                                    Spacer(Modifier.width(14.dp))
-                                    Text("Don't play this song")
-                                }
-                            }
                         }
                     }
                 }

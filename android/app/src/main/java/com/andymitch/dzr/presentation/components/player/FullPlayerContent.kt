@@ -337,6 +337,8 @@ fun FullPlayerContent(
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
 
+    val hasLyrics = lyricsProvider().let { !it?.synced.isNullOrEmpty() || !it?.plain.isNullOrEmpty() }
+
     val onLyricsClick = {
         val lyrics = lyricsProvider()
         if (lyrics?.synced.isNullOrEmpty() && lyrics?.plain.isNullOrEmpty()) {
@@ -586,6 +588,7 @@ fun FullPlayerContent(
             isLandscape = false,
             onLyricsClick = onLyricsClick,
             onInfoClick = { onShowSongInfo(song) },
+            hasLyrics = hasLyrics,
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
@@ -610,6 +613,7 @@ fun FullPlayerContent(
             isLandscape = true,
             onLyricsClick = onLyricsClick,
             onInfoClick = { onShowSongInfo(song) },
+            hasLyrics = hasLyrics,
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
@@ -1285,6 +1289,7 @@ private fun FullPlayerSongMetadataSection(
     isLandscape: Boolean,
     onLyricsClick: () -> Unit,
     onInfoClick: () -> Unit,
+    hasLyrics: Boolean,
     playerOnBaseColor: Color,
     playerViewModel: PlayerViewModel,
     gradientEdgeColor: Color,
@@ -1326,6 +1331,7 @@ private fun FullPlayerSongMetadataSection(
                 .padding(start = 0.dp),
             onClickLyrics = onLyricsClick,
             onClickInfo = onInfoClick,
+            hasLyrics = hasLyrics,
             song = song,
             currentSongArtists = currentSongArtists,
             expansionFractionProvider = expansionFractionProvider,
@@ -1435,6 +1441,7 @@ private fun SongMetadataDisplaySection(
     chipContentColor: Color,
     onClickLyrics: () -> Unit,
     onClickInfo: () -> Unit,
+    hasLyrics: Boolean,
     showQueueButton: Boolean,
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
@@ -1520,35 +1527,37 @@ private fun SongMetadataDisplaySection(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(height = 42.dp, width = 50.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 50.dp,
-                                topEnd = 6.dp,
-                                bottomStart = 50.dp,
-                                bottomEnd = 6.dp
+                if (hasLyrics) {
+                    Box(
+                        modifier = Modifier
+                            .size(height = 42.dp, width = 50.dp)
+                            .clip(
+                                RoundedCornerShape(
+                                    topStart = 50.dp,
+                                    topEnd = 6.dp,
+                                    bottomStart = 50.dp,
+                                    bottomEnd = 6.dp
+                                )
                             )
+                            .background(chipColor)
+                            .clickable { onClickLyrics() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.rounded_lyrics_mic_24),
+                            contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics),
+                            tint = chipContentColor
                         )
-                        .background(chipColor)
-                        .clickable { onClickLyrics() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_lyrics_mic_24),
-                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics),
-                        tint = chipContentColor
-                    )
+                    }
                 }
                 Box(
                     modifier = Modifier
                         .size(height = 42.dp, width = 50.dp)
                         .clip(
                             RoundedCornerShape(
-                                topStart = 6.dp,
+                                topStart = if (hasLyrics) 6.dp else 50.dp,
                                 topEnd = 50.dp,
-                                bottomStart = 6.dp,
+                                bottomStart = if (hasLyrics) 6.dp else 50.dp,
                                 bottomEnd = 50.dp
                             )
                         )
@@ -1564,19 +1573,21 @@ private fun SongMetadataDisplaySection(
                 }
             }
         } else {
-            FilledIconButton(
-                modifier = Modifier
-                    .size(width = 48.dp, height = 48.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = chipColor,
-                    contentColor = chipContentColor
-                ),
-                onClick = onClickLyrics,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.rounded_lyrics_mic_24),
-                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
-                )
+            if (hasLyrics) {
+                FilledIconButton(
+                    modifier = Modifier
+                        .size(width = 48.dp, height = 48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = chipColor,
+                        contentColor = chipContentColor
+                    ),
+                    onClick = onClickLyrics,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_lyrics_mic_24),
+                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_lyrics)
+                    )
+                }
             }
             FilledIconButton(
                 modifier = Modifier.size(width = 48.dp, height = 48.dp),
