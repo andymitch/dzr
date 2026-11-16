@@ -213,7 +213,7 @@ fun AppNavigation(
                         navController = navController,
                         playerViewModel = playerViewModel,
                         onNavigationIconClick = {
-                            navController.popBackStack()
+                            navController.navigateBack()
                         }
                     )
                 }
@@ -246,7 +246,7 @@ fun AppNavigation(
                             categoryId = categoryId,
                             navController = navController,
                             playerViewModel = playerViewModel,
-                            onBackClick = { navController.popBackStack() }
+                            onBackClick = { navController.navigateBack() }
                         )
                     }
                 }
@@ -261,7 +261,7 @@ fun AppNavigation(
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     PaletteStyleSettingsScreen(
                         playerViewModel = playerViewModel,
-                        onBackClick = { navController.popBackStack() }
+                        onBackClick = { navController.navigateBack() }
                     )
                 }
             }
@@ -276,7 +276,7 @@ fun AppNavigation(
                     ExperimentalSettingsScreen(
                         navController = navController,
                         playerViewModel = playerViewModel,
-                        onNavigationIconClick = { navController.popBackStack() }
+                        onNavigationIconClick = { navController.navigateBack() }
                     )
                 }
             }
@@ -356,8 +356,8 @@ fun AppNavigation(
                             autoPlay = autoPlay,
                             playerViewModel = playerViewModel,
                             playlistViewModel = playlistViewModel,
-                            onBackClick = { navController.popBackStack() },
-                            onDeletePlayListClick = { navController.popBackStack() },
+                            onBackClick = { navController.navigateBack() },
+                            onDeletePlayListClick = { navController.navigateBack() },
                             navController = navController
                         )
                     }
@@ -377,7 +377,7 @@ fun AppNavigation(
                         com.andymitch.dzr.presentation.screens.SmartTrackListScreen(
                             listType = listType,
                             playerViewModel = playerViewModel,
-                            onBackClick = { navController.popBackStack() },
+                            onBackClick = { navController.navigateBack() },
                             navController = navController
                         )
                     }
@@ -501,7 +501,7 @@ fun AppNavigation(
                     AboutScreen(
                         navController = navController,
                         viewModel = playerViewModel,
-                        onNavigationIconClick = { navController.popBackStack() }
+                        onNavigationIconClick = { navController.navigateBack() }
                     )
                 }
             }
@@ -515,7 +515,7 @@ fun AppNavigation(
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     EasterEggScreen(
                         viewModel = playerViewModel,
-                        onNavigationIconClick = { navController.popBackStack() },
+                        onNavigationIconClick = { navController.navigateBack() },
                     )
                 }
             }

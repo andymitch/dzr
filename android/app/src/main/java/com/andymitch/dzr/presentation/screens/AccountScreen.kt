@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -35,7 +37,7 @@ fun AccountScreen(
             TopAppBar(
                 title = { Text("Deezer Account") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 }

@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 import androidx.compose.animation.AnimatedVisibility
@@ -335,7 +337,7 @@ fun ArtistSettingsScreen(
             title = stringResource(R.string.setcat_artists_title),
             collapseFraction = collapseFraction,
             headerHeight = currentTopBarHeightDp,
-            onBackClick = { navController.popBackStack() },
+            onBackClick = { navController.navigateBack() },
             expandedTitleStartPadding = 20.dp
         )
     }

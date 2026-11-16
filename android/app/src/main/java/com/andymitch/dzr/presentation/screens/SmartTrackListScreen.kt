@@ -47,42 +47,29 @@ fun SmartTrackListScreen(
     navController: NavController,
     libraryViewModel: LibraryViewModel = hiltViewModel(LocalContext.current as ComponentActivity)
 ) {
-    val yourMixes by libraryViewModel.yourMixes.collectAsState()
     val yourDiscovery by libraryViewModel.yourDiscovery.collectAsState()
+    val myTop by libraryViewModel.myTop.collectAsState()
+    val newReleasesMix by libraryViewModel.newReleasesMix.collectAsState()
     val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
 
-    val mix = remember(listType, yourMixes) {
-        if (listType != "discovery") yourMixes.find { it.id == listType } else null
+    val homeMix = when (listType) {
+        "my_top" -> myTop
+        "new_releases" -> newReleasesMix
+        else -> null
     }
 
-    val songs = remember(listType, mix, yourDiscovery) {
-        if (listType == "discovery") {
-            yourDiscovery?.included?.filter { it.type == "track" }?.map { mapDeezerTrackToSong(it) } ?: emptyList()
-        } else {
-            mix?.included?.filter { it.type == "track" }?.map { mapDeezerTrackToSong(it) } ?: emptyList()
-        }
+    val songs = remember(listType, homeMix, yourDiscovery) {
+        homeMix?.songs
+            ?: yourDiscovery?.included?.filter { it.type == "track" }?.map { mapDeezerTrackToSong(it) }
+            ?: emptyList()
     }
 
-    val title = remember(listType, mix, yourDiscovery) {
-        if (listType == "discovery") {
-            "Your Discovery"
-        } else {
-            if (listType.startsWith("your_mix_")) {
-                val num = listType.substringAfterLast("_")
-                "Your Mix $num"
-            } else {
-                mix?.attributes?.title ?: mix?.attributes?.name ?: "Your Mix"
-            }
-        }
-    }
-    
-    val description = remember(listType, mix, yourDiscovery) {
-        if (listType == "discovery") {
-            yourDiscovery?.attributes?.title ?: yourDiscovery?.attributes?.description ?: "Based on your recent listening"
-        } else {
-            mix?.attributes?.title ?: mix?.attributes?.description ?: "A special mix inspired by your listening"
-        }
-    }
+    val title = homeMix?.title ?: "Your Discovery"
+
+    val description = homeMix?.featuring
+        ?: yourDiscovery?.attributes?.title
+        ?: yourDiscovery?.attributes?.description
+        ?: "Based on your recent listening"
 
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()

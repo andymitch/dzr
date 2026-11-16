@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -375,7 +377,7 @@ fun GenreDetailScreen(
                 title = genreDisplayName,
                 collapseFraction = collapseFraction,
                 headerHeight = currentTopBarHeightDp,
-                onBackPressed = { navController.popBackStack() },
+                onBackPressed = { navController.navigateBack() },
                 startColor = startColor,
                 contentColor = contentColor,
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,

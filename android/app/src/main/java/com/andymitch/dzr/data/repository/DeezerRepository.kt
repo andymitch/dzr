@@ -132,16 +132,6 @@ class DeezerRepository @Inject constructor(
         }
     }
 
-    suspend fun getInspiredByMix(index: Int): DeezerPlaylistDetailResponse? {
-        val auth = getAuthHeader() ?: return null
-        return try {
-            deezerApiService.getInspiredByMix(index, auth)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
     suspend fun getDiscoveryMix(): DeezerPlaylistDetailResponse? {
         val auth = getAuthHeader() ?: return null
         return try {
@@ -265,6 +255,41 @@ class DeezerRepository @Inject constructor(
     suspend fun getArtistRadio(artistId: Long): List<com.andymitch.dzr.data.network.deezer.DeezerTrack> {
         val token = getRawToken() ?: return emptyList()
         return runCatching { classicTracks(deezerApiService.getArtistRadio(artistId, token)) }.getOrDefault(emptyList())
+    }
+
+    data class Release(val id: String, val title: String, val artist: String, val cover: String?)
+
+    suspend fun getTopTracks(): List<com.andymitch.dzr.data.network.deezer.DeezerTrack> {
+        val token = getRawToken() ?: return emptyList()
+        return runCatching { classicTracks(deezerApiService.getTopTracks(token)) }.getOrDefault(emptyList())
+    }
+
+    suspend fun getRecommendedReleases(): List<Release> {
+        val token = getRawToken() ?: return emptyList()
+        return runCatching {
+            deezerApiService.getRecommendedReleases(token).getAsJsonArray("data").map { el ->
+                val o = el.asJsonObject
+                Release(
+                    id = o.get("id").asString,
+                    title = o.get("title")?.asString.orEmpty(),
+                    artist = o.getAsJsonObject("artist")?.get("name")?.asString.orEmpty(),
+                    cover = o.get("cover_xl")?.asString ?: o.get("cover_big")?.asString
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun getAlbumTracks(release: Release): List<com.andymitch.dzr.data.network.deezer.DeezerTrack> {
+        val token = getRawToken() ?: return emptyList()
+        return runCatching {
+            classicTracks(deezerApiService.getAlbumTracks(release.id, token)).map { track ->
+                track.copy(attributes = track.attributes?.copy(
+                    albumName = release.title,
+                    albumId = release.id.toLongOrNull(),
+                    image = DeezerImage(medium = release.cover, large = release.cover)
+                ))
+            }
+        }.getOrDefault(emptyList())
     }
 
     suspend fun getHistory(): List<com.andymitch.dzr.data.network.deezer.DeezerTrack> {

@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -85,8 +87,8 @@ fun NavBarCornerRadiusScreen(
     NavBarCornerRadiusContent(
         initialRadius = uiState.navBarCornerRadius.toFloat(),
         onRadiusChange = { settingsViewModel.setNavBarCornerRadius(it) },
-        onDone = { navController.popBackStack() },
-        onBack = { navController.popBackStack() },
+        onDone = { navController.navigateBack() },
+        onBack = { navController.navigateBack() },
         isFullWidth = isFullWidth,
         isCompactMode = uiState.navBarCompactMode
     )

@@ -4,10 +4,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -33,16 +33,38 @@ class LibraryViewModel @Inject constructor(
     private val _deezerRecommendedPlaylists = kotlinx.coroutines.flow.MutableStateFlow<com.andymitch.dzr.data.network.deezer.DeezerRecommendedPlaylistsResponse?>(null)
     val deezerRecommendedPlaylists: kotlinx.coroutines.flow.StateFlow<com.andymitch.dzr.data.network.deezer.DeezerRecommendedPlaylistsResponse?> = _deezerRecommendedPlaylists
 
-    private val _yourMixes = kotlinx.coroutines.flow.MutableStateFlow<List<com.andymitch.dzr.data.network.deezer.DeezerPlaylistDetailData>>(emptyList())
-    val yourMixes: kotlinx.coroutines.flow.StateFlow<List<com.andymitch.dzr.data.network.deezer.DeezerPlaylistDetailData>> = _yourMixes
+    data class HomeMix(
+        val id: String,
+        val title: String,
+        val featuring: String,
+        val covers: List<String>,
+        val songs: List<com.andymitch.dzr.data.model.Song>
+    )
 
-    val yourMixSongs: kotlinx.coroutines.flow.StateFlow<List<com.andymitch.dzr.data.model.Song>> = _yourMixes
-        .map { mixes ->
-            mixes.flatMap { mix -> 
-                mix.included.filter { it.type == "track" }.map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) } 
-            }.distinctBy { it.id }.take(50)
-        }
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Lazily, emptyList())
+    private fun homeMix(id: String, title: String, songs: List<com.andymitch.dzr.data.model.Song>) = HomeMix(
+        id = id,
+        title = title,
+        featuring = "Featuring " + songs.map { it.artist }.distinct().take(4).joinToString(", "),
+        covers = songs.mapNotNull { it.highResAlbumArtUriString ?: it.albumArtUriString }.distinct().take(3),
+        songs = songs
+    )
+
+    private val _myTop = kotlinx.coroutines.flow.MutableStateFlow<HomeMix?>(null)
+    val myTop: kotlinx.coroutines.flow.StateFlow<HomeMix?> = _myTop
+
+    private val _newReleases = kotlinx.coroutines.flow.MutableStateFlow<List<com.andymitch.dzr.data.repository.DeezerRepository.Release>>(emptyList())
+    val newReleases: kotlinx.coroutines.flow.StateFlow<List<com.andymitch.dzr.data.repository.DeezerRepository.Release>> = _newReleases
+
+    private val _newReleasesMix = kotlinx.coroutines.flow.MutableStateFlow<HomeMix?>(null)
+    val newReleasesMix: kotlinx.coroutines.flow.StateFlow<HomeMix?> = _newReleasesMix
+
+    suspend fun playlistSongs(playlistId: String): List<com.andymitch.dzr.data.model.Song> =
+        deezerRepository.getPlaylistTracks(playlistId)?.data?.included.orEmpty()
+            .filter { it.type == "track" }
+            .map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }
+
+    suspend fun albumSongs(release: com.andymitch.dzr.data.repository.DeezerRepository.Release): List<com.andymitch.dzr.data.model.Song> =
+        deezerRepository.getAlbumTracks(release).map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }
 
     private val _recentlyPlayed = kotlinx.coroutines.flow.MutableStateFlow<List<Pair<String, com.andymitch.dzr.data.network.deezer.DeezerPlaylist>>>(emptyList())
     val recentlyPlayed: kotlinx.coroutines.flow.StateFlow<List<Pair<String, com.andymitch.dzr.data.network.deezer.DeezerPlaylist>>> = _recentlyPlayed
@@ -75,16 +97,19 @@ class LibraryViewModel @Inject constructor(
             _deezerRecommendedPlaylists.value = playlists
         }
         viewModelScope.launch {
-            val mixes = mutableListOf<com.andymitch.dzr.data.network.deezer.DeezerPlaylistDetailData>()
-            for (i in 1..5) {
-                val mix = deezerRepository.getInspiredByMix(i)?.data
-                if (mix != null && mix.included.isNotEmpty()) {
-                    val featuring = mix.attributes?.title.orEmpty()
-                    val lead = featuring.removePrefix("Featuring ").substringBefore(",").trim()
-                    mixes.add(mix.copy(id = "your_mix_$i", attributes = mix.attributes?.copy(title = "Inspired by $lead", description = featuring)))
-                }
+            val top = deezerRepository.getTopTracks().map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }
+            if (top.isNotEmpty()) {
+                val month = java.time.LocalDate.now().month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+                _myTop.value = homeMix("my_top", "My Top $month", top)
             }
-            _yourMixes.value = mixes
+        }
+        viewModelScope.launch {
+            val releases = deezerRepository.getRecommendedReleases()
+            _newReleases.value = releases
+            val firstTracks = kotlinx.coroutines.coroutineScope {
+                releases.take(20).map { release -> async { albumSongs(release).firstOrNull() } }.awaitAll()
+            }.filterNotNull()
+            if (firstTracks.isNotEmpty()) _newReleasesMix.value = homeMix("new_releases", "New releases for you", firstTracks)
         }
         refreshRecentlyPlayed()
         viewModelScope.launch { _songMixSeeds.value = history().take(10) }

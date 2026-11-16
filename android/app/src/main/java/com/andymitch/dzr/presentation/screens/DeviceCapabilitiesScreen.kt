@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import android.text.format.Formatter
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
@@ -185,7 +187,7 @@ fun DeviceCapabilitiesScreen(
             title = stringResource(R.string.settings_category_device_capabilities_title),
             collapseFraction = collapseFraction,
             headerHeight = currentTopBarHeightDp,
-            onBackClick = { navController.popBackStack() },
+            onBackClick = { navController.navigateBack() },
             expandedTitleStartPadding = 20.dp,
             collapsedTitleStartPadding = 68.dp,
             maxLines = 2

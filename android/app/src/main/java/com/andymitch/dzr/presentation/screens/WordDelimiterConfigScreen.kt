@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import android.widget.Toast
 import androidx.compose.ui.res.stringResource
 import com.andymitch.dzr.R
@@ -354,7 +356,7 @@ fun WordDelimiterConfigScreen(
             title = stringResource(R.string.word_delimiters_screen_title),
             collapseFraction = collapseFraction,
             headerHeight = currentTopBarHeightDp,
-            onBackClick = { navController.popBackStack() },
+            onBackClick = { navController.navigateBack() },
             actions = {
                 Box(
                     modifier = Modifier

@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -378,7 +380,7 @@ fun EqualizerScreen(
             title = stringResource(R.string.settings_category_equalizer_title),
             collapseFraction = collapseFraction,
             headerHeight = currentTopBarHeightDp,
-            onBackClick = { navController.popBackStack() },
+            onBackClick = { navController.navigateBack() },
             expandedTitleStartPadding = 20.dp,
             collapsedTitleStartPadding = 72.dp,
             actions = {

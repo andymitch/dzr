@@ -2,6 +2,8 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -634,7 +636,7 @@ fun ArtistDetailScreen(
                             headerImageRequestSize = headerImageRequestSize,
                             isLiked = uiState.isLiked,
                             onLikeClick = { viewModel.toggleArtistLike() },
-                            onBackPressed = { navController.popBackStack() },
+                            onBackPressed = { navController.navigateBack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
                                     playerViewModel.playSongsShuffled(
@@ -662,7 +664,7 @@ fun ArtistDetailScreen(
                             headerImageRequestSize = headerImageRequestSize,
                             isLiked = uiState.isLiked,
                             onLikeClick = { viewModel.toggleArtistLike() },
-                            onBackPressed = { navController.popBackStack() },
+                            onBackPressed = { navController.navigateBack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
                                     playerViewModel.playSongsShuffled(

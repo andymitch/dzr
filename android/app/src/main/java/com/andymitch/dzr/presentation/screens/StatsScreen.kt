@@ -2,6 +2,8 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -354,7 +356,7 @@ fun StatsScreen(
                         title = stringResource(R.string.presentation_batch_g_stats_title),
                         collapseFraction = collapseFraction,
                         headerHeight = currentTopBarHeightDp,
-                        onBackClick = { navController.popBackStack() },
+                        onBackClick = { navController.navigateBack() },
                         containerColor = Color.Transparent,
                         actions = {
                             FilledIconButton(

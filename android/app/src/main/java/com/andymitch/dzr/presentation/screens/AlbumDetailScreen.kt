@@ -2,6 +2,8 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
 
@@ -397,7 +399,7 @@ fun AlbumDetailScreen(
                                     headerArtworkLoaded = true
                                 }
                             },
-                            onBackPressed = { navController.popBackStack() },
+                            onBackPressed = { navController.navigateBack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
                                     playerViewModel.playSongsShuffled(songs, queueName = album.title, startAtZero = true)
@@ -419,7 +421,7 @@ fun AlbumDetailScreen(
                                     headerArtworkLoaded = true
                                 }
                             },
-                            onBackPressed = { navController.popBackStack() },
+                            onBackPressed = { navController.navigateBack() },
                             onPlayClick = {
                                 if (songs.isNotEmpty()) {
                                     playerViewModel.playSongsShuffled(songs, queueName = album.title, startAtZero = true)

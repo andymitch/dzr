@@ -76,6 +76,7 @@ fun NavController.navigateBack() {
 }
 
 fun NavController.navigateUpToHome() {
+    if (currentDestination?.route == Screen.Home.route) return
     if (currentDestination?.route in settingsChildRoutes) {
         navigate(Screen.Settings.route) {
             popUpTo(Screen.Home.route)

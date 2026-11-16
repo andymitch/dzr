@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -151,8 +153,9 @@ fun HomeScreen(
 
     val flowConfigsState by libraryViewModel.deezerFlowConfigs.collectAsState()
     val playlists by libraryViewModel.deezerRecommendedPlaylists.collectAsState()
-    val yourMixes by libraryViewModel.yourMixes.collectAsState()
-    val yourMixSongs by libraryViewModel.yourMixSongs.collectAsState()
+    val myTop by libraryViewModel.myTop.collectAsState()
+    val newReleases by libraryViewModel.newReleases.collectAsState()
+    val newReleasesMix by libraryViewModel.newReleasesMix.collectAsState()
     val yourDiscovery by libraryViewModel.yourDiscovery.collectAsState()
     val recentlyPlayed by libraryViewModel.recentlyPlayed.collectAsState()
     val songMixSeeds by libraryViewModel.songMixSeeds.collectAsState()
@@ -211,7 +214,7 @@ fun HomeScreen(
     }
 
     ReportDrawnWhen {
-        yourMixes.isNotEmpty() || isBenchmarkMode
+        songMixSeeds.isNotEmpty() || isBenchmarkMode
     }
 
     // 2) Observe only the currentSong (or null) to know whether to show padding
@@ -266,7 +269,7 @@ fun HomeScreen(
 
     LaunchedEffect(
         needsScrollRestore,
-        yourMixes.isNotEmpty(),
+        songMixSeeds.isNotEmpty(),
         yourDiscovery != null,
         recentlyPlayedSongs.size,
         homeStatsOverview
@@ -366,74 +369,83 @@ fun HomeScreen(
                         song = "Today, we made for you",
                         isShuffleEnabled = isShuffleEnabled,
                         onPlayShuffled = {
-                            if (yourMixes.isNotEmpty()) {
-                                val randomMix = yourMixes.random()
-                                val randomMixTracks = randomMix.included.map { mapDeezerTrackToSong(it) }
-                                if (randomMixTracks.isNotEmpty()) {
-                                    playerViewModel.playSongsShuffled(
-                                        songsToPlay = randomMixTracks.toImmutableList(),
-                                        queueName = randomMix.attributes?.title ?: randomMix.attributes?.name ?: "Your Mix",
-                                        startAtZero = true
-                                    )
+                            val discoverySongs = yourDiscovery?.included?.filter { it.type == "track" }?.map { mapDeezerTrackToSong(it) }.orEmpty()
+                            val choices = buildList<Pair<String, suspend () -> List<Song>>> {
+                                songMixSeeds.forEach { seed -> add("${seed.title} Mix" to { libraryViewModel.trackMix(seed) }) }
+                                if (discoverySongs.isNotEmpty()) add("Your Discovery" to { discoverySongs })
+                                listOfNotNull(myTop, newReleasesMix).forEach { mix -> add(mix.title to { mix.songs }) }
+                                flowConfigs.forEach { config ->
+                                    val url = config.links?.self ?: return@forEach
+                                    add((config.attributes?.title ?: "Flow") to {
+                                        libraryViewModel.getMultiFlowTracks(url)?.data?.included.orEmpty()
+                                            .filter { it.type == "track" }.map { mapDeezerTrackToSong(it) }
+                                    })
+                                }
+                                recommendedPlaylists.forEach { playlist ->
+                                    add((playlist.attributes?.title ?: playlist.attributes?.name ?: "Playlist") to { libraryViewModel.playlistSongs(playlist.id) })
+                                }
+                                recentlyPlayed.filter { it.first == "playlist" }.forEach { (_, playlist) ->
+                                    add((playlist.attributes?.title ?: playlist.attributes?.name ?: "Playlist") to { libraryViewModel.playlistSongs(playlist.id) })
+                                }
+                            }
+                            choices.randomOrNull()?.let { (name, load) ->
+                                coroutineScope.launch {
+                                    val songs = load()
+                                    songs.firstOrNull()?.let { playerViewModel.playSongs(songs, it, queueName = name) }
                                 }
                             }
                         }
                     )
                 }
                 if (songMixSeeds.isNotEmpty()) {
-                    item(key = "song_mix_list", contentType = "your_mix_list") {
-                        val mixScope = rememberCoroutineScope()
-                        LazyRow(
+                    item(key = "song_mixes_header", contentType = "deezer_playlists_header") {
+                        HomeSectionTitle("Mixes inspired by...")
+                    }
+                    item(key = "song_mixes", contentType = "song_mixes") {
+                        androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
+                            rows = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.height(64.dp * 3 + 24.dp)
                         ) {
-                            itemsIndexed(songMixSeeds, key = { _, song -> "songmix_${song.id}" }) { _, song ->
-                                DeezerHomePlaylistItem(
-                                    playlist = com.andymitch.dzr.data.network.deezer.DeezerPlaylist(
-                                        id = "songmix_${song.id}",
-                                        attributes = com.andymitch.dzr.data.network.deezer.DeezerPlaylistAttributes(
-                                            title = "${song.title} Mix",
-                                            image = com.andymitch.dzr.data.network.deezer.DeezerImage(
-                                                medium = song.highResAlbumArtUriString ?: song.albumArtUriString
-                                            )
-                                        )
-                                    ),
-                                    onClick = {
-                                        mixScope.launch {
-                                            val mix = libraryViewModel.trackMix(song)
-                                            mix.firstOrNull()?.let { playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix") }
+                            items(count = songMixSeeds.size, key = { "songmix_${songMixSeeds[it].id}" }) { index ->
+                                val song = songMixSeeds[index]
+                                SongMixRow(song = song, onClick = {
+                                    coroutineScope.launch {
+                                        val mix = libraryViewModel.trackMix(song)
+                                        mix.firstOrNull()?.let {
+                                            playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix")
+                                            playerViewModel.expandPlayerSheet()
                                         }
                                     }
-                                )
+                                })
                             }
                         }
                     }
                 }
-                item(
-                    key = "your_mix_list",
-                    contentType = "your_mix_list"
-                ) {
-                    if (yourMixes.isEmpty()) {
-                        // Show a loading indicator or placeholder if needed, or just keep it empty height
-                        Box(modifier = Modifier.fillMaxWidth().height(140.dp).padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
+
+                val discoveryCovers = yourDiscovery?.included.orEmpty().mapNotNull { it.attributes?.image?.large ?: it.attributes?.image?.medium }.distinct().take(3)
+                if (newReleases.isNotEmpty()) {
+                    item(key = "new_releases_header", contentType = "deezer_playlists_header") {
+                        HomeSectionTitle("New releases for you")
+                    }
+                    item(key = "new_releases", contentType = "deezer_playlists_list") {
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            itemsIndexed(yourMixes, key = { index, _ -> "yourmix_$index" }) { _, mix ->
-                                val playlist = com.andymitch.dzr.data.network.deezer.DeezerPlaylist(
-                                    id = mix.id,
-                                    attributes = mix.attributes
-                                )
-                                DeezerHomePlaylistItem(
-                                    playlist = playlist,
-                                    artOverlay = mix.attributes?.title?.removePrefix("Inspired by ")?.trim(),
-                                    onClick = { navController.navigate(Screen.SmartTrackList.createRoute(mix.id)) }
-                                )
+                            newReleasesMix?.let { mix ->
+                                item {
+                                    HomeCard(subtitle = mix.featuring, onClick = { navController.navigateSafely(Screen.SmartTrackList.createRoute("new_releases")) }) {
+                                        MixArt(label = "New releases", covers = mix.covers)
+                                    }
+                                }
+                            }
+                            items(newReleases, key = { "release_${it.id}" }) { release ->
+                                HomeCard(title = release.title, subtitle = release.artist, onClick = { navController.navigateSafely(Screen.AlbumDetail.createRoute(release.id)) }) {
+                                    AsyncImage(model = release.cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                }
                             }
                         }
                     }
@@ -465,7 +477,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (recommendedPlaylists.isNotEmpty()) {
+                if (recommendedPlaylists.isNotEmpty() || yourDiscovery != null || myTop != null) {
                     item(
                         key = "deezer_playlists_header",
                         contentType = "deezer_playlists_header"
@@ -484,47 +496,26 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            yourDiscovery?.let {
+                                item {
+                                    HomeCard(title = "Discovery", subtitle = null, size = 140.dp, onClick = { navController.navigateSafely(Screen.SmartTrackList.createRoute("discovery")) }) {
+                                        MixArt(label = "Discovery", covers = discoveryCovers)
+                                    }
+                                }
+                            }
+                            myTop?.let { mix ->
+                                item {
+                                    HomeCard(title = mix.title, subtitle = null, size = 140.dp, onClick = { navController.navigateSafely(Screen.SmartTrackList.createRoute("my_top")) }) {
+                                        MixArt(label = mix.title, covers = mix.covers)
+                                    }
+                                }
+                            }
                             itemsIndexed(recommendedPlaylists, key = { index, _ -> "recommended_$index" }) { _, playlist ->
                                 DeezerHomePlaylistItem(playlist = playlist, onClick = {
                                     navController.navigate(Screen.PlaylistDetail.createRoute("deezer_${playlist.id}"))
                                 })
                             }
                         }
-                    }
-                }
-
-                val discoveryTracks = yourDiscovery?.included?.map { mapDeezerTrackToSong(it) } ?: emptyList()
-                if (discoveryTracks.isNotEmpty()) {
-                    item(
-                        key = "your_discovery_section",
-                        contentType = "your_discovery_section"
-                    ) {
-                        DailyMixSection(
-                            songs = discoveryTracks.toImmutableList(),
-                            title = "Your Discovery",
-                            subtitle = yourDiscovery?.attributes?.description ?: "Based on your recent listening",
-                            onClickOpen = {
-                                navController.navigate(Screen.SmartTrackList.createRoute("discovery"))
-                            },
-                            onNavigateToAlbum = { song ->
-                                navController.navigateSafelyReplacing(
-                                    route = Screen.AlbumDetail.createRoute(song.albumId),
-                                    patternToPop = Screen.AlbumDetail.route
-                                )
-                            },
-                            onNavigateToArtist = { song ->
-                                navController.navigateSafelyReplacing(
-                                    route = Screen.ArtistDetail.createRoute(song.artistId),
-                                    patternToPop = Screen.ArtistDetail.route
-                                )
-                            },
-                            onNavigateToGenre = { song ->
-                                song.genre?.let {
-                                    navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
-                                }
-                            },
-                            playerViewModel = playerViewModel
-                        )
                     }
                 }
 
@@ -571,8 +562,16 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars)
-                .background(MaterialTheme.colorScheme.background)
+                .height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 32.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to MaterialTheme.colorScheme.background,
+                            0.45f to MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
+                            1.0f to Color.Transparent
+                        )
+                    )
+                )
         )
     }
     if (showOptionsBottomSheet) {
@@ -1007,5 +1006,69 @@ fun DeezerHomePlaylistItem(playlist: DeezerPlaylist, artOverlay: String? = null,
             minLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun HomeSectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun SongMixRow(song: Song, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .width(300.dp)
+            .height(64.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = song.highResAlbumArtUriString ?: song.albumArtUriString,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(64.dp)
+        )
+        Column(modifier = Modifier.padding(horizontal = 14.dp)) {
+            Text(song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun HomeCard(title: String? = null, subtitle: String?, size: Dp = 160.dp, onClick: () -> Unit, art: @Composable () -> Unit) {
+    Column(modifier = Modifier.width(size).clickable(onClick = onClick)) {
+        Box(modifier = Modifier.size(size).clip(RoundedCornerShape(16.dp))) { art() }
+        Spacer(modifier = Modifier.height(8.dp))
+        title?.let { Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+        subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+    }
+}
+
+@Composable
+private fun MixArt(label: String, covers: List<String>) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
+        Text(
+            text = label.uppercase(),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Black,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 2,
+            lineHeight = 19.sp,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 10.dp)
+        )
+        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            covers.take(2).forEach { cover ->
+                AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.weight(1f).fillMaxSize())
+            }
+        }
     }
 }

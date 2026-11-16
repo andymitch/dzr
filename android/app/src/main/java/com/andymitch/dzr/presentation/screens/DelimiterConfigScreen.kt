@@ -1,3 +1,4 @@
+import com.andymitch.dzr.presentation.navigation.navigateBack
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -359,7 +360,7 @@ fun DelimiterConfigScreen(
             title = stringResource(R.string.path_delimiters_toolbar_title),
             collapseFraction = collapseFraction,
             headerHeight = currentTopBarHeightDp,
-            onBackClick = { navController.popBackStack() },
+            onBackClick = { navController.navigateBack() },
             actions = {
                 Box(
                     modifier = Modifier

@@ -130,6 +130,25 @@ interface DeezerApiService {
         @retrofit2.http.Header("authorization") auth: String
     ): DeezerPlaylistDetailResponse
 
+    @GET("user/me/charts/tracks")
+    suspend fun getTopTracks(
+        @Query("access_token") token: String,
+        @Query("limit") limit: Int = 50
+    ): com.google.gson.JsonObject
+
+    @GET("user/me/recommendations/releases")
+    suspend fun getRecommendedReleases(
+        @Query("access_token") token: String,
+        @Query("limit") limit: Int = 20
+    ): com.google.gson.JsonObject
+
+    @GET("album/{album_id}/tracks")
+    suspend fun getAlbumTracks(
+        @retrofit2.http.Path("album_id") albumId: String,
+        @Query("access_token") token: String,
+        @Query("limit") limit: Int = 100
+    ): com.google.gson.JsonObject
+
     @GET("user/me/history")
     suspend fun getHistory(
         @Query("access_token") token: String,
@@ -319,12 +338,6 @@ interface DeezerApiService {
     ): DeezerArtistsListResponse
 
     // --- SmartTrackList Endpoints ---
-
-    @GET("platform/generic/smarttracklist/inspired-by-{index}?include=lyrics")
-    suspend fun getInspiredByMix(
-        @retrofit2.http.Path("index") index: Int,
-        @retrofit2.http.Header("authorization") auth: String
-    ): DeezerPlaylistDetailResponse
 
     @GET("platform/generic/smarttracklist/discovery?include=lyrics")
     suspend fun getDiscoveryMix(

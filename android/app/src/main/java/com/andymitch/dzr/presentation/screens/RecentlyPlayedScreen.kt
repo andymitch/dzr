@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.navigation.navigateBack
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 import android.os.Trace
@@ -351,7 +353,7 @@ fun RecentlyPlayedScreen(
         }
 
         FilledIconButton(
-            onClick = { navController.popBackStack() },
+            onClick = { navController.navigateBack() },
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
