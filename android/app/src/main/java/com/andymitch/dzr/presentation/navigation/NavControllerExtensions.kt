@@ -48,14 +48,29 @@ fun NavController.navigateSafelyReplacing(
     return true
 }
 
-fun NavController.navigateToTopLevelSafely(route: String): Boolean {
-    val startDestinationId = runCatching { graph.startDestinationId }.getOrNull() ?: return false
-    navigate(route) {
-        popUpTo(startDestinationId) {
-            saveState = true
+private val settingsChildRoutes = setOf(
+    Screen.Accounts.route,
+    Screen.SettingsCategory.route,
+    Screen.PaletteStyle.route,
+    Screen.Experimental.route,
+    Screen.NavBarCrRad.route,
+    Screen.About.route,
+    Screen.ArtistSettings.route,
+    Screen.DelimiterConfig.route,
+    Screen.WordDelimiterConfig.route,
+    Screen.Equalizer.route,
+    Screen.DeviceCapabilities.route
+)
+
+fun NavController.navigateUpToHome() {
+    if (currentDestination?.route in settingsChildRoutes) {
+        navigate(Screen.Settings.route) {
+            popUpTo(Screen.Home.route)
+            launchSingleTop = true
         }
-        launchSingleTop = true
-        restoreState = true
+    } else if (!popBackStack(Screen.Home.route, inclusive = false)) {
+        navigate(Screen.Home.route) {
+            popUpTo(graph.id) { inclusive = true }
+        }
     }
-    return true
 }

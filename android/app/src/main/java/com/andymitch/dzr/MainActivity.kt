@@ -94,6 +94,7 @@ import androidx.media3.session.SessionToken
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.andymitch.dzr.presentation.navigation.ForegroundBackHandler
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
@@ -862,6 +863,7 @@ class MainActivity : ComponentActivity() {
                                 playerViewModel.playerContentExpansionFraction.value > 0.01f
                             }
                         }
+                        ForegroundBackHandler(navController, enabled = !isExpandedOrExpanding && !isSearchBarActive)
                         AnimatedVisibility(
                             visible = isExpandedOrExpanding,
                             enter = fadeIn(animationSpec = tween(durationMillis = 350)),

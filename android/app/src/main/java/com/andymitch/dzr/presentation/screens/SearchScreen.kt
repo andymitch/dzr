@@ -156,6 +156,7 @@ fun SearchScreen(
     onSearchBarActiveChange: (Boolean) -> Unit = {}
 ) {
     var searchQuery by rememberSaveable { mutableStateOf(playerViewModel.searchQuery) }
+    val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
@@ -267,6 +268,22 @@ fun SearchScreen(
                     unfocusedContainerColor = Color.Transparent,
                     cursorColor = MaterialTheme.colorScheme.primary
                 )
+
+                if (navBarStyle == com.andymitch.dzr.data.preferences.NavBarStyle.NONE) {
+                    FilledIconButton(
+                        modifier = Modifier.padding(bottom = 2.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        onClick = { navController.popBackStack() }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.rounded_arrow_back_24),
+                            contentDescription = "Back"
+                        )
+                    }
+                }
 
                 Box(
                     Modifier

@@ -315,6 +315,7 @@ fun LibraryScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val lastTabIndex by playerViewModel.lastLibraryTabIndexFlow.collectAsStateWithLifecycle()
+    val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -631,6 +632,23 @@ fun LibraryScreen(
                                 fontSize = 40.sp,
                                 letterSpacing = 1.sp
                             )
+                        }
+                    },
+                    navigationIcon = {
+                        if (navBarStyle == com.andymitch.dzr.data.preferences.NavBarStyle.NONE) {
+                            FilledIconButton(
+                                modifier = Modifier.padding(start = 10.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
+                                onClick = { navController.popBackStack() }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.rounded_arrow_back_24),
+                                    contentDescription = "Back"
+                                )
+                            }
                         }
                     },
                     actions = {

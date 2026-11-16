@@ -83,6 +83,12 @@ interface DeezerApiService {
         @retrofit2.http.Header("authorization") auth: String
     ): retrofit2.Response<Unit>
 
+    @retrofit2.http.PUT("platform/generic/track/{track_id}/ban")
+    suspend fun banTrack(
+        @retrofit2.http.Path("track_id") trackId: Long,
+        @retrofit2.http.Header("authorization") auth: String
+    ): retrofit2.Response<Unit>
+
     @GET("platform/gcast/track/{track_id}/streamUrls")
     suspend fun getStreamUrls(
         @retrofit2.http.Path("track_id") trackId: Long,

@@ -557,7 +557,7 @@ fun SettingsCategoryScreen(
                                     options = mapOf(
                                         NavBarStyle.DEFAULT to stringResource(R.string.setcat_navbar_style_default),
                                         NavBarStyle.FULL_WIDTH to stringResource(R.string.setcat_navbar_style_full_width),
-                                        NavBarStyle.NONE to "No nav bar (buttons in the Home header)"
+                                        NavBarStyle.NONE to "No Nav Bar"
                                     ),
                                     selectedKey = uiState.navBarStyle,
                                     onSelectionChanged = { settingsViewModel.setNavBarStyle(it) },

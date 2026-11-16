@@ -107,6 +107,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -128,6 +129,7 @@ import com.andymitch.dzr.presentation.components.AlbumCarouselSection
 import com.andymitch.dzr.presentation.components.AutoScrollingTextOnDemand
 import com.andymitch.dzr.presentation.components.LocalMaterialTheme
 import com.andymitch.dzr.presentation.components.LyricsSheet
+import com.andymitch.dzr.presentation.components.queueSourceLabel
 import com.andymitch.dzr.presentation.components.scoped.rememberSmoothProgress
 import com.andymitch.dzr.presentation.components.subcomps.FetchLyricsDialog
 import com.andymitch.dzr.presentation.viewmodel.LyricsSearchUiState
@@ -234,7 +236,8 @@ fun FullPlayerContent(
     onNavigateToPlaybackSettings: () -> Unit,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onShowSongInfo: (Song) -> Unit
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
@@ -582,6 +585,7 @@ fun FullPlayerContent(
             placeholderOnColor = placeholderOnColor,
             isLandscape = false,
             onLyricsClick = onLyricsClick,
+            onInfoClick = { onShowSongInfo(song) },
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
@@ -605,6 +609,7 @@ fun FullPlayerContent(
             placeholderOnColor = placeholderOnColor,
             isLandscape = true,
             onLyricsClick = onLyricsClick,
+            onInfoClick = { onShowSongInfo(song) },
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
@@ -706,7 +711,7 @@ fun FullPlayerContent(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         modifier = Modifier.padding(start = 18.dp),
-                                        text = stringResource(R.string.setcat_now_playing),
+                                        text = queueSourceLabel(currentQueueSourceName),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.labelLargeEmphasized,
@@ -1279,6 +1284,7 @@ private fun FullPlayerSongMetadataSection(
     placeholderOnColor: Color,
     isLandscape: Boolean,
     onLyricsClick: () -> Unit,
+    onInfoClick: () -> Unit,
     playerOnBaseColor: Color,
     playerViewModel: PlayerViewModel,
     gradientEdgeColor: Color,
@@ -1319,6 +1325,7 @@ private fun FullPlayerSongMetadataSection(
             modifier = Modifier
                 .padding(start = 0.dp),
             onClickLyrics = onLyricsClick,
+            onClickInfo = onInfoClick,
             song = song,
             currentSongArtists = currentSongArtists,
             expansionFractionProvider = expansionFractionProvider,
@@ -1427,6 +1434,7 @@ private fun SongMetadataDisplaySection(
     chipColor: Color,
     chipContentColor: Color,
     onClickLyrics: () -> Unit,
+    onClickInfo: () -> Unit,
     showQueueButton: Boolean,
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
@@ -1556,28 +1564,18 @@ private fun SongMetadataDisplaySection(
                 }
             }
         } else {
-            // Portrait Mode: Track Mix and Lyrics buttons (Queue is in TopBar)
-            if (song?.contentUriString?.startsWith("deezer://") == true) {
-                val mixViewModel: com.andymitch.dzr.presentation.viewmodel.SongInfoBottomSheetViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
-                val mixScope = androidx.compose.runtime.rememberCoroutineScope()
-                FilledIconButton(
-                    modifier = Modifier.size(width = 48.dp, height = 48.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = chipColor,
-                        contentColor = chipContentColor
-                    ),
-                    onClick = {
-                        mixScope.launch {
-                            val mix = mixViewModel.trackMix(song)
-                            mix.firstOrNull()?.let { playerViewModel.playSongs(mix, it, queueName = "${song.title} Mix") }
-                        }
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_all_inclusive_24),
-                        contentDescription = "Track Mix"
-                    )
-                }
+            FilledIconButton(
+                modifier = Modifier.size(width = 48.dp, height = 48.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = chipColor,
+                    contentColor = chipContentColor
+                ),
+                onClick = onClickInfo,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "Song details"
+                )
             }
             FilledIconButton(
                 modifier = Modifier

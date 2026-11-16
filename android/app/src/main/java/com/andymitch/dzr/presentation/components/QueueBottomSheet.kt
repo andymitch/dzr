@@ -1351,6 +1351,11 @@ private fun QueueHeader(
 }
 
 @Composable
+internal fun queueSourceLabel(queueSourceName: String): String =
+    queueSourceName.takeUnless { it.isBlank() || it == "None" || it == "Current Context" }
+        ?: stringResource(R.string.presentation_batch_e_queue_source_fallback)
+
+@Composable
 private fun QueueSourceBadge(
     queueSourceName: String,
     modifier: Modifier = Modifier
@@ -1375,7 +1380,7 @@ private fun QueueSourceBadge(
                 tint = colors.onSurfaceVariant
             )
             Text(
-                text = queueSourceName.ifBlank { stringResource(R.string.presentation_batch_e_queue_source_fallback) },
+                text = queueSourceLabel(queueSourceName),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
                 color = colors.onSurfaceVariant,
                 overflow = TextOverflow.Ellipsis,

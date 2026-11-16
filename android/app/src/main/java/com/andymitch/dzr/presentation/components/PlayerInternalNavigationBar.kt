@@ -1,6 +1,6 @@
 package com.andymitch.dzr.presentation.components
 
-import com.andymitch.dzr.presentation.navigation.navigateToTopLevelSafely
+import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
@@ -175,7 +175,7 @@ private fun PlayerInternalNavigationItemsRow(
                         lastSearchTapTimestamp = now
 
                         if (!isAlreadySelected) {
-                            if (!navController.navigateToTopLevelSafely(itemRoute)) {
+                            if (!navController.navigateSafely(itemRoute)) {
                                 lastSearchTapTimestamp = 0L
                                 return@click
                             }
@@ -194,7 +194,7 @@ private fun PlayerInternalNavigationItemsRow(
                         }
                     } else if (!isAlreadySelected) {
                         lastSearchTapTimestamp = 0L
-                        navController.navigateToTopLevelSafely(itemRoute)
+                        navController.navigateSafely(itemRoute)
                     } else {
                         lastSearchTapTimestamp = 0L
                     }

@@ -731,7 +731,8 @@ fun UnifiedPlayerSheetV2(
                             onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                             onQueueDrag = sheetActionHandlers.dragQueueBy,
                             onQueueRelease = sheetActionHandlers.endQueueDrag,
-                            onNavigateToSettingsPlayback = { navController.navigateSafely(com.andymitch.dzr.presentation.navigation.Screen.SettingsCategory.createRoute(com.andymitch.dzr.presentation.model.SettingsCategory.PLAYBACK.id)) }
+                            onNavigateToSettingsPlayback = { navController.navigateSafely(com.andymitch.dzr.presentation.navigation.Screen.SettingsCategory.createRoute(com.andymitch.dzr.presentation.model.SettingsCategory.PLAYBACK.id)) },
+                            onShowSongInfo = sheetActionHandlers.onSelectedSongForInfoChange
                         )
                     }
                 }
@@ -753,7 +754,8 @@ fun UnifiedPlayerSheetV2(
                     onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                     onQueueDrag = sheetActionHandlers.dragQueueBy,
                     onQueueRelease = sheetActionHandlers.endQueueDrag,
-                    onNavigateToSettingsPlayback = { navController.navigateSafely(com.andymitch.dzr.presentation.navigation.Screen.SettingsCategory.createRoute(com.andymitch.dzr.presentation.model.SettingsCategory.PLAYBACK.id)) }
+                    onNavigateToSettingsPlayback = { navController.navigateSafely(com.andymitch.dzr.presentation.navigation.Screen.SettingsCategory.createRoute(com.andymitch.dzr.presentation.model.SettingsCategory.PLAYBACK.id)) },
+                    onShowSongInfo = sheetActionHandlers.onSelectedSongForInfoChange
                 )
             }
 

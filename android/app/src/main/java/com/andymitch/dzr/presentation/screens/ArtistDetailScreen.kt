@@ -371,7 +371,7 @@ fun ArtistDetailScreen(
                                     },
                                     onPlayAlbum = {
                                         section.songs.firstOrNull()?.let { firstSong ->
-                                            playerViewModel.showAndPlaySong(firstSong, section.songs)
+                                            playerViewModel.showAndPlaySong(firstSong, section.songs, section.title)
                                         }
                                     }
                                 )
@@ -412,7 +412,7 @@ fun ArtistDetailScreen(
                                         isCurrentSong = stablePlayerState.currentSong?.id == song.id,
                                         isPlaying = stablePlayerState.isPlaying,
                                         onSongClick = {
-                                            playerViewModel.showAndPlaySong(song, section.songs)
+                                            playerViewModel.showAndPlaySong(song, section.songs, section.title)
                                         },
                                         onMoreOptionsClick = {
                                             playerViewModel.selectSongForInfo(song)
@@ -479,7 +479,7 @@ fun ArtistDetailScreen(
                                                 showSongInfoBottomSheet = true
                                             },
                                             onClick = {
-                                                playerViewModel.showAndPlaySong(song, uiState.topTracks)
+                                                playerViewModel.showAndPlaySong(song, uiState.topTracks, artist.name)
                                             }
                                         )
                                     }

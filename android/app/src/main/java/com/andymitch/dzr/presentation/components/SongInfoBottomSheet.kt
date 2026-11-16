@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -572,6 +573,25 @@ fun SongInfoBottomSheet(
                                                     Icon(painterResource(R.drawable.rounded_playlist_add_24), contentDescription = null)
                                                     Spacer(Modifier.width(14.dp))
                                                     Text("Save Track Mix as playlist")
+                                                }
+                                                FilledTonalButton(
+                                                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(top = 8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                                    shape = CircleShape,
+                                                    onClick = {
+                                                        scope.launch {
+                                                            val banned = songInfoViewModel.banSong(song)
+                                                            if (banned) {
+                                                                playerViewModel.removeSongFromQueue(song.id)
+                                                                onDismiss()
+                                                            }
+                                                            android.widget.Toast.makeText(context, if (banned) "dzr won't play \"${song.title}\" again" else "Couldn't update Deezer", android.widget.Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                ) {
+                                                    Icon(Icons.Rounded.Block, contentDescription = null)
+                                                    Spacer(Modifier.width(14.dp))
+                                                    Text("Don't play this song")
                                                 }
                                             }
                                         }

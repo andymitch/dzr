@@ -69,7 +69,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
-    onNavigateToSettingsPlayback: () -> Unit
+    onNavigateToSettingsPlayback: () -> Unit,
+    onShowSongInfo: (Song) -> Unit
 ) {
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
@@ -255,7 +256,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onNavigateToPlaybackSettings = { onNavigateToSettingsPlayback() },
                         onShuffleToggle = onShuffleToggle,
                         onRepeatToggle = onRepeatToggle,
-                        onFavoriteToggle = onFavoriteToggle
+                        onFavoriteToggle = onFavoriteToggle,
+                        onShowSongInfo = onShowSongInfo
                     )
                 }
             }
@@ -282,7 +284,8 @@ internal fun UnifiedPlayerPrewarmLayer(
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
-    onNavigateToSettingsPlayback: () -> Unit
+    onNavigateToSettingsPlayback: () -> Unit,
+    onShowSongInfo: (Song) -> Unit
 ) {
     if (prewarmFullPlayer && currentSong != null) {
         // Scoped queue collection: the prewarmed FullPlayer owns its own
@@ -353,7 +356,8 @@ internal fun UnifiedPlayerPrewarmLayer(
                     onCollapse = {},
                     onShuffleToggle = onShuffleToggle,
                     onRepeatToggle = onRepeatToggle,
-                    onFavoriteToggle = onFavoriteToggle
+                    onFavoriteToggle = onFavoriteToggle,
+                    onShowSongInfo = onShowSongInfo
                 )
             }
         }

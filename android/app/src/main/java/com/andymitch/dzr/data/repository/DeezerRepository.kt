@@ -392,6 +392,16 @@ class DeezerRepository @Inject constructor(
         }
     }
 
+    suspend fun banTrack(trackId: Long): Boolean {
+        val auth = getAuthHeader() ?: return false
+        return try {
+            deezerApiService.banTrack(trackId, auth).isSuccessful
+        } catch (e: Exception) {
+            android.util.Log.e("DeezerRepository", "banTrack error: ${e.message}", e)
+            false
+        }
+    }
+
     suspend fun getStreamUrls(trackId: Long): DeezerStreamUrlsResponse? {
         val auth = getAuthHeader() ?: return null
         return try {

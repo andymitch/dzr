@@ -48,6 +48,9 @@ class SongInfoBottomSheetViewModel @Inject constructor(
             deezerRepository.getTrackMix(id).map { com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it) }
         }.orEmpty()
 
+    suspend fun banSong(song: Song): Boolean =
+        song.id.toLongOrNull()?.let { deezerRepository.banTrack(it) } ?: false
+
     data class SongLocationInfo(
         val label: String,
         val value: String,
