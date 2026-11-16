@@ -14,6 +14,12 @@ class UpdateCheckerVersionTest {
     }
 
     @Test
+    fun ignoresOtherPlatformsTags() {
+        assertThat(Version.parse("macos-v0.9")).isNull()
+        assertThat(Version.parse("android-v0.7".removePrefix("android-"))).isEqualTo(Version.parse("0.7"))
+    }
+
+    @Test
     fun treatsMissingComponentsAsZero() {
         assertThat(Version.parse("4")).isEqualTo(Version.parse("v4.0.0"))
     }

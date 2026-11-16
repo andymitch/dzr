@@ -14,6 +14,6 @@ data class GitHubRelease(
 )
 
 interface GitHubApiService {
-    @GET("repos/andymitch/dzr/releases?per_page=20")
+    @GET("repos/andymitch/dzr/releases?per_page=30")
     suspend fun getReleases(): List<GitHubRelease>
 }

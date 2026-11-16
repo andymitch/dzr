@@ -19,7 +19,7 @@ class UpdateCheckerRepository @Inject constructor(
         try {
             apiService.getReleases()
                 .filter { !it.draft && (currentVersion.beta != null || !it.prerelease) }
-                .mapNotNull { release -> Version.parse(release.tagName)?.let { release to it } }
+                .mapNotNull { release -> Version.parse(release.tagName.removePrefix("android-"))?.let { release to it } }
                 .maxWithOrNull(compareBy { it.second })
                 ?.takeIf { it.second > currentVersion }
                 ?.first

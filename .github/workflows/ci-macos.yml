@@ -1,0 +1,21 @@
+name: CI macOS
+
+on:
+  push:
+    branches: [main]
+    paths: ["macos/**", ".github/workflows/ci-macos.yml"]
+  pull_request:
+    paths: ["macos/**", ".github/workflows/ci-macos.yml"]
+
+concurrency:
+  group: ci-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use the newest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - run: macos/bundle.sh

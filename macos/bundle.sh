@@ -3,7 +3,8 @@ set -eu
 cd "$(dirname "$0")"
 swift build -c release
 if [ -z "${VERSION:-}" ]; then
-  TAG=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || echo v0)
+  TAG=$(git describe --tags --match 'macos-v*' --match 'v*' --abbrev=0 2>/dev/null || echo v0)
+  TAG=${TAG#macos-}
   VERSION="${TAG#v}-dev"
 fi
 APP=build/dzr.app

@@ -70,11 +70,11 @@ Without it the release build is unsigned.
 
 ## Versions
 
-dzr is in beta, so every release is the next `v0.X`, fixes included. From v1 on, a big feature or a batch of small ones is the next `vX` and a fix or small change is `vX.Y`.
+Android and macOS are released separately, each with its own version: tags `android-v0.X` and `macos-v0.X` (both continue from the shared `v0.1` to `v0.6`). dzr is in beta, so every release is the next `v0.X`, fixes included. From v1 on, a big feature or a batch of small ones is the next `vX` and a fix or small change is `vX.Y`.
 
-Releases are cut by the Release workflow (Actions > Release > Run workflow). It tags the next version, builds the macOS zip and the signed Android APK, and publishes notes grouped by each closed issue's label. Commits name the issues they close (`Closes #25`) so they show up in the notes.
+Releases are cut by the Release Android and Release macOS workflows (Actions > Run workflow). Each tags the next version for its app, builds it, and publishes notes grouped by the label of each issue closed by commits that touched that app's folder. Commits name the issues they close (`Closes #25`). CI builds only the app whose folder changed.
 
-Both apps check GitHub for a newer release at launch. Local builds are `<latest tag>-dev` and skip the check. To build a specific version locally:
+Each app checks GitHub for its own newer release at launch. Local builds are `<latest tag>-dev` and skip the check. To build a specific version locally:
 
 ```sh
 cd macos && VERSION=0.6 ./bundle.sh

@@ -34,16 +34,20 @@ enum Updates {
         let draft: Bool
     }
 
+    private static func name(_ release: Release) -> String {
+        release.tag_name.hasPrefix("macos-") ? String(release.tag_name.dropFirst(6)) : release.tag_name
+    }
+
     static func check(manual: Bool) async {
         guard let text = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
               !text.hasSuffix("-dev"), let current = Version(text) else { return }
         let alert = NSAlert()
         do {
-            let url = URL(string: "https://api.github.com/repos/andymitch/dzr/releases?per_page=20")!
+            let url = URL(string: "https://api.github.com/repos/andymitch/dzr/releases?per_page=30")!
             let (data, _) = try await URLSession.shared.data(from: url)
             let newest = try JSONDecoder().decode([Release].self, from: data)
                 .filter { !$0.draft && (current.beta != nil || !$0.prerelease) }
-                .compactMap { r in Version(r.tag_name).map { (r, $0) } }
+                .compactMap { r in Version(name(r)).map { (r, $0) } }
                 .max { $0.1 < $1.1 }
             guard let (release, latest) = newest, current < latest else {
                 guard manual else { return }
@@ -52,7 +56,7 @@ enum Updates {
                 alert.runModal()
                 return
             }
-            alert.messageText = "dzr \(release.tag_name) is available"
+            alert.messageText = "dzr \(name(release)) is available"
             alert.informativeText = "You have v\(text).\n\n\(release.body ?? "")"
             alert.addButton(withTitle: "Download")
             alert.addButton(withTitle: "Later")

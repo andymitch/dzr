@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process";
 // HEAD is the commit to diff up to. In CI the vN tag doesn't exist yet (the
 // release is still a draft — publishing creates the tag), so a compare against
 // TAG 404s; pass the release's target SHA as HEAD. Falls back to TAG locally.
-const { REPO, TAG, PREV, HEAD } = process.env;
+const { REPO, TAG, PREV, HEAD, PATHS } = process.env;
 const [OWNER, NAME] = REPO.split("/");
 // execFile (no shell) — args are passed literally, so nothing is shell-interpreted.
 const ghJson = (args) =>
@@ -75,9 +75,15 @@ const categoryFor = (labels) =>
 //   - "Merge branch 'feat/N-…'"  → issue #N (local branch merge, no PR)
 // The last one matters because branches are often merged locally, with no PR —
 // those carry no PR number, so we fall back to the issue the branch name names.
-const messages = PREV
-  ? ghJson(["api", `repos/${REPO}/compare/${PREV}...${HEAD || TAG}`, "--jq", "[.commits[].commit.message]"])
-  : ghJson(["api", `repos/${REPO}/commits`, "--paginate", "--jq", "[.[].commit.message]"]);
+// Only commits that touched PATHS (space-separated), so each app's notes list its own changes.
+const range = PREV ? `${PREV}..${HEAD || TAG}` : HEAD || TAG;
+const messages = execFileSync("git", ["log", "--format=%B%x1e", range, "--", ...(PATHS || ".").split(" ")], {
+  encoding: "utf8",
+  maxBuffer: 1 << 24,
+})
+  .split("\x1e")
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 const prNums = new Set();
 const issueNums = new Set();

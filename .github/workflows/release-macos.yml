@@ -1,0 +1,78 @@
+name: Release macOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      code: ${{ steps.v.outputs.code }}
+      tag: ${{ steps.v.outputs.tag }}
+      prev: ${{ steps.v.outputs.prev }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          set -euo pipefail
+          PREV=$(git tag -l | { grep -E '^(macos-)?v0\.[0-9]+$' || true; } | sort -t. -k2 -n | tail -1)
+          LATEST=${PREV##*.}
+          X=$(( ${LATEST:-0} + 1 ))
+          echo "version=0.$X" >> "$GITHUB_OUTPUT"
+          echo "code=$X" >> "$GITHUB_OUTPUT"
+          echo "tag=macos-v0.$X" >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV" >> "$GITHUB_OUTPUT"
+          echo "Next release: macos-v0.$X, prev ${PREV:-<none>}"
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: gh release create "$TAG" --draft --target "${{ github.sha }}" --title "dzr macOS v$VERSION" --notes "Building…" --repo "${{ github.repository }}"
+
+  macos:
+    needs: prepare
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use the newest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: Build
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          macos/bundle.sh
+          ditto -c -k --keepParent macos/build/dzr.app "dzr-macos-$VERSION.zip"
+      - name: Upload to the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: gh release upload "$TAG" "dzr-macos-$VERSION.zip" --clobber --repo "${{ github.repository }}"
+
+  notes:
+    needs: [prepare, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Publish with categorized notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          PREV: ${{ needs.prepare.outputs.prev }}
+          HEAD: ${{ github.sha }}
+          PATHS: macos
+        run: |
+          node scripts/release-notes.mjs > notes.md
+          cat notes.md
+          gh release edit "$TAG" --repo "$REPO" --notes-file notes.md --draft=false --latest

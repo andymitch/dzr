@@ -334,7 +334,7 @@ class MainActivity : ComponentActivity() {
                             title = { Text("Update Available") },
                             text = { 
                                 Column {
-                                    Text("A new version of dzr (${updateAvailable?.tagName}) is available on GitHub.")
+                                    Text("A new version of dzr (${updateAvailable?.tagName?.removePrefix("android-")}) is available on GitHub.")
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text("What's new:\n${updateAvailable?.body ?: "Bug fixes and improvements."}")
                                 }
