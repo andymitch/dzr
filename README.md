@@ -20,6 +20,7 @@ Both apps:
 - Search for tracks, artists, albums and playlists
 - Library: liked songs, recently played, playlists, albums, artists
 - Streaming in FLAC, 320 kbps or 128 kbps
+- Offline downloads: Liked Songs, playlists and albums, with their own quality setting
 - Artist Mix and Track Mix, synced lyrics, likes
 - Create, rename and delete playlists and add or remove tracks
 

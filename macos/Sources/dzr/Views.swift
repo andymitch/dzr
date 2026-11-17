@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum Destination: Hashable {
-    case home, search, liked, recent, playlists, albums, artists
+    case home, search, liked, recent, playlists, albums, artists, downloads
 }
 
 struct MainView: View {
@@ -25,6 +25,7 @@ struct MainView: View {
                     Label("Playlists", systemImage: "music.note.list").tag(Destination.playlists)
                     Label("Albums", systemImage: "square.stack").tag(Destination.albums)
                     Label("Artists", systemImage: "music.microphone").tag(Destination.artists)
+                    Label("Downloads", systemImage: "arrow.down.circle").tag(Destination.downloads)
                 }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
@@ -91,6 +92,7 @@ struct MainView: View {
                 .toolbar { Button { model.newPlaylistTracks = [] } label: { Label("New Playlist", systemImage: "plus") } }
         case .albums: GridPage(title: "Albums") { try await $0.albums() }
         case .artists: GridPage(title: "Artists") { try await $0.artists() }
+        case .downloads: DownloadsPage()
         }
     }
 }
@@ -227,7 +229,7 @@ struct TracksPage: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(title).font(.system(size: 30, weight: .bold))
                             Text("\(tracks.count) tracks").foregroundStyle(.secondary)
-                            PlayButtons(tracks: tracks)
+                            PlayButtons(tracks: tracks, download: sourceId == "liked" ? Item(kind: .playlist, id: "liked", title: title, subtitle: "") : nil)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -245,6 +247,7 @@ struct PlayButtons: View {
     @Environment(\.playSource) private var source
     let tracks: [Item]
     var extra: (() -> Void)?
+    var download: Item?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -259,6 +262,9 @@ struct PlayButtons: View {
             if let extra {
                 Button(action: extra) { Label("Artist Mix", systemImage: "dot.radiowaves.left.and.right").padding(.horizontal, 6) }
                     .buttonStyle(.glass)
+            }
+            if let download {
+                DownloadButton(item: download, tracks: tracks)
             }
         }
         .controlSize(.large)
@@ -417,7 +423,7 @@ struct Hero: View {
                 if item.kind != .flow && item.kind != .mix {
                     Text(item.subtitle).foregroundStyle(.secondary)
                 }
-                PlayButtons(tracks: tracks, extra: item.kind == .artist ? artistMix : nil)
+                PlayButtons(tracks: tracks, extra: item.kind == .artist ? artistMix : nil, download: [.playlist, .album].contains(item.kind) ? item : nil)
             }
             Spacer(minLength: 0)
         }
@@ -470,6 +476,7 @@ struct TrackList: View {
 
 struct TrackRow: View {
     @Environment(AppModel.self) private var model
+    @Environment(Downloads.self) private var downloads
     @Environment(Player.self) private var player
     @Environment(\.playSource) private var source
     let track: Item
@@ -505,6 +512,9 @@ struct TrackRow: View {
             .buttonStyle(.borderless)
             .foregroundStyle(model.liked.contains(track.id) ? Color.accent : .secondary)
             .opacity(hover || model.liked.contains(track.id) ? 1 : 0)
+            if downloads.entry(track.id) != nil {
+                Image(systemName: "arrow.down.circle.fill").font(.caption).foregroundStyle(.secondary).help("Downloaded")
+            }
             Text(format(track.duration)).monospacedDigit().font(.callout).foregroundStyle(.secondary).frame(width: 44, alignment: .trailing)
         }
         .padding(.horizontal, 12)
@@ -532,5 +542,69 @@ struct Artwork: View {
                 .overlay(Image(systemName: "music.note").foregroundStyle(Color.accent.opacity(0.6)))
         }
         .clipShape(round ? AnyShape(.circle) : AnyShape(.rect(cornerRadius: radius)))
+    }
+}
+
+struct DownloadButton: View {
+    @Environment(Downloads.self) private var downloads
+    let item: Item
+    let tracks: [Item]
+
+    var body: some View {
+        Group {
+            if let p = downloads.progress[item.id] {
+                Label {
+                    Text("Downloading \(p.done) of \(p.total)")
+                } icon: {
+                    ProgressView(value: Double(p.done), total: Double(max(p.total, 1))).progressViewStyle(.circular).controlSize(.small)
+                }
+                .padding(.horizontal, 6)
+            } else if downloads.isDownloaded(item.id) {
+                Menu {
+                    Button("Remove Download", role: .destructive) { downloads.remove(item.id) }
+                } label: {
+                    Label("Downloaded", systemImage: "checkmark.circle.fill").padding(.horizontal, 6)
+                }
+                .menuIndicator(.hidden)
+                .buttonStyle(.glass)
+                .fixedSize()
+            } else {
+                Button { downloads.download(item, tracks: tracks) } label: {
+                    Label("Download", systemImage: "arrow.down.circle").padding(.horizontal, 6)
+                }
+                .buttonStyle(.glass)
+            }
+        }
+        .task(id: tracks.map(\.id)) {
+            if downloads.isDownloaded(item.id), downloads.progress[item.id] == nil { downloads.download(item, tracks: tracks) }
+        }
+    }
+}
+
+struct DownloadsPage: View {
+    @Environment(Downloads.self) private var downloads
+
+    var body: some View {
+        let tracks = downloads.tracks
+        Group {
+            if tracks.isEmpty {
+                ContentUnavailableView("No Downloads", systemImage: "arrow.down.circle", description: Text("Download Liked Songs, playlists and albums to play them without a connection."))
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Downloads").font(.system(size: 30, weight: .bold))
+                            Text("\(tracks.count) songs · \(ByteCountFormatter.string(fromByteCount: downloads.bytesUsed, countStyle: .file))").foregroundStyle(.secondary)
+                            PlayButtons(tracks: tracks)
+                        }
+                        .padding(.horizontal, 24)
+                        TrackList(tracks: tracks, numbered: false)
+                    }
+                    .padding(.vertical, 20)
+                }
+                .environment(\.playSource, Item(kind: .mix, id: "downloads", title: "Downloads", subtitle: ""))
+            }
+        }
+        .navigationTitle("Downloads")
     }
 }

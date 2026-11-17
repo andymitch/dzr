@@ -6,6 +6,7 @@ import Observation
 @MainActor @Observable
 final class Player {
     private let deezer: Deezer
+    private let downloads: Downloads
     private let av = AVQueuePlayer()
     private var timeObserver: Any?
     private var itemObserver: NSKeyValueObservation?
@@ -41,8 +42,9 @@ final class Player {
 
     private var streamQuality: Quality { flacFailed && quality == .flac ? .high : quality }
 
-    init(deezer: Deezer) {
+    init(deezer: Deezer, downloads: Downloads) {
         self.deezer = deezer
+        self.downloads = downloads
         av.actionAtItemEnd = .advance
         restore()
         timeObserver = av.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] t in
@@ -225,7 +227,7 @@ final class Player {
         save()
         loadTask = Task {
             do {
-                let (url, q) = try await deezer.streamURL(t.id, quality: streamQuality)
+                let (url, q) = try await source(for: t)
                 guard !Task.isCancelled else { return }
                 let item = AVPlayerItem(url: url)
                 av.removeAllItems()
@@ -241,9 +243,19 @@ final class Player {
                 onUnauthorized()
             } catch {
                 guard !Task.isCancelled else { return }
+                if error is URLError, let n = queue.tracks.indices.first(where: { $0 > queue.index && downloads.entry(queue.tracks[$0].id) != nil }) {
+                    queue.index = n
+                    load()
+                    return
+                }
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    private func source(for track: Item) async throws -> (URL, Quality) {
+        if let local = downloads.localURL(track.id) { return local }
+        return try await deezer.streamURL(track.id, quality: streamQuality)
     }
 
     private func dropPrepared() {
@@ -259,7 +271,7 @@ final class Player {
         guard let n = queue.nextIndex(auto: true) else { return }
         let t = queue.tracks[n]
         prepareTask = Task {
-            guard let (url, q) = try? await deezer.streamURL(t.id, quality: streamQuality), !Task.isCancelled,
+            guard let (url, q) = try? await source(for: t), !Task.isCancelled,
                   queue.tracks.indices.contains(n), queue.tracks[n].id == t.id,
                   let cur = av.currentItem, av.items().count == 1 else { return }
             let item = AVPlayerItem(url: url)

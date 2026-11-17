@@ -80,8 +80,13 @@ extension Color {
 }
 
 struct SettingsView: View {
+    @Environment(AppModel.self) private var model
     @AppStorage("showInDock") private var showInDock = true
     @Bindable private var theme = Theme.shared
+    @State private var confirmRemove = false
+    @State private var usedBytes: Int64 = 0
+
+    private var downloads: Binding<Quality> { Binding(get: { model.downloads.quality }, set: { model.downloads.quality = $0 }) }
 
     var body: some View {
         Form {
@@ -109,7 +114,25 @@ struct SettingsView: View {
             }
 
             Toggle("Show in Dock", isOn: $showInDock)
+
+            Section("Downloads") {
+                Picker("Download quality", selection: downloads) {
+                    ForEach(Quality.allCases) { Text($0.rawValue).tag($0) }
+                }
+                LabeledContent("Storage used", value: ByteCountFormatter.string(fromByteCount: usedBytes, countStyle: .file))
+                Button("Remove All Downloads…", role: .destructive) { confirmRemove = true }
+                    .disabled(model.downloads.index.collections.isEmpty)
+            }
         }
+        .confirmationDialog("Remove all downloads?", isPresented: $confirmRemove) {
+            Button("Remove All Downloads", role: .destructive) {
+                model.downloads.removeAll()
+                usedBytes = 0
+            }
+        } message: {
+            Text("Downloaded songs will need a connection to play again.")
+        }
+        .onAppear { usedBytes = model.downloads.bytesUsed }
         .formStyle(.grouped)
         .frame(width: 460)
         .fixedSize()

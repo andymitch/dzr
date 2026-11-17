@@ -16,6 +16,7 @@ struct DzrApp: App {
             RootView()
                 .environment(model)
                 .environment(model.player)
+                .environment(model.downloads)
                 .frame(minWidth: 900, minHeight: 560)
                 .onAppear { applyDockPolicy(); Theme.shared.apply() }
                 .onChange(of: model.player.current?.artwork) { _, url in Theme.shared.follow(url) }
@@ -45,6 +46,7 @@ struct DzrApp: App {
 
         Settings {
             SettingsView()
+                .environment(model)
         }
 
         MenuBarExtra {
@@ -74,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @MainActor @Observable
 final class AppModel {
     let deezer = Deezer(session: Session.load())
+    let downloads: Downloads
     let player: Player
     var signedIn: Bool
     var liked: Set<String> = []
@@ -87,7 +90,8 @@ final class AppModel {
     private var lyricsFor: String?
 
     init() {
-        player = Player(deezer: deezer)
+        downloads = Downloads(deezer: deezer)
+        player = Player(deezer: deezer, downloads: downloads)
         signedIn = deezer.session != nil
         player.onUnauthorized = { [weak self] in self?.signOut() }
     }
