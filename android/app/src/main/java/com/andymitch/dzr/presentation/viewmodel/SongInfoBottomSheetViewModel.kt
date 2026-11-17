@@ -36,7 +36,9 @@ import kotlin.coroutines.resume
 class SongInfoBottomSheetViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository,
+    castController: com.andymitch.dzr.data.service.CastController,
 ) : ViewModel() {
+    val isCasting = castController.isCasting
 
     suspend fun trackMix(song: Song): List<Song> =
         song.id.toLongOrNull()?.let { id ->

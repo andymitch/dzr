@@ -647,17 +647,6 @@ fun FullPlayerContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(playerOnAccentColor.copy(alpha = 0.7f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides playerAccentColor) {
-                                    androidx.media3.cast.MediaRouteButton(modifier = Modifier.size(42.dp))
-                                }
-                            }
                             // Queue Button — full circle, matching the collapse button
                             Box(
                                 modifier = Modifier

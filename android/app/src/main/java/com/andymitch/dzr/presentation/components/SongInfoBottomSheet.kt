@@ -27,6 +27,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
@@ -431,6 +434,24 @@ fun SongInfoBottomSheet(
                                     Icon(Icons.Rounded.Block, contentDescription = null)
                                     Spacer(Modifier.width(14.dp))
                                     Text("Don't play this song")
+                                }
+                            }
+                            item {
+                                val isCasting by songInfoViewModel.isCasting.collectAsStateWithLifecycle()
+                                Box(modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                                    FilledTonalButton(
+                                        modifier = Modifier.matchParentSize(),
+                                        contentPadding = PaddingValues(horizontal = 0.dp),
+                                        shape = CircleShape,
+                                        onClick = {}
+                                    ) {
+                                        Icon(Icons.Rounded.Cast, contentDescription = null)
+                                        Spacer(Modifier.width(14.dp))
+                                        Text(if (isCasting) "Casting" else "Cast to a device")
+                                    }
+                                    androidx.media3.cast.MediaRouteButton(
+                                        modifier = Modifier.matchParentSize().clip(CircleShape).graphicsLayer { alpha = 0f }
+                                    )
                                 }
                             }
                         item {
