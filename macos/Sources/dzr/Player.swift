@@ -3,91 +3,122 @@ import AppKit
 import MediaPlayer
 import Observation
 
-enum Repeat: CaseIterable { case off, all, one }
-
 @MainActor @Observable
 final class Player {
     private let deezer: Deezer
-    private let av = AVPlayer()
+    private let av = AVQueuePlayer()
     private var timeObserver: Any?
-    private var endObserver: NSObjectProtocol?
+    private var itemObserver: NSKeyValueObservation?
+    private var terminateObserver: NSObjectProtocol?
     private var loadTask: Task<Void, Never>?
+    private var prepareTask: Task<Void, Never>?
+    private var prepared: (index: Int, item: AVPlayerItem, quality: Quality)?
+    private var fetchingMore = false
+    private var flacFailed = false
+    private var lastSave = Date.distantPast
 
-    var queue: [Item] = []
-    private var original: [Item] = []
-    var index = 0
+    private(set) var queue = PlayQueue()
     var isPlaying = false
     var position: TimeInterval = 0
     var duration: TimeInterval = 0
-    var shuffle = false
-    var repeatMode = Repeat.off
-    var quality = Quality.flac
+    var quality = Quality.flac { didSet { flacFailed = false; save() } }
     var playingQuality: Quality?
     var error: String?
     var onUnauthorized: () -> Void = {}
 
-    var current: Item? { queue.indices.contains(index) ? queue[index] : nil }
-    var upNext: ArraySlice<Item> { queue.indices.contains(index + 1) ? queue[(index + 1)...] : [] }
-
-    func jump(to i: Int) {
-        guard queue.indices.contains(i) else { return }
-        index = i
-        load()
+    var current: Item? { queue.current }
+    var upNext: ArraySlice<Item> { queue.upNext }
+    var index: Int { queue.index }
+    var repeatMode: Repeat { queue.repeatMode }
+    var shuffle: Bool {
+        get { queue.shuffle }
+        set { queue.shuffle = newValue }
     }
+
+    private var streamQuality: Quality { flacFailed && quality == .flac ? .high : quality }
 
     init(deezer: Deezer) {
         self.deezer = deezer
+        av.actionAtItemEnd = .advance
+        restore()
         timeObserver = av.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] t in
             MainActor.assumeIsolated { self?.tick(t) }
         }
-        endObserver = NotificationCenter.default.addObserver(forName: AVPlayerItem.didPlayToEndTimeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.advance(1, auto: true) }
+        itemObserver = av.observe(\.currentItem) { [weak self] _, _ in
+            Task { @MainActor in self?.currentItemChanged() }
+        }
+        terminateObserver = NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.save() }
         }
         setupRemote()
+        updateNowPlaying()
     }
 
-    func play(_ tracks: [Item], at i: Int) {
-        let playable = tracks.filter { $0.kind == .track && $0.readable }
-        guard let start = playable.firstIndex(where: { $0.id == tracks[i].id }) else { return }
-        original = playable
-        queue = playable
-        index = start
-        if shuffle { shuffleRest() }
+    func play(_ tracks: [Item], at i: Int, from source: Item? = nil) {
+        guard queue.play(tracks, at: i, from: source) else { return }
+        load()
+    }
+
+    func jump(to i: Int) {
+        guard queue.tracks.indices.contains(i) else { return }
+        queue.index = i
         load()
     }
 
     func playNext(_ t: Item) {
         guard current != nil else { return play([t], at: 0) }
-        queue.insert(t, at: index + 1)
-        original.append(t)
-    }
-
-    func moveUpNext(from: IndexSet, to: Int) {
-        let base = index + 1
-        queue.move(fromOffsets: IndexSet(from.map { $0 + base }), toOffset: to + base)
-    }
-
-    func removeUpNext(at offsets: IndexSet) {
-        queue.remove(atOffsets: IndexSet(offsets.map { $0 + index + 1 }))
+        queue.playNext(t)
+        queueChanged()
     }
 
     func enqueue(_ t: Item) {
-        queue.append(t)
-        original.append(t)
-        if queue.count == 1 { load() }
+        queue.enqueue(t)
+        if queue.tracks.count == 1 { load() } else { queueChanged() }
+    }
+
+    func moveUpNext(from: IndexSet, to: Int) {
+        queue.moveUpNext(from: from, to: to)
+        queueChanged()
+    }
+
+    func removeUpNext(at offsets: IndexSet) {
+        queue.removeUpNext(at: offsets)
+        queueChanged()
+    }
+
+    func toggleShuffle() {
+        queue.toggleShuffle()
+        queueChanged()
+    }
+
+    func cycleRepeat() {
+        queue.cycleRepeat()
+        queueChanged()
     }
 
     func toggle() {
         guard current != nil else { return }
+        if av.currentItem == nil {
+            load(startAt: position)
+            return
+        }
         isPlaying ? av.pause() : av.play()
         isPlaying.toggle()
         updateNowPlaying()
+        save()
     }
 
-    func next() { advance(1, auto: false) }
+    func next() {
+        guard let n = queue.nextIndex(auto: false) else { return }
+        queue.index = n
+        load()
+    }
 
     func previous() {
-        if position > 3 { seek(to: 0) } else { advance(-1, auto: false) }
+        if position > 3 { return seek(to: 0) }
+        guard let n = queue.previousIndex() else { return }
+        queue.index = n
+        load()
     }
 
     func seek(to t: TimeInterval) {
@@ -96,58 +127,58 @@ final class Player {
         updateNowPlaying()
     }
 
-    func toggleShuffle() {
-        shuffle.toggle()
-        guard let cur = current else { return }
-        if shuffle {
-            shuffleRest()
-        } else {
-            queue = original
-            index = queue.firstIndex(of: cur) ?? 0
-        }
+    func save() {
+        let saved = Saved(queue: queue, position: position, quality: quality)
+        guard let data = try? JSONEncoder().encode(saved) else { return }
+        try? FileManager.default.createDirectory(at: Self.savedURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: Self.savedURL, options: .atomic)
+        lastSave = Date()
     }
 
-    func cycleRepeat() {
-        let all = Repeat.allCases
-        repeatMode = all[(all.firstIndex(of: repeatMode)! + 1) % all.count]
+    private struct Saved: Codable {
+        var queue: PlayQueue
+        var position: TimeInterval
+        var quality: Quality
     }
 
-    private func shuffleRest() {
-        guard index + 1 < queue.count else { return }
-        queue[(index + 1)...].shuffle()
+    private static var savedURL: URL { Session.url.deletingLastPathComponent().appendingPathComponent("player.json") }
+
+    private func restore() {
+        guard let data = try? Data(contentsOf: Self.savedURL), let saved = try? JSONDecoder().decode(Saved.self, from: data) else { return }
+        queue = saved.queue
+        quality = saved.quality
+        position = saved.position
+        duration = current?.duration ?? 0
     }
 
-    private func advance(_ d: Int, auto: Bool) {
-        guard !queue.isEmpty else { return }
-        if auto && repeatMode == .one { return load() }
-        var n = index + d
-        if !queue.indices.contains(n) {
-            guard repeatMode == .all else {
-                if auto { isPlaying = false; updateNowPlaying() }
-                return
-            }
-            n = (n + queue.count) % queue.count
-        }
-        index = n
-        load()
+    private func queueChanged() {
+        save()
+        if av.currentItem != nil { prepareNext() }
     }
 
-    private func load() {
+    private func load(startAt: TimeInterval = 0) {
         guard let t = current else { return }
         loadTask?.cancel()
+        dropPrepared()
         error = nil
-        position = 0
+        position = startAt
         duration = t.duration
         updateNowPlaying()
+        save()
         loadTask = Task {
             do {
-                let (url, q) = try await deezer.streamURL(t.id, quality: quality)
+                let (url, q) = try await deezer.streamURL(t.id, quality: streamQuality)
                 guard !Task.isCancelled else { return }
-                av.replaceCurrentItem(with: AVPlayerItem(url: url))
+                let item = AVPlayerItem(url: url)
+                av.removeAllItems()
+                av.insert(item, after: nil)
+                if startAt > 0 { await av.seek(to: CMTime(seconds: startAt, preferredTimescale: 600)) }
+                guard !Task.isCancelled else { return }
                 av.play()
                 isPlaying = true
                 playingQuality = q
                 updateNowPlaying()
+                prepareNext()
             } catch DeezerError.unauthorized {
                 onUnauthorized()
             } catch {
@@ -157,15 +188,73 @@ final class Player {
         }
     }
 
+    private func dropPrepared() {
+        prepareTask?.cancel()
+        if let p = prepared { av.remove(p.item) }
+        prepared = nil
+    }
+
+    private func prepareNext() {
+        dropPrepared()
+        if queue.needsMore { fetchMore() }
+        guard let n = queue.nextIndex(auto: true) else { return }
+        let t = queue.tracks[n]
+        prepareTask = Task {
+            guard let (url, q) = try? await deezer.streamURL(t.id, quality: streamQuality), !Task.isCancelled,
+                  queue.tracks.indices.contains(n), queue.tracks[n].id == t.id,
+                  let cur = av.currentItem, av.items().count == 1 else { return }
+            let item = AVPlayerItem(url: url)
+            av.insert(item, after: cur)
+            prepared = (n, item, q)
+        }
+    }
+
+    private func fetchMore() {
+        guard !fetchingMore, let source = queue.source, source.kind == .flow else { return }
+        fetchingMore = true
+        Task {
+            defer { fetchingMore = false }
+            let more = (try? await deezer.flowTracks(source.id)) ?? []
+            guard queue.source == source, queue.append(more) > 0 else { return }
+            save()
+            if prepared == nil, av.currentItem != nil { prepareNext() }
+        }
+    }
+
+    private func currentItemChanged() {
+        guard loadTask != nil else { return }
+        if let p = prepared, av.currentItem === p.item {
+            prepared = nil
+            queue.index = p.index
+            position = 0
+            duration = queue.tracks[p.index].duration
+            playingQuality = p.quality
+            updateNowPlaying()
+            save()
+            prepareNext()
+        } else if av.currentItem == nil, isPlaying {
+            guard let n = queue.nextIndex(auto: true) else {
+                isPlaying = false
+                updateNowPlaying()
+                save()
+                return
+            }
+            queue.index = n
+            load()
+        }
+    }
+
     private func tick(_ t: CMTime) {
+        guard av.currentItem != nil else { return }
         position = t.seconds.isFinite ? t.seconds : 0
         if let d = av.currentItem?.duration.seconds, d.isFinite, d > 0 { duration = d }
         if av.currentItem?.status == .failed, playingQuality == .flac {
             playingQuality = nil
-            quality = .high
+            flacFailed = true
             error = "FLAC failed, falling back to 320 kbps"
-            load()
+            load(startAt: position)
         }
+        if isPlaying, Date().timeIntervalSince(lastSave) > 10 { save() }
     }
 
     private func setupRemote() {

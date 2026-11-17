@@ -5,6 +5,7 @@ let package = Package(
     name: "dzr",
     platforms: [.macOS("26.0")],
     targets: [
-        .executableTarget(name: "dzr", path: "Sources/dzr")
+        .executableTarget(name: "dzr", path: "Sources/dzr"),
+        .testTarget(name: "dzrTests", dependencies: ["dzr"], path: "Tests/dzrTests"),
     ]
 )

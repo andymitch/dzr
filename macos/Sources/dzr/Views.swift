@@ -213,16 +213,17 @@ struct TracksPage: View {
 
 struct PlayButtons: View {
     @Environment(Player.self) private var player
+    @Environment(\.playSource) private var source
     let tracks: [Item]
     var extra: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 10) {
-            Button { player.shuffle = false; player.play(tracks, at: 0) } label: {
+            Button { player.shuffle = false; player.play(tracks, at: 0, from: source) } label: {
                 Label("Play", systemImage: "play.fill").padding(.horizontal, 6)
             }
             .buttonStyle(.glassProminent)
-            Button { player.shuffle = true; player.play(tracks, at: Int.random(in: 0..<max(1, tracks.count))) } label: {
+            Button { player.shuffle = true; player.play(tracks, at: Int.random(in: 0..<max(1, tracks.count)), from: source) } label: {
                 Label("Shuffle", systemImage: "shuffle").padding(.horizontal, 6)
             }
             .buttonStyle(.glass)
@@ -294,7 +295,7 @@ struct Card: View {
 }
 
 extension EnvironmentValues {
-    @Entry var currentPlaylist: Item?
+    @Entry var playSource: Item?
 }
 
 struct DetailPage: View {
@@ -308,7 +309,7 @@ struct DetailPage: View {
     var body: some View {
         content
             .id(item.kind == .playlist ? model.playlistsVersion : 0)
-            .environment(\.currentPlaylist, item.kind == .playlist ? item : nil)
+            .environment(\.playSource, item)
             .toolbar {
                 if owned {
                     Menu {
@@ -431,7 +432,7 @@ struct TrackList: View {
 struct TrackRow: View {
     @Environment(AppModel.self) private var model
     @Environment(Player.self) private var player
-    @Environment(\.currentPlaylist) private var playlist
+    @Environment(\.playSource) private var source
     let track: Item
     let number: Int?
     let tracks: [Item]
@@ -473,9 +474,9 @@ struct TrackRow: View {
         .contentShape(.rect)
         .opacity(track.readable ? 1 : 0.4)
         .onHover { hover = $0 }
-        .onTapGesture { player.play(tracks, at: index) }
+        .onTapGesture { player.play(tracks, at: index, from: source) }
         .contextMenu {
-            Button("Play") { player.play(tracks, at: index) }
+            Button("Play") { player.play(tracks, at: index, from: source) }
             Button("Play Next") { player.playNext(track) }
             Button("Add to Queue") { player.enqueue(track) }
             Menu("Add to Playlist") {
@@ -485,7 +486,7 @@ struct TrackRow: View {
                     Button(p.title) { model.playlistAction { try await model.deezer.addToPlaylist(p.id, [track.id]) } }
                 }
             }
-            if let p = playlist, model.myPlaylists.contains(where: { $0.id == p.id }) {
+            if let p = source, p.kind == .playlist, model.myPlaylists.contains(where: { $0.id == p.id }) {
                 Button("Remove from Playlist") { model.playlistAction { try await model.deezer.removeFromPlaylist(p.id, [track.id]) } }
             }
             Button("Play Track Mix") {

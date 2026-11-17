@@ -35,9 +35,9 @@ enum DeezerError: LocalizedError {
     }
 }
 
-enum Kind: String { case track, album, playlist, artist, flow, mix }
+enum Kind: String, Codable { case track, album, playlist, artist, flow, mix }
 
-struct Item: Identifiable, Hashable {
+struct Item: Identifiable, Hashable, Codable {
     var kind: Kind
     var id: String
     var title: String
@@ -56,13 +56,13 @@ struct Shelf: Identifiable {
     var id: String { title }
 }
 
-private struct Images: Decodable {
+struct Images: Decodable {
     var small: String?
     var medium: String?
     var large: String?
 }
 
-private struct Attributes: Decodable {
+struct Attributes: Decodable {
     var title: String?
     var name: String?
     var artistName: String?
@@ -83,7 +83,7 @@ private struct Attributes: Decodable {
     struct Named: Decodable { var id: Int64?; var name: String? }
 }
 
-private struct Resource: Decodable {
+struct Resource: Decodable {
     var type: String
     var id: String
     var attributes: Attributes?
@@ -119,12 +119,12 @@ private struct Resource: Decodable {
     }
 }
 
-private struct One: Decodable { var data: Resource }
+struct One: Decodable { var data: Resource }
 private struct Many: Decodable { var data: [Resource] }
 
 private func items(_ rs: [Resource]?) -> [Item] { (rs ?? []).map(\.item) }
 
-enum Quality: String, CaseIterable, Identifiable {
+enum Quality: String, CaseIterable, Identifiable, Codable {
     case flac = "FLAC", high = "320 kbps", standard = "128 kbps"
     var id: String { rawValue }
 }
@@ -274,6 +274,7 @@ final class Deezer {
     func history() async throws -> [Item] { try await classic("user/me/history?limit=100") }
     func artistRadio(_ id: String) async throws -> [Item] { try await classic("artist/\(id)/radio?limit=100") }
     func trackMix(_ id: String) async throws -> [Item] { try await items(one("platform/generic/track/\(id)/mix").included) }
+    func flowTracks(_ id: String) async throws -> [Item] { try await items(one("\(user)/multiflow/\(id)").included) }
     func lovedTracks() async throws -> [Item] { try await items(one("\(castUser)/loved-tracks").included) }
 
     struct LyricLine: Decodable {
@@ -313,7 +314,7 @@ final class Deezer {
             if it.id == (await lovedPlaylistId()) { return try await [Shelf(title: "Tracks", items: lovedTracks())] }
             return try await [Shelf(title: "Tracks", items: items(one("platform/generic/playlist/\(it.id)").included))]
         case .album: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/album/\(it.id)").included))]
-        case .flow: return try await [Shelf(title: "Tracks", items: items(one("\(user)/multiflow/\(it.id)").included))]
+        case .flow: return try await [Shelf(title: "Tracks", items: flowTracks(it.id))]
         case .mix: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/smarttracklist/\(it.id)").included))]
         case .artist:
             async let top = one("platform/generic/artist/\(it.id)/top-tracks")
