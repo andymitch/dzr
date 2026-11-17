@@ -69,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Task { await Updates.check(manual: false) }
+        Updates.startDailyChecks()
     }
 }
 
