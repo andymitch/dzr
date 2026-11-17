@@ -89,16 +89,18 @@ Without it the release build is unsigned.
 
 ## Versions
 
-Android and macOS are released separately, each with its own version: tags `android-v0.X` and `macos-v0.X` (both continue from the shared `v0.1` to `v0.6`). dzr is in beta, so every release is the next `v0.X`, fixes included. From v1 on, a big feature or a batch of small ones is the next `vX` and a fix or small change is `vX.Y`.
+Android and macOS are released separately, each with its own version and tags prefixed by the app: `android-vX` and `macos-vX`. A big feature or a batch of small ones is the next `vX`, a fix or small change is `vX.Y`, and a beta of the next big release is `vX-beta.N`. Before v1, releases were `v0.X` (shared up to `v0.6`, then per app).
 
-Releases are cut by the Release Android and Release macOS workflows (Actions > Run workflow). Each tags the next version for its app, builds it, and publishes notes grouped by the label of each issue closed by commits that touched that app's folder. Commits name the issues they close (`Closes #25`). CI builds only the app whose folder changed.
+Releases are cut by the Release Android and Release macOS workflows (Actions > Run workflow, then pick major, hotfix or beta). Each tags the next version for its app, builds it, and publishes notes grouped by the label of each issue closed by commits that touched that app's folder. Commits name the issues they close (`Closes #25`). Betas are GitHub pre-releases, so only people already on a beta are offered them. CI builds only the app whose folder changed.
 
 Each app checks GitHub for its own newer release at launch. Local builds are `<latest tag>-dev` and skip the check. To build a specific version locally:
 
 ```sh
-cd macos && VERSION=0.6 ./bundle.sh
-cd android && ./gradlew :app:assembleRelease -PAPP_VERSION_NAME=0.6 -PAPP_VERSION_CODE=6
+cd macos && VERSION=1 ./bundle.sh
+cd android && ./gradlew :app:assembleRelease -PAPP_VERSION_NAME=1 -PAPP_VERSION_CODE=100
 ```
+
+Android's version code is `X*100 + Y` for `vX.Y` and `(X-1)*100 + 50 + N` for `vX-beta.N`, so each install is newer than the last.
 
 ## Credits
 

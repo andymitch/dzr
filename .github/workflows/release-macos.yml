@@ -2,6 +2,12 @@ name: Release macOS
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type (see scripts/next-version.sh)"
+        type: choice
+        options: [major, hotfix, beta]
+        default: major
 
 permissions:
   contents: write
@@ -14,27 +20,28 @@ jobs:
       code: ${{ steps.v.outputs.code }}
       tag: ${{ steps.v.outputs.tag }}
       prev: ${{ steps.v.outputs.prev }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - id: v
+        env:
+          TYPE: ${{ inputs.release_type }}
         run: |
           set -euo pipefail
-          PREV=$(git tag -l | { grep -E '^(macos-)?v0\.[0-9]+$' || true; } | sort -t. -k2 -n | tail -1)
-          LATEST=${PREV##*.}
-          X=$(( ${LATEST:-0} + 1 ))
-          echo "version=0.$X" >> "$GITHUB_OUTPUT"
-          echo "code=$X" >> "$GITHUB_OUTPUT"
-          echo "tag=macos-v0.$X" >> "$GITHUB_OUTPUT"
-          echo "prev=$PREV" >> "$GITHUB_OUTPUT"
-          echo "Next release: macos-v0.$X, prev ${PREV:-<none>}"
+          scripts/next-version.sh macos "$TYPE" | tee -a "$GITHUB_OUTPUT"
       - name: Create draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.v.outputs.tag }}
           VERSION: ${{ steps.v.outputs.version }}
-        run: gh release create "$TAG" --draft --target "${{ github.sha }}" --title "dzr macOS v$VERSION" --notes "Building…" --repo "${{ github.repository }}"
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          FLAGS=(--draft --target "${{ github.sha }}" --title "dzr macOS v$VERSION" --notes "Building…" --repo "${{ github.repository }}")
+          if [ "$PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
+          gh release create "$TAG" "${FLAGS[@]}"
 
   macos:
     needs: prepare
@@ -72,7 +79,10 @@ jobs:
           PREV: ${{ needs.prepare.outputs.prev }}
           HEAD: ${{ github.sha }}
           PATHS: macos
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
         run: |
           node scripts/release-notes.mjs > notes.md
           cat notes.md
-          gh release edit "$TAG" --repo "$REPO" --notes-file notes.md --draft=false --latest
+          LATEST=true
+          if [ "$PRERELEASE" = "true" ]; then LATEST=false; fi
+          gh release edit "$TAG" --repo "$REPO" --notes-file notes.md --draft=false --latest="$LATEST"

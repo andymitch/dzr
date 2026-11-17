@@ -39,7 +39,7 @@ const FORCE_LABEL = "changelog-include";
 // whole surface they are being asked to exercise), a hotfix vN.X (the bugs it
 // fixes shipped in vN), or when the release had no betas.
 const cycleStart = (() => {
-  const major = /^v(\d+)$/.exec(TAG)?.[1];
+  const [, prefix = "", major] = /^([a-z]+-)?v(\d+)$/.exec(TAG) ?? [];
   if (!major) return null;
   let dates = [];
   try {
@@ -48,7 +48,7 @@ const cycleStart = (() => {
       `repos/${REPO}/releases`,
       "--paginate",
       "--jq",
-      `[.[] | select(.tag_name | startswith("v${major}-beta.")) | .published_at]`,
+      `[.[] | select(.tag_name | startswith("${prefix}v${major}-beta.")) | .published_at]`,
     ]);
   } catch {
     return null;
