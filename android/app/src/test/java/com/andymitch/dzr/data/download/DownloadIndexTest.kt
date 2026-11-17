@@ -40,4 +40,15 @@ class DownloadIndexTest {
 
         assertThat(index.orderedTrackIds).containsExactly("b")
     }
+
+    @Test
+    fun progressCountsDownloadedSongsForCollectionsStillPending() {
+        val index = DownloadIndex(
+            tracks = mapOf("a" to track("a")),
+            collections = listOf(DownloadedCollection("album_1", "Album", listOf("a", "b", "c")), DownloadedCollection("done", "Done", listOf("a"))),
+            pending = mapOf("b" to track("b"), "c" to track("c"))
+        )
+
+        assertThat(index.progress()).containsExactly("album_1", 1 to 3)
+    }
 }

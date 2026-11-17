@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -55,12 +59,45 @@ data class DownloadedTrack(
 val Song.deezerTrackId: String?
     get() = contentUriString.removePrefix("deezer://track/").substringBefore('?').takeIf { contentUriString.startsWith("deezer://track/") && it.all(Char::isDigit) }
 
+fun Song.toDownloadedTrack(id: String) = DownloadedTrack(
+    id = id,
+    title = title,
+    artist = displayArtist,
+    artistId = artistId,
+    album = album,
+    albumId = albumId,
+    art = highResAlbumArtUriString ?: albumArtUriString,
+    duration = duration,
+    file = "",
+    quality = DeezerAudioQuality.HIGH,
+)
+
+fun downloadTo(url: String, dest: File): Boolean {
+    val temp = File(dest.parentFile, "${dest.name}.part")
+    return runCatching {
+        dest.parentFile?.mkdirs()
+        URL(url).openConnection().apply {
+            connectTimeout = 15_000
+            readTimeout = 30_000
+        }.getInputStream().use { input -> temp.outputStream().use { input.copyTo(it) } }
+        temp.renameTo(dest)
+    }.getOrDefault(false).also { if (!it) temp.delete() }
+}
+
 data class DownloadedCollection(val id: String, val title: String, val trackIds: List<String>)
 
 data class DownloadIndex(
     val tracks: Map<String, DownloadedTrack> = emptyMap(),
     val collections: List<DownloadedCollection> = emptyList(),
+    val pending: Map<String, DownloadedTrack>? = emptyMap(),
 ) {
+    val wanted: Set<String>
+        get() = collections.flatMap { it.trackIds }.toSet()
+
+    fun progress(): Map<String, Pair<Int, Int>> =
+        collections.filter { c -> c.trackIds.any { it in pending.orEmpty() } }
+            .associate { c -> c.id to (c.trackIds.count { it in tracks } to c.trackIds.size) }
+
     fun upsert(collection: DownloadedCollection): Pair<DownloadIndex, List<String>> {
         val previous = collections.firstOrNull { it.id == collection.id }?.trackIds.orEmpty()
         val updated = copy(collections = collections.filter { it.id != collection.id } + collection)
@@ -82,7 +119,7 @@ data class DownloadIndex(
 
 @Singleton
 class DownloadStore @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val deezerRepository: DeezerRepository,
     @AppScope private val scope: CoroutineScope,
 ) {
@@ -96,8 +133,13 @@ class DownloadStore @Inject constructor(
     )
     val index: StateFlow<DownloadIndex> = _index.asStateFlow()
 
-    private val _progress = MutableStateFlow<Map<String, Pair<Int, Int>>>(emptyMap())
-    val progress: StateFlow<Map<String, Pair<Int, Int>>> = _progress.asStateFlow()
+    val progress: StateFlow<Map<String, Pair<Int, Int>>> = _index.map { it.progress() }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    val wifiOnly = MutableStateFlow(prefs.getBoolean("wifi_only", true))
+
+    init {
+        dir.listFiles { f -> f.name.endsWith(".part") }?.forEach(File::delete)
+    }
 
     private val _quality = MutableStateFlow(
         runCatching { DeezerAudioQuality.valueOf(prefs.getString("quality", null)!!) }.getOrDefault(DeezerAudioQuality.HIGH)
@@ -120,23 +162,38 @@ class DownloadStore @Inject constructor(
         val deezerSongs = songs.filter { it.deezerTrackId != null }.distinctBy { it.deezerTrackId }
         val ids = deezerSongs.mapNotNull { it.deezerTrackId }
         val (updated, orphans) = _index.value.upsert(DownloadedCollection(collectionId, title, ids))
-        _index.value = updated.copy(tracks = updated.tracks - orphans.toSet())
+        val newPending = deezerSongs.filter { it.deezerTrackId !in updated.tracks }.associate { it.deezerTrackId!! to it.toDownloadedTrack(it.deezerTrackId!!) }
+        _index.value = updated.copy(tracks = updated.tracks - orphans.toSet(), pending = updated.pending.orEmpty() + newPending)
         deleteFiles(orphans)
         save()
-        val missing = deezerSongs.filter { localFile(it.deezerTrackId!!) == null }
-        if (missing.isEmpty() || collectionId in _progress.value) return
-        _progress.update { it + (collectionId to (0 to missing.size)) }
-        scope.launch(Dispatchers.IO) {
-            val permits = Semaphore(3)
-            missing.map { song ->
+        if (newPending.isNotEmpty()) DownloadWorker.enqueue(context, wifiOnly.value)
+    }
+
+    suspend fun runPending(onProgress: suspend (done: Int, total: Int) -> Unit) = withContext(Dispatchers.IO) {
+        val permits = Semaphore(3)
+        while (true) {
+            val wanted = _index.value.wanted
+            val batch = _index.value.pending.orEmpty().values.filter { it.id in wanted }
+            _index.update { it.copy(pending = it.pending.orEmpty().filterKeys { id -> id in wanted }) }
+            if (batch.isEmpty()) break
+            val done = java.util.concurrent.atomic.AtomicInteger()
+            batch.map { track ->
                 async {
-                    permits.withPermit { fetch(song) }
-                    _progress.update { p -> p[collectionId]?.let { (done, total) -> p + (collectionId to (done + 1 to total)) } ?: p }
+                    permits.withPermit { fetch(track) }
+                    _index.update { it.copy(pending = it.pending.orEmpty() - track.id) }
+                    save()
+                    onProgress(done.incrementAndGet(), batch.size)
                 }
             }.awaitAll()
-            _progress.update { it - collectionId }
-            save()
+            if (_index.value.pending.orEmpty().keys.none { it in _index.value.wanted }) break
         }
+        save()
+    }
+
+    fun setWifiOnly(enabled: Boolean) {
+        wifiOnly.value = enabled
+        prefs.edit().putBoolean("wifi_only", enabled).apply()
+        if (_index.value.pending.orEmpty().isNotEmpty()) DownloadWorker.enqueue(context, enabled, replace = true)
     }
 
     fun remove(collectionId: String) {
@@ -147,40 +204,17 @@ class DownloadStore @Inject constructor(
     }
 
     fun removeAll() {
+        DownloadWorker.cancel(context)
         dir.deleteRecursively()
         _index.value = DownloadIndex()
-        _progress.value = emptyMap()
     }
 
-    private suspend fun fetch(song: Song) {
-        val id = song.deezerTrackId ?: return
-        if (_index.value.collections.none { id in it.trackIds }) return
-        val trackId = id.toLong()
-        val (url, quality) = deezerRepository.streamUrl(trackId, _quality.value) ?: return
-        val file = "$id.${if (quality == DeezerAudioQuality.HIFI) "flac" else "mp3"}"
-        val dest = File(dir, file)
-        val temp = File(dir, "$file.part")
-        runCatching {
-            dir.mkdirs()
-            URL(url).openConnection().apply {
-                connectTimeout = 15_000
-                readTimeout = 30_000
-            }.getInputStream().use { input -> temp.outputStream().use { input.copyTo(it) } }
-            if (!temp.renameTo(dest)) error("rename failed")
-            val track = DownloadedTrack(
-                id = id,
-                title = song.title,
-                artist = song.displayArtist,
-                artistId = song.artistId,
-                album = song.album,
-                albumId = song.albumId,
-                art = song.highResAlbumArtUriString ?: song.albumArtUriString,
-                duration = song.duration,
-                file = file,
-                quality = quality,
-            )
-            _index.update { it.copy(tracks = it.tracks + (id to track)) }
-        }.onFailure { temp.delete() }
+    private suspend fun fetch(track: DownloadedTrack) {
+        val (url, quality) = deezerRepository.streamUrl(track.id.toLong(), _quality.value) ?: return
+        val file = "${track.id}.${if (quality == DeezerAudioQuality.HIFI) "flac" else "mp3"}"
+        if (downloadTo(url, File(dir, file))) {
+            _index.update { it.copy(tracks = it.tracks + (track.id to track.copy(file = file, quality = quality))) }
+        }
     }
 
     private fun deleteFiles(ids: List<String>) {

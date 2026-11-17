@@ -66,6 +66,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material.icons.outlined.Folder
@@ -750,6 +751,9 @@ private fun DownloadsSettings() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val used = remember(index) { android.text.format.Formatter.formatShortFileSize(context, viewModel.bytesUsed()) }
     var confirm by remember { mutableStateOf(false) }
+    val wifiOnly by viewModel.wifiOnly.collectAsStateWithLifecycle()
+    val cacheAhead by viewModel.cacheAhead.collectAsStateWithLifecycle()
+    var cacheUsed by remember { mutableStateOf(android.text.format.Formatter.formatShortFileSize(context, viewModel.cacheBytes())) }
     SettingsSubsection(title = "Downloads") {
         ThemeSelectorItem(
             label = "Download Quality",
@@ -758,6 +762,30 @@ private fun DownloadsSettings() {
             selectedKey = quality.name,
             onSelectionChanged = { viewModel.setQuality(com.andymitch.dzr.data.preferences.DeezerAudioQuality.valueOf(it)) },
             leadingIcon = { Icon(Icons.Rounded.Download, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+        SwitchSettingItem(
+            title = "Download only on Wi-Fi",
+            subtitle = "Downloads wait for Wi-Fi and keep going with the app closed.",
+            checked = wifiOnly,
+            onCheckedChange = viewModel::setWifiOnly,
+            leadingIcon = { Icon(Icons.Rounded.Wifi, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+        SliderSettingsItem(
+            label = "Songs to cache ahead",
+            value = cacheAhead.toFloat(),
+            valueRange = com.andymitch.dzr.data.download.SongCache.MIN_AHEAD.toFloat()..com.andymitch.dzr.data.download.SongCache.MAX_AHEAD.toFloat(),
+            steps = com.andymitch.dzr.data.download.SongCache.MAX_AHEAD - com.andymitch.dzr.data.download.SongCache.MIN_AHEAD - 1,
+            onValueChange = { viewModel.setCacheAhead(it.toInt()) },
+            valueText = { "${it.toInt()}" }
+        )
+        SettingsItem(
+            title = "Clear cache",
+            subtitle = "Songs cached for smooth playback, using $cacheUsed",
+            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.secondary) },
+            onClick = {
+                viewModel.clearCache()
+                cacheUsed = android.text.format.Formatter.formatShortFileSize(context, 0)
+            }
         )
         SettingsItem(
             title = "Remove all downloads",

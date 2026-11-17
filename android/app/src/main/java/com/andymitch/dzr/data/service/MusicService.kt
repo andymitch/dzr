@@ -167,6 +167,8 @@ class MusicService : MediaLibraryService() {
     @Inject
     lateinit var flowContinuation: FlowContinuation
     @Inject
+    lateinit var songCache: com.andymitch.dzr.data.download.SongCache
+    @Inject
     lateinit var mediaMapper: com.andymitch.dzr.data.media.MediaMapper
     @Inject
     lateinit var deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository
@@ -1195,6 +1197,7 @@ class MusicService : MediaLibraryService() {
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            cacheUpcoming(mediaSession?.player ?: engine.masterPlayer)
             requestWidgetFullUpdate(force = true)
             schedulePlaybackSnapshotPersist(immediate = timeline.isEmpty)
             // Pre-fetch RG for the next track so the cache is warm before playback starts
@@ -1234,6 +1237,7 @@ class MusicService : MediaLibraryService() {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer, forceNewSession = true)
             flowContinuation.extendIfNeeded(mediaSession?.player ?: engine.masterPlayer, serviceScope)
+            cacheUpcoming(mediaSession?.player ?: engine.masterPlayer)
 
 
             val eotTargetSongId = endOfTrackTimerSongId
@@ -2523,6 +2527,23 @@ class MusicService : MediaLibraryService() {
 
     private fun <T> List<T>.page(page: Int, pageSize: Int): List<T> =
         drop((page.toLong() * pageSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()).take(pageSize)
+
+    private fun cacheUpcoming(player: Player) {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return
+        val window = Timeline.Window()
+        val ids = mutableListOf<String>()
+        var index = player.currentMediaItemIndex
+        while (ids.size < com.andymitch.dzr.data.download.SongCache.MAX_AHEAD) {
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+            if (index == C.INDEX_UNSET) break
+            timeline.getWindow(index, window).mediaItem.localConfiguration?.uri
+                ?.takeIf { it.scheme == "deezer" && it.host == "track" }
+                ?.pathSegments?.firstOrNull()
+                ?.let(ids::add)
+        }
+        songCache.prefetch(ids)
+    }
 
     private suspend fun carQueue(mediaItems: List<MediaItem>): Pair<List<MediaItem>, Int>? {
         val item = mediaItems.singleOrNull() ?: return null

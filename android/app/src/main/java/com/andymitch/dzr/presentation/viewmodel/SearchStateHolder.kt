@@ -193,7 +193,14 @@ class SearchStateHolder @Inject constructor(
                         val artists = artistsDeferred?.await() ?: emptyList()
                         val playlists = playlistsDeferred?.await() ?: emptyList()
                         
-                        val combinedResults = (tracks + albums + artists + playlists)
+                        val combinedResults = (tracks + albums + artists + playlists).distinctBy { item ->
+                            when (item) {
+                                is SearchResultItem.SongItem -> "song_${item.song.id}"
+                                is SearchResultItem.AlbumItem -> "album_${item.album.id}"
+                                is SearchResultItem.ArtistItem -> "artist_${item.artist.id}"
+                                is SearchResultItem.PlaylistItem -> "playlist_${item.playlist.id}"
+                            }
+                        }
 
                         if (request.requestId != latestSearchRequestId.get()) {
                             return@collectLatest

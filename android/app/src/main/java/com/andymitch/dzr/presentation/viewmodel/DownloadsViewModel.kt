@@ -15,7 +15,15 @@ import javax.inject.Inject
 class DownloadsViewModel @Inject constructor(
     private val store: DownloadStore,
     private val deezerRepository: DeezerRepository,
+    private val cache: com.andymitch.dzr.data.download.SongCache,
 ) : ViewModel() {
+    val wifiOnly = store.wifiOnly
+    val cacheAhead = cache.ahead
+    fun setWifiOnly(enabled: Boolean) = store.setWifiOnly(enabled)
+    fun setCacheAhead(count: Int) = cache.setAhead(count)
+    fun cacheBytes(): Long = cache.bytesUsed()
+    fun clearCache() = cache.clear()
+
     val index = store.index
     val progress = store.progress
     val quality = store.quality

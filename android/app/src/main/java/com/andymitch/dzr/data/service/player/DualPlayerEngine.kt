@@ -172,6 +172,7 @@ class DualPlayerEngine @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val deezerRepository: dagger.Lazy<com.andymitch.dzr.data.repository.DeezerRepository>,
     private val downloadStore: dagger.Lazy<com.andymitch.dzr.data.download.DownloadStore>,
+    private val songCache: dagger.Lazy<com.andymitch.dzr.data.download.SongCache>,
     private val userPreferencesRepository: com.andymitch.dzr.data.preferences.UserPreferencesRepository
 ) {
     private companion object {
@@ -956,7 +957,7 @@ class DualPlayerEngine @Inject constructor(
     private fun downloadedUri(uri: Uri): Uri? {
         if (uri.scheme != "deezer" || uri.host != "track") return null
         val trackId = uri.pathSegments.firstOrNull() ?: return null
-        return downloadStore.get().localFile(trackId)?.let { Uri.fromFile(it) }
+        return (downloadStore.get().localFile(trackId) ?: songCache.get().localFile(trackId))?.let { Uri.fromFile(it) }
     }
 
     private fun resolveReadyCloudProxyUri(uri: Uri): Uri? {
