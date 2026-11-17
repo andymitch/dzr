@@ -171,6 +171,7 @@ internal fun shouldDisableAudioOffloadOnEarlyBuffering(
 class DualPlayerEngine @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val deezerRepository: dagger.Lazy<com.andymitch.dzr.data.repository.DeezerRepository>,
+    private val downloadStore: dagger.Lazy<com.andymitch.dzr.data.download.DownloadStore>,
     private val userPreferencesRepository: com.andymitch.dzr.data.preferences.UserPreferencesRepository
 ) {
     private companion object {
@@ -900,6 +901,7 @@ class DualPlayerEngine @Inject constructor(
                 val uri = dataSpec.uri
                 val scheme = uri.scheme
                 if (scheme in CLOUD_PROXY_SCHEMES) {
+                    downloadedUri(uri)?.let { return dataSpec.buildUpon().setUri(it).build() }
                     val originalUri = uri.toString()
                     val resolved = resolvedUriCache.get(originalUri)
                         ?: resolveReadyCloudProxyUri(uri)?.also { proxyUri ->
@@ -951,6 +953,12 @@ class DualPlayerEngine @Inject constructor(
         }
     }
 
+    private fun downloadedUri(uri: Uri): Uri? {
+        if (uri.scheme != "deezer" || uri.host != "track") return null
+        val trackId = uri.pathSegments.firstOrNull() ?: return null
+        return downloadStore.get().localFile(trackId)?.let { Uri.fromFile(it) }
+    }
+
     private fun resolveReadyCloudProxyUri(uri: Uri): Uri? {
         if (uri.scheme == "deezer" && uri.host == "track") {
             val trackId = uri.pathSegments.firstOrNull()?.toLongOrNull() ?: return null
@@ -959,15 +967,7 @@ class DualPlayerEngine @Inject constructor(
             }
             return kotlinx.coroutines.runBlocking {
                 val quality = qualityOverride ?: userPreferencesRepository.deezerAudioQualityFlow.first()
-                val response = deezerRepository.get().getStreamUrls(trackId)
-                val streamUrls = response?.data?.attributes
-                val url = when (quality) {
-                    com.andymitch.dzr.data.preferences.DeezerAudioQuality.HIFI -> streamUrls?.urlFlac ?: streamUrls?.url320 ?: streamUrls?.url
-                    com.andymitch.dzr.data.preferences.DeezerAudioQuality.HIGH -> streamUrls?.url320 ?: streamUrls?.url
-                    com.andymitch.dzr.data.preferences.DeezerAudioQuality.STANDARD -> streamUrls?.url
-                    else -> streamUrls?.url
-                }
-                url?.let { Uri.parse(it) }
+                deezerRepository.get().streamUrl(trackId, quality)?.let { Uri.parse(it.first) }
             }
         }
         return null
@@ -1018,10 +1018,8 @@ class DualPlayerEngine @Inject constructor(
     }
 
     suspend fun resolveCloudUri(uri: Uri): Uri = withContext(Dispatchers.IO) {
-        val uriString = uri.toString()
-        resolvedUriCache.get(uriString)?.let { return@withContext it }
-
-        uri
+        downloadedUri(uri)?.let { return@withContext it }
+        resolvedUriCache.get(uri.toString()) ?: uri
     }
 
     suspend fun resolveMediaItem(mediaItem: MediaItem): MediaItem {

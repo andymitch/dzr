@@ -439,6 +439,16 @@ class DeezerRepository @Inject constructor(
         }
     }
 
+    suspend fun streamUrl(trackId: Long, quality: com.andymitch.dzr.data.preferences.DeezerAudioQuality): Pair<String, com.andymitch.dzr.data.preferences.DeezerAudioQuality>? {
+        val urls = getStreamUrls(trackId)?.data?.attributes ?: return null
+        val all = listOf(
+            com.andymitch.dzr.data.preferences.DeezerAudioQuality.HIFI to urls.urlFlac,
+            com.andymitch.dzr.data.preferences.DeezerAudioQuality.HIGH to urls.url320,
+            com.andymitch.dzr.data.preferences.DeezerAudioQuality.STANDARD to urls.url
+        )
+        return all.dropWhile { it.first != quality }.firstNotNullOfOrNull { (q, url) -> url?.let { it to q } }
+    }
+
     suspend fun getLyrics(trackId: String): com.andymitch.dzr.data.network.deezer.DeezerLyricsResponse? {
         val auth = getAuthHeader() ?: return null
         return try {

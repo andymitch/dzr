@@ -928,7 +928,10 @@ fun LibraryScreen(
                                     showStorageFilterButton = false,
                                     showMainActionButtons = showMainButtons,
                                     currentStorageFilter = playerUiState.currentStorageFilter,
-                                    onStorageFilterClick = { playerViewModel.toggleStorageFilter() }
+                                    onStorageFilterClick = { playerViewModel.toggleStorageFilter() },
+                                    trailingAction = if (currentTabId == LibraryTabId.LIKED) {
+                                        { com.andymitch.dzr.presentation.components.DownloadButton(collectionId = com.andymitch.dzr.presentation.viewmodel.DownloadsViewModel.LIKED, title = "Liked songs", songs = null) }
+                                    } else null
                                 )
                             }
                         }

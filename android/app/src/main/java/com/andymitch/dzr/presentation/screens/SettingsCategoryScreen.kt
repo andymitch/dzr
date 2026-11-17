@@ -66,6 +66,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
@@ -485,6 +486,8 @@ fun SettingsCategoryScreen(
                                 )
                             }
 
+                            DownloadsSettings()
+
                             SettingsSubsection(title = stringResource(R.string.setcat_replaygain_section)) {
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_replaygain_enable_title),
@@ -735,5 +738,41 @@ private fun SettingsSubsection(
     }
     if (addBottomSpace) {
         Spacer(modifier = Modifier.height(10.dp))
+    }
+}
+
+@Composable
+private fun DownloadsSettings() {
+    val viewModel: com.andymitch.dzr.presentation.viewmodel.DownloadsViewModel =
+        hiltViewModel(androidx.compose.ui.platform.LocalContext.current as androidx.activity.ComponentActivity)
+    val quality by viewModel.quality.collectAsStateWithLifecycle()
+    val index by viewModel.index.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val used = remember(index) { android.text.format.Formatter.formatShortFileSize(context, viewModel.bytesUsed()) }
+    var confirm by remember { mutableStateOf(false) }
+    SettingsSubsection(title = "Downloads") {
+        ThemeSelectorItem(
+            label = "Download Quality",
+            description = "Quality for songs you download to play offline.",
+            options = com.andymitch.dzr.data.preferences.DeezerAudioQuality.entries.associate { it.name to it.label },
+            selectedKey = quality.name,
+            onSelectionChanged = { viewModel.setQuality(com.andymitch.dzr.data.preferences.DeezerAudioQuality.valueOf(it)) },
+            leadingIcon = { Icon(Icons.Rounded.Download, null, tint = MaterialTheme.colorScheme.secondary) }
+        )
+        SettingsItem(
+            title = "Remove all downloads",
+            subtitle = "Using $used",
+            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.secondary) },
+            onClick = { if (index.collections.isNotEmpty()) confirm = true }
+        )
+    }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text("Remove all downloads?") },
+            text = { Text("Downloaded songs will need a connection to play again.") },
+            confirmButton = { TextButton(onClick = { confirm = false; viewModel.removeAll() }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.cancel)) } }
+        )
     }
 }

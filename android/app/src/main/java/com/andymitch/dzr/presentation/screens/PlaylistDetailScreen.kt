@@ -373,6 +373,13 @@ fun PlaylistDetailScreen(
                     }
                 },
                 actions = {
+                    if (!isFolderPlaylist && currentPlaylist != null) {
+                        com.andymitch.dzr.presentation.components.DownloadButton(
+                            collectionId = currentPlaylist.id,
+                            title = currentPlaylist.name,
+                            songs = songsInPlaylist
+                        )
+                    }
                     IconButton(
                         onClick = {
                             playerViewModel.showSortingSheet() 

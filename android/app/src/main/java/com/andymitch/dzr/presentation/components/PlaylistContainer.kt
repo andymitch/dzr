@@ -62,6 +62,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -188,6 +190,7 @@ fun PlaylistContainer(
                     currentSortOption = currentSortOption
                 )
             } else {
+                DownloadsEntry(navController)
                 val playlistPullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
                     isRefreshing = isRefreshing,
@@ -584,4 +587,28 @@ fun CreatePlaylistDialogRedesigned(
             }
         }
     }
+}
+
+@Composable
+private fun DownloadsEntry(navController: NavController?) {
+    val viewModel: com.andymitch.dzr.presentation.viewmodel.DownloadsViewModel =
+        androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(androidx.compose.ui.platform.LocalContext.current as androidx.activity.ComponentActivity)
+    val index by viewModel.index.collectAsStateWithLifecycle()
+    val count = index.orderedTrackIds.size
+    if (count == 0) return
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text("Downloads", style = MaterialTheme.typography.titleMedium) },
+        supportingContent = { Text(if (count == 1) "1 song" else "$count songs") },
+        leadingContent = {
+            Icon(
+                androidx.compose.material.icons.Icons.Rounded.DownloadDone,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { navController?.navigate(com.andymitch.dzr.presentation.navigation.Screen.SmartTrackList.createRoute("downloads")) }
+    )
 }

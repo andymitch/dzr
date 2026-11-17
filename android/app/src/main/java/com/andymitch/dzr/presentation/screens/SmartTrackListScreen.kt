@@ -52,6 +52,9 @@ fun SmartTrackListScreen(
     val myTop by libraryViewModel.myTop.collectAsState()
     val newReleasesMix by libraryViewModel.newReleasesMix.collectAsState()
     val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val downloadsViewModel: com.andymitch.dzr.presentation.viewmodel.DownloadsViewModel = hiltViewModel(LocalContext.current as ComponentActivity)
+    val downloadIndex by downloadsViewModel.index.collectAsStateWithLifecycle()
+    val isDownloads = listType == "downloads"
 
     val homeMix = when (listType) {
         "my_top" -> myTop
@@ -59,15 +62,16 @@ fun SmartTrackListScreen(
         else -> null
     }
 
-    val songs = remember(listType, homeMix, yourDiscovery) {
+    val songs = remember(listType, homeMix, yourDiscovery, downloadIndex) {
+        if (isDownloads) return@remember downloadsViewModel.songs()
         homeMix?.songs
             ?: yourDiscovery?.included?.filter { it.type == "track" }?.map { mapDeezerTrackToSong(it) }
             ?: emptyList()
     }
 
-    val title = homeMix?.title ?: "Your Discovery"
+    val title = if (isDownloads) "Downloads" else homeMix?.title ?: "Your Discovery"
 
-    val description = homeMix?.featuring
+    val description = if (isDownloads) android.text.format.Formatter.formatShortFileSize(LocalContext.current, remember(downloadIndex) { downloadsViewModel.bytesUsed() }) else homeMix?.featuring
         ?: yourDiscovery?.attributes?.title
         ?: yourDiscovery?.attributes?.description
         ?: "Based on your recent listening"
@@ -138,7 +142,7 @@ fun SmartTrackListScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(top = innerPadding.calculateTopPadding()), Alignment.Center
-            ) { CircularProgressIndicator() }
+            ) { if (isDownloads) Text("Nothing downloaded yet") else CircularProgressIndicator() }
         } else {
             Column(
                 modifier = Modifier

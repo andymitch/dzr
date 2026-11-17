@@ -389,6 +389,13 @@ fun AlbumDetailScreen(
 
                     if (UseSharedCollapsibleTopBarProbe) {
                         SharedAlbumTopBarProbe(
+                            extraActions = {
+                                com.andymitch.dzr.presentation.components.DownloadButton(
+                                    collectionId = "album_${album.id}",
+                                    title = album.title,
+                                    songs = songs
+                                )
+                            },
                             album = album,
                             songsCount = songs.size,
                             fansCount = uiState.fans,
@@ -411,6 +418,13 @@ fun AlbumDetailScreen(
                         )
                     } else {
                         CollapsingAlbumTopBar(
+                            extraActions = {
+                                com.andymitch.dzr.presentation.components.DownloadButton(
+                                    collectionId = "album_${album.id}",
+                                    title = album.title,
+                                    songs = songs
+                                )
+                            },
                             album = album,
                             songsCount = songs.size,
                             fansCount = uiState.fans,
@@ -520,7 +534,8 @@ private fun SharedAlbumTopBarProbe(
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     isLiked: Boolean,
-    onLikeClick: () -> Unit
+    onLikeClick: () -> Unit,
+    extraActions: @Composable () -> Unit = {}
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
@@ -622,6 +637,7 @@ private fun SharedAlbumTopBarProbe(
             fadeSubtitleOnCollapse = false,
             syncStatusBarWithContainer = false,
             actions = {
+                extraActions()
                 FilledIconButton(
                     modifier = Modifier.padding(end = 12.dp),
                     onClick = onLikeClick,
@@ -667,7 +683,8 @@ private fun CollapsingAlbumTopBar(
     onBackPressed: () -> Unit,
     onPlayClick: () -> Unit,
     isLiked: Boolean,
-    onLikeClick: () -> Unit
+    onLikeClick: () -> Unit,
+    extraActions: @Composable () -> Unit = {}
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
@@ -772,6 +789,7 @@ private fun CollapsingAlbumTopBar(
                     Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.auth_cd_back))
                 }
 
+                Box(modifier = Modifier.align(Alignment.TopEnd).padding(end = 64.dp, top = 4.dp)) { extraActions() }
                 FilledIconButton(
                     modifier = Modifier
                         .align(Alignment.TopEnd)

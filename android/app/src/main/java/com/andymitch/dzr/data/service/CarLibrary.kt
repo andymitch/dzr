@@ -29,6 +29,7 @@ class CarLibrary @Inject constructor(
     @ApplicationContext private val context: Context,
     private val deezer: DeezerRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val downloads: com.andymitch.dzr.data.download.DownloadStore,
 ) {
     companion object {
         const val ROOT = "car"
@@ -38,6 +39,7 @@ class CarLibrary @Inject constructor(
         private const val PLAYLISTS = "car/playlists"
         private const val ALBUMS = "car/albums"
         private const val ARTISTS = "car/artists"
+        private const val DOWNLOADS = "car/downloads"
         private const val DISCOVERY = "car/discovery"
         private const val MY_TOP = "car/mytop"
         private const val PLAYLIST = "car/playlist/"
@@ -62,7 +64,7 @@ class CarLibrary @Inject constructor(
             folder(PLAYLISTS, "Playlists", grid = true),
             folder(ALBUMS, "Albums", grid = true),
             folder(ARTISTS, "Artists", grid = true),
-        )
+        ) + listOfNotNull(folder(DOWNLOADS, "Downloads").takeIf { downloads.songs().isNotEmpty() })
         PLAYLISTS -> {
             val lovedId = deezer.lovedPlaylistId()
             deezer.getUserPlaylists()?.data?.included.orEmpty()
@@ -120,6 +122,7 @@ class CarLibrary @Inject constructor(
     private suspend fun flowConfigs() = deezer.getMultiFlowConfigs()?.data?.included.orEmpty()
 
     private suspend fun songs(containerId: String): List<Song> {
+        if (containerId == DOWNLOADS) return downloads.songs()
         val id = containerId.substringAfterLast('/')
         val tracks = when {
             containerId == LIKED -> deezer.getAllLovedTracks()

@@ -150,7 +150,8 @@ fun LibraryActionRow(
     onPlayClick: (() -> Unit)? = null,
     // Custom Main Action
     customMainActionIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    customMainActionText: String? = null
+    customMainActionText: String? = null,
+    trailingAction: (@Composable () -> Unit)? = null
 ) {
 
     Row(
@@ -259,6 +260,11 @@ fun LibraryActionRow(
         }
 
         Spacer(modifier = Modifier.width(8.dp))
+
+        trailingAction?.let {
+            it()
+            Spacer(modifier = Modifier.width(4.dp))
+        }
 
         if (showSortButton) {
             val outerCorner = 26.dp
