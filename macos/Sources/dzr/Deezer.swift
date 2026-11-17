@@ -48,6 +48,7 @@ struct Item: Identifiable, Hashable, Codable {
     var artwork: URL?
     var readable = true
     var creatorId: Int64 = 0
+    var covers: [URL]?
 }
 
 struct Shelf: Identifiable {
@@ -122,7 +123,7 @@ struct Resource: Decodable {
 struct One: Decodable { var data: Resource }
 private struct Many: Decodable { var data: [Resource] }
 
-private func items(_ rs: [Resource]?) -> [Item] { (rs ?? []).map(\.item) }
+func items(_ rs: [Resource]?) -> [Item] { (rs ?? []).map(\.item) }
 
 enum Quality: String, CaseIterable, Identifiable, Codable {
     case flac = "FLAC", high = "320 kbps", standard = "128 kbps"
@@ -188,24 +189,88 @@ final class Deezer {
         async let flows = one("\(user)/multiflow")
         async let recs = one("\(castUser)/recommended-playlists")
         async let recents = try? one("\(castUser)/recently-played")
+        async let releases = (try? newReleases()) ?? []
+        async let discovery = try? one("platform/generic/smarttracklist/discovery")
+        async let top = (try? classic("user/me/charts/tracks?limit=50")) ?? []
         let mixes = await withTaskGroup(of: (Int, Item?).self) { group in
-            let ids = ["discovery"] + (1...8).map { "inspired-by-\($0)" }
-            for (i, id) in ids.enumerated() {
+            for i in 1...8 {
                 group.addTask {
-                    guard let r = try? await self.one("platform/generic/smarttracklist/\(id)"), !(r.included ?? []).isEmpty else { return (i, nil) }
+                    guard let r = try? await self.one("platform/generic/smarttracklist/inspired-by-\(i)"), !(r.included ?? []).isEmpty else { return (i, nil) }
                     let featuring = r.attributes?.title ?? ""
                     let lead = featuring.replacingOccurrences(of: "Featuring ", with: "").components(separatedBy: ",").first ?? ""
-                    return (i, Item(kind: .mix, id: id, title: i == 0 ? "Discovery" : "Inspired by \(lead)", subtitle: featuring, artwork: r.item.artwork))
+                    return (i, Item(kind: .mix, id: "inspired-by-\(i)", title: "Inspired by \(lead)", subtitle: featuring, artwork: r.item.artwork))
                 }
             }
             return await group.reduce(into: []) { $0.append($1) }.sorted { $0.0 < $1.0 }.compactMap(\.1)
         }
+        let releaseList = await releases
+        let topTracks = await top
+        var picks: [Item] = []
+        if let d = await discovery, !(d.included ?? []).isEmpty {
+            picks.append(Item(kind: .mix, id: "discovery", title: "Discovery", subtitle: d.attributes?.title ?? "", artwork: d.item.artwork))
+        }
+        if !topTracks.isEmpty {
+            let month = Date().formatted(.dateTime.month(.wide))
+            picks.append(Item(kind: .mix, id: Self.myTopId, title: "My Top \(month)", subtitle: Self.featuring(topTracks), artwork: topTracks.first?.artwork, covers: Self.covers(topTracks)))
+        }
+        var releaseShelf = releaseList
+        if !releaseList.isEmpty {
+            let artists = releaseList.prefix(4).map { $0.subtitle.components(separatedBy: " · ").first ?? "" }
+            releaseShelf.insert(Item(kind: .mix, id: Self.newReleasesId, title: "New releases for you", subtitle: "Featuring " + artists.joined(separator: ", "), artwork: releaseList.first?.artwork, covers: Self.covers(releaseList)), at: 0)
+        }
         return try await [
             Shelf(title: "Recently played", items: await renamingLoved(items(recents?.included))),
             Shelf(title: "Flow", items: items(flows.included)),
-            Shelf(title: "Mixes", items: mixes),
-            Shelf(title: "Recommended playlists", items: items(recs.included)),
+            Shelf(title: "New releases for you", items: releaseShelf),
+            Shelf(title: "Mixes inspired by…", items: mixes),
+            Shelf(title: "Recommended playlists", items: picks + items(recs.included)),
         ]
+    }
+
+    static let newReleasesId = "new-releases"
+    static let myTopId = "my-top"
+
+    private static func covers(_ list: [Item]) -> [URL] {
+        var out: [URL] = []
+        for url in list.compactMap(\.artwork) where !out.contains(url) {
+            out.append(url)
+            if out.count == 4 { break }
+        }
+        return out
+    }
+
+    private static func featuring(_ tracks: [Item]) -> String {
+        var seen: [String] = []
+        for t in tracks {
+            let a = t.subtitle.components(separatedBy: " · ").first ?? ""
+            if !a.isEmpty, !seen.contains(a) { seen.append(a) }
+            if seen.count == 4 { break }
+        }
+        return "Featuring " + seen.joined(separator: ", ")
+    }
+
+    private struct Releases: Decodable {
+        var data: [R]
+        struct R: Decodable { var id: Int64; var title: String; var cover_xl: String?; var artist: A?; var release_date: String? }
+        struct A: Decodable { var name: String }
+    }
+
+    func newReleases() async throws -> [Item] {
+        let url = URL(string: Self.api.absoluteString + "user/me/recommendations/releases?access_token=\(session?.accessToken ?? "")")!
+        let r: Releases = try await Self.fetch(URLRequest(url: url))
+        return r.data.map {
+            Item(kind: .album, id: String($0.id), title: $0.title, subtitle: [$0.artist?.name, $0.release_date.map { String($0.prefix(4)) }].compactMap { $0 }.joined(separator: " · "), artwork: $0.cover_xl.flatMap(URL.init(string:)))
+        }
+    }
+
+    private func releaseMix() async throws -> [Item] {
+        let releases = try await newReleases().prefix(20)
+        return await withTaskGroup(of: (Int, Item?).self) { group in
+            for (i, r) in releases.enumerated() {
+                group.addTask { (i, try? await items(self.one("platform/generic/album/\(r.id)").included).first) }
+            }
+            return await group.reduce(into: []) { $0.append($1) }.sorted { $0.0 < $1.0 }.compactMap(\.1)
+        }
     }
 
     private var lovedId: String?
@@ -315,7 +380,12 @@ final class Deezer {
             return try await [Shelf(title: "Tracks", items: items(one("platform/generic/playlist/\(it.id)").included))]
         case .album: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/album/\(it.id)").included))]
         case .flow: return try await [Shelf(title: "Tracks", items: flowTracks(it.id))]
-        case .mix: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/smarttracklist/\(it.id)").included))]
+        case .mix:
+            switch it.id {
+            case Self.newReleasesId: return try await [Shelf(title: "Tracks", items: releaseMix())]
+            case Self.myTopId: return try await [Shelf(title: "Tracks", items: classic("user/me/charts/tracks?limit=50"))]
+            default: return try await [Shelf(title: "Tracks", items: items(one("platform/generic/smarttracklist/\(it.id)").included))]
+            }
         case .artist:
             async let top = one("platform/generic/artist/\(it.id)/top-tracks")
             async let albums = try? one("platform/generic/artist/\(it.id)/albums")
@@ -337,6 +407,11 @@ final class Deezer {
             if let u, let url = URL(string: u) { return (url, q) }
         }
         throw DeezerError.unavailable
+    }
+
+    func ban(_ trackId: String) async throws {
+        let (_, res) = try await URLSession.shared.data(for: request("platform/generic/track/\(trackId)/ban", method: "PUT"))
+        if (res as? HTTPURLResponse)?.statusCode ?? 0 >= 300 { throw DeezerError.http((res as? HTTPURLResponse)?.statusCode ?? 0) }
     }
 
     func setLiked(_ trackId: String, _ liked: Bool) async throws {

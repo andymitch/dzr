@@ -74,7 +74,11 @@ struct QueueList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Up Next").font(.headline).padding(.bottom, 4)
+            Text("Up Next").font(.headline)
+            if let source = player.queue.source {
+                Text("Playing from \(source.title)").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer().frame(height: 4)
             if player.upNext.isEmpty {
                 Text("Nothing queued").foregroundStyle(.secondary)
             }
@@ -161,6 +165,7 @@ struct NowPlayingBar: View {
                 if let t = player.current { LikeButton(track: t) }
             }
             .frame(minWidth: 200, maxWidth: 280, alignment: .leading)
+            .help(player.queue.source.map { "Playing from \($0.title)" } ?? "")
 
             VStack(spacing: 2) {
                 Transport()
@@ -169,11 +174,22 @@ struct NowPlayingBar: View {
             .frame(maxWidth: .infinity)
 
             HStack(spacing: 12) {
+                SleepIndicator()
                 QualityMenu()
-                Button { model.showLyrics.toggle() } label: { Image(systemName: "quote.bubble") }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(model.showLyrics ? Color.accent : .secondary)
-                    .help("Lyrics")
+                if model.lyrics?.isEmpty == false {
+                    Button { model.showLyrics.toggle() } label: { Image(systemName: "quote.bubble") }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(model.showLyrics ? Color.accent : .secondary)
+                        .help("Lyrics")
+                }
+                if let t = player.current {
+                    Menu { TrackMenu(track: t, showQueueActions: false) } label: { Image(systemName: "ellipsis") }
+                        .menuStyle(.button)
+                        .menuIndicator(.hidden)
+                        .buttonStyle(.borderless)
+                        .fixedSize()
+                        .help("More")
+                }
                 Button { showQueue.toggle() } label: { Image(systemName: "list.bullet") }
                     .buttonStyle(.borderless)
                     .help("Up Next")
@@ -196,6 +212,13 @@ struct MiniPlayer: View {
     var body: some View {
         VStack(spacing: 14) {
             if let t = player.current {
+                if let source = player.queue.source {
+                    Text("PLAYING FROM \(source.title.uppercased())")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                }
                 Artwork(url: t.artwork, radius: 16)
                     .frame(width: 256, height: 256)
                     .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
@@ -256,13 +279,11 @@ struct MiniPlayer: View {
 struct LyricsView: View {
     @Environment(AppModel.self) private var model
     @Environment(Player.self) private var player
-    @State private var lines: [Deezer.LyricLine]?
-    @State private var loadedFor: String?
     @State private var lineMids: [Int: CGFloat] = [:]
     @State private var scrollNudge: CGFloat = 0
 
     private var currentIndex: Int? {
-        guard let lines else { return nil }
+        guard let lines = model.lyrics else { return nil }
         return lines.lastIndex { ($0.time ?? .infinity) <= player.position + 0.3 }
     }
 
@@ -270,7 +291,7 @@ struct LyricsView: View {
         Group {
             if player.current == nil {
                 ContentUnavailableView("Lyrics", systemImage: "quote.bubble", description: Text("Play something to see its lyrics."))
-            } else if let lines, !lines.isEmpty {
+            } else if let lines = model.lyrics, !lines.isEmpty {
                 GeometryReader { geo in
                     VStack(alignment: .leading, spacing: 14) {
                         ForEach(Array(lines.enumerated()), id: \.offset) { i, l in
@@ -294,19 +315,13 @@ struct LyricsView: View {
                 .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.12), .init(color: .black, location: 0.85), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
                 .onScrollWheel { scrollNudge += $0 }
                 .onChange(of: currentIndex) { scrollNudge = 0 }
-            } else if lines != nil {
+            } else if model.lyrics != nil {
                 ContentUnavailableView("No Lyrics", systemImage: "quote.bubble", description: Text("Deezer has no lyrics for this track."))
             } else {
                 ProgressView()
             }
         }
-        .task(id: player.current?.id) {
-            guard let id = player.current?.id, id != loadedFor else { return }
-            lines = nil
-            lineMids = [:]
-            loadedFor = id
-            lines = (try? await model.deezer.lyrics(id)) ?? []
-        }
+        .onChange(of: player.current?.id) { lineMids = [:] }
     }
 }
 
@@ -325,5 +340,123 @@ private struct ScrollWheel: NSViewRepresentable {
 extension View {
     func onScrollWheel(_ action: @escaping (CGFloat) -> Void) -> some View {
         overlay(ScrollWheel(onScroll: action).allowsHitTesting(true))
+    }
+}
+
+struct SleepTimerMenu: View {
+    let player: Player
+
+    var body: some View {
+        Menu("Sleep Timer") {
+            Button("Off") { player.setSleepTimer(minutes: nil) }
+                .disabled(player.sleepEnd == nil && !player.sleepAtEndOfSong)
+            Divider()
+            ForEach([15, 30, 45, 60], id: \.self) { m in
+                Button("\(m) Minutes") { player.setSleepTimer(minutes: m) }
+            }
+            Button("End of Current Song") { player.sleepAfterCurrentSong() }
+                .disabled(player.current == nil)
+        }
+    }
+}
+
+struct SleepIndicator: View {
+    @Environment(Player.self) private var player
+
+    var body: some View {
+        if player.sleepEnd != nil || player.sleepAtEndOfSong {
+            Menu {
+                SleepTimerMenu(player: player)
+            } label: {
+                Image(systemName: "moon.zzz.fill")
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .buttonStyle(.borderless)
+            .foregroundStyle(Color.accent)
+            .fixedSize()
+            .help(sleepHelp)
+        }
+    }
+
+    private var sleepHelp: String {
+        if player.sleepAtEndOfSong { return "Stops at the end of this song" }
+        guard let end = player.sleepEnd else { return "" }
+        return "Stops at \(end.formatted(date: .omitted, time: .shortened))"
+    }
+}
+
+struct TrackMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(Player.self) private var player
+    @Environment(\.playSource) private var source
+    let track: Item
+    var showQueueActions = true
+
+    var body: some View {
+        if showQueueActions {
+            Button("Play Next") { player.playNext(track) }
+            Button("Add to Queue") { player.enqueue(track) }
+        }
+        Menu("Add to Playlist") {
+            Button("New Playlist…") { model.newPlaylistTracks = [track.id] }
+            if !model.myPlaylists.isEmpty { Divider() }
+            ForEach(model.myPlaylists) { p in
+                Button(p.title) { model.playlistAction { try await model.deezer.addToPlaylist(p.id, [track.id]) } }
+            }
+        }
+        if let p = source, p.kind == .playlist, model.myPlaylists.contains(where: { $0.id == p.id }) {
+            Button("Remove from Playlist") { model.playlistAction { try await model.deezer.removeFromPlaylist(p.id, [track.id]) } }
+        }
+        Divider()
+        Button("Play Track Mix") { model.playTrackMix(track) }
+        Button("Save Track Mix as Playlist") { model.saveTrackMix(track) }
+        Divider()
+        Button(model.liked.contains(track.id) ? "Unlike" : "Like") { model.toggleLike(track) }
+        Button("Don't Play This Song") { model.ban(track) }
+        Divider()
+        if track.albumId != 0 {
+            NavigationLink("Go to Album", value: Item(kind: .album, id: String(track.albumId), title: track.subtitle.components(separatedBy: " · ").last ?? "", subtitle: track.subtitle.components(separatedBy: " · ").first ?? "", artwork: track.artwork))
+        }
+        if track.artistId != 0 {
+            NavigationLink("Go to Artist", value: Item(kind: .artist, id: String(track.artistId), title: track.subtitle.components(separatedBy: " · ").first ?? "", subtitle: ""))
+        }
+        Button("Song Info") { model.infoTrack = track }
+    }
+}
+
+struct SongInfoView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(Player.self) private var player
+    let track: Item
+
+    var body: some View {
+        let parts = track.subtitle.components(separatedBy: " · ")
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                Artwork(url: track.artwork, radius: 12).frame(width: 96, height: 96)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(track.title).font(.title3.bold()).lineLimit(2)
+                    Text(parts.first ?? "").foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            Form {
+                LabeledContent("Artist", value: parts.first ?? "")
+                LabeledContent("Album", value: parts.dropFirst().first ?? "")
+                LabeledContent("Duration", value: format(track.duration))
+                if player.current?.id == track.id, let q = player.playingQuality {
+                    LabeledContent("Quality", value: q.rawValue)
+                }
+            }
+            .formStyle(.grouped)
+            .scrollDisabled(true)
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 400)
     }
 }

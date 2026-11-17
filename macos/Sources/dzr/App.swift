@@ -19,6 +19,7 @@ struct DzrApp: App {
                 .frame(minWidth: 900, minHeight: 560)
                 .onAppear { applyDockPolicy(); Theme.shared.apply() }
                 .onChange(of: model.player.current?.artwork) { _, url in Theme.shared.follow(url) }
+                .task(id: model.player.current?.id) { await model.loadLyrics(for: model.player.current?.id) }
                 .onChange(of: showInDock) { applyDockPolicy() }
         }
         .commands {
@@ -31,6 +32,8 @@ struct DzrApp: App {
                 Button("Shuffle") { model.player.toggleShuffle() }.keyboardShortcut("s", modifiers: .command)
                 Button("Repeat") { model.player.cycleRepeat() }.keyboardShortcut("r", modifiers: .command)
                 Button("Like") { model.toggleLike() }.keyboardShortcut("l", modifiers: .command)
+                Divider()
+                SleepTimerMenu(player: model.player)
             }
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates…") { Task { await Updates.check(manual: true) } }
@@ -78,6 +81,10 @@ final class AppModel {
     var myPlaylists: [Item] = []
     var playlistsVersion = 0
     var newPlaylistTracks: [String]?
+    var lyrics: [Deezer.LyricLine]?
+    var infoTrack: Item?
+    var notice: String?
+    private var lyricsFor: String?
 
     init() {
         player = Player(deezer: deezer)
@@ -120,6 +127,43 @@ final class AppModel {
         Task {
             do { try await deezer.setLiked(t.id, like) } catch {
                 if like { liked.remove(t.id) } else { liked.insert(t.id) }
+            }
+        }
+    }
+
+    func loadLyrics(for id: String?) async {
+        guard let id, id != lyricsFor else { return }
+        lyricsFor = id
+        lyrics = nil
+        let lines = (try? await deezer.lyrics(id)) ?? []
+        guard lyricsFor == id else { return }
+        lyrics = lines
+        if lines.isEmpty { showLyrics = false }
+    }
+
+    func ban(_ track: Item) {
+        Task {
+            if case .success = await run({ try await deezer.ban(track.id) }) {
+                player.remove(track)
+                notice = "You won't hear \(track.title) again."
+            }
+        }
+    }
+
+    func playTrackMix(_ track: Item) {
+        Task {
+            if case .success(let mix) = await run({ try await deezer.trackMix(track.id) }), !mix.isEmpty {
+                player.shuffle = false
+                player.play(mix, at: 0, from: Item(kind: .mix, id: "trackmix-\(track.id)", title: "\(track.title) Mix", subtitle: ""))
+            }
+        }
+    }
+
+    func saveTrackMix(_ track: Item) {
+        Task {
+            if case .success(let mix) = await run({ try await deezer.trackMix(track.id) }), !mix.isEmpty {
+                playlistAction { _ = try await self.deezer.createPlaylist("\(track.title) Mix", tracks: mix.map(\.id)) }
+                notice = "Saved \(track.title) Mix to your playlists."
             }
         }
     }

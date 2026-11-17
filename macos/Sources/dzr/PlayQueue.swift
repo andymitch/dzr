@@ -45,6 +45,13 @@ struct PlayQueue: Codable, Equatable {
         return fresh.count
     }
 
+    mutating func removeOthers(_ id: String) {
+        guard let cur = current else { return }
+        tracks.removeAll { $0.id == id && $0 != cur }
+        original.removeAll { $0.id == id && $0 != cur }
+        index = tracks.firstIndex(of: cur) ?? 0
+    }
+
     mutating func moveUpNext(from: IndexSet, to: Int) {
         let base = index + 1
         tracks.move(fromOffsets: IndexSet(from.map { $0 + base }), toOffset: to + base)

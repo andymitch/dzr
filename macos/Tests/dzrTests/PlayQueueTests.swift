@@ -73,6 +73,16 @@ private func ids(_ items: some Sequence<Item>) -> [String] { items.map(\.id) }
         #expect(!q.needsMore)
     }
 
+    @Test func removingABannedSongKeepsTheCurrentTrack() {
+        var q = PlayQueue()
+        q.play([track("a"), track("b"), track("c"), track("b")], at: 2, from: nil)
+        q.removeOthers("b")
+        #expect(ids(q.tracks) == ["a", "c"])
+        #expect(q.current?.id == "c")
+        q.removeOthers("c")
+        #expect(q.current?.id == "c")
+    }
+
     @Test func survivesASaveAndRestore() throws {
         var q = PlayQueue()
         q.play([track("a"), track("b")], at: 1, from: Item(kind: .playlist, id: "p", title: "Mine", subtitle: ""))

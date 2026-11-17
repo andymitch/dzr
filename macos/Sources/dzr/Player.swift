@@ -25,6 +25,10 @@ final class Player {
     var playingQuality: Quality?
     var error: String?
     var onUnauthorized: () -> Void = {}
+    var sleepEnd: Date?
+    var sleepAtEndOfSong = false
+    private var sleepTask: Task<Void, Never>?
+    private var endObserver: NSObjectProtocol?
 
     var current: Item? { queue.current }
     var upNext: ArraySlice<Item> { queue.upNext }
@@ -46,6 +50,9 @@ final class Player {
         }
         itemObserver = av.observe(\.currentItem) { [weak self] _, _ in
             Task { @MainActor in self?.currentItemChanged() }
+        }
+        endObserver = NotificationCenter.default.addObserver(forName: AVPlayerItem.didPlayToEndTimeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.songEnded() }
         }
         terminateObserver = NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.save() }
@@ -127,6 +134,57 @@ final class Player {
         updateNowPlaying()
     }
 
+    func remove(_ track: Item) {
+        if current?.id == track.id {
+            guard let n = queue.nextIndex(auto: false) else {
+                av.pause()
+                isPlaying = false
+                updateNowPlaying()
+                return
+            }
+            queue.index = n
+            load()
+        }
+        queue.removeOthers(track.id)
+        queueChanged()
+    }
+
+    func setSleepTimer(minutes: Int?) {
+        sleepTask?.cancel()
+        sleepEnd = nil
+        sleepAtEndOfSong = false
+        av.actionAtItemEnd = .advance
+        if av.currentItem != nil { prepareNext() }
+        guard let minutes else { return }
+        sleepEnd = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        sleepTask = Task {
+            try? await Task.sleep(for: .seconds(minutes * 60))
+            guard !Task.isCancelled else { return }
+            sleepEnd = nil
+            if isPlaying { toggle() }
+        }
+    }
+
+    func sleepAfterCurrentSong() {
+        setSleepTimer(minutes: nil)
+        sleepAtEndOfSong = true
+        dropPrepared()
+        av.actionAtItemEnd = .pause
+    }
+
+    private func songEnded() {
+        guard sleepAtEndOfSong else { return }
+        sleepAtEndOfSong = false
+        av.actionAtItemEnd = .advance
+        isPlaying = false
+        av.removeAllItems()
+        if let n = queue.nextIndex(auto: true) { queue.index = n }
+        position = 0
+        duration = current?.duration ?? 0
+        updateNowPlaying()
+        save()
+    }
+
     func save() {
         let saved = Saved(queue: queue, position: position, quality: quality)
         guard let data = try? JSONEncoder().encode(saved) else { return }
@@ -196,6 +254,7 @@ final class Player {
 
     private func prepareNext() {
         dropPrepared()
+        if sleepAtEndOfSong { return }
         if queue.needsMore { fetchMore() }
         guard let n = queue.nextIndex(auto: true) else { return }
         let t = queue.tracks[n]

@@ -64,21 +64,27 @@ struct MainView: View {
             }
             Button("Cancel", role: .cancel) { newPlaylistName = "" }
         }
+        .sheet(item: Binding(get: { model.infoTrack }, set: { model.infoTrack = $0 })) { SongInfoView(track: $0) }
+        .alert(model.notice ?? "", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
+            Button("OK", role: .cancel) {}
+        }
         .tint(.accent)
     }
 
     @ViewBuilder private var root: some View {
         switch selection ?? .home {
-        case .home: ShelvesPage(title: "Home") { try await $0.home() }
+        case .home: ShelvesPage(title: "Home", surprise: true) { try await $0.home() }
         case .search:
             if submitted.isEmpty {
                 ContentUnavailableView("Search Deezer", systemImage: "magnifyingglass", description: Text("Find tracks, artists, albums and playlists."))
                     .navigationTitle("Search")
             } else {
-                ShelvesPage(title: submitted) { [submitted] in try await $0.search(submitted) }.id(submitted)
+                ShelvesPage(title: submitted) { [submitted] in try await $0.search(submitted) }
+                    .environment(\.playSource, Item(kind: .mix, id: "search", title: "Search: \(submitted)", subtitle: ""))
+                    .id(submitted)
             }
-        case .liked: TracksPage(title: "Liked Songs", symbol: "heart.fill") { try await $0.lovedTracks() }
-        case .recent: TracksPage(title: "Recently Played", symbol: "clock.fill") { try await $0.history() }
+        case .liked: TracksPage(title: "Liked Songs", symbol: "heart.fill", sourceId: "liked") { try await $0.lovedTracks() }
+        case .recent: TracksPage(title: "Recently Played", symbol: "clock.fill", sourceId: "recent") { try await $0.history() }
         case .playlists:
             GridPage(title: "Playlists") { try await $0.playlists() }
                 .id(model.playlistsVersion)
@@ -159,8 +165,23 @@ struct Loader<T, Content: View>: View {
 }
 
 struct ShelvesPage: View {
+    @Environment(AppModel.self) private var model
+    @Environment(Player.self) private var player
     let title: String
+    var surprise = false
     let load: (Deezer) async throws -> [Shelf]
+
+    private func surpriseMe(_ shelves: [Shelf]) {
+        let picks = shelves.filter { $0.title != "Recently played" }.flatMap(\.items).filter { [.flow, .mix, .playlist, .album].contains($0.kind) }
+        guard let pick = picks.randomElement() else { return }
+        Task {
+            if case .success(let opened) = await model.run({ try await model.deezer.open(pick) }),
+               let tracks = opened.first(where: { $0.items.first?.kind == .track })?.items, !tracks.isEmpty {
+                player.shuffle = false
+                player.play(tracks, at: 0, from: pick)
+            }
+        }
+    }
 
     var body: some View {
         Loader(title: title, load: load) { shelves in
@@ -176,6 +197,12 @@ struct ShelvesPage: View {
                 }
                 .padding(.vertical, 20)
             }
+            .toolbar {
+                if surprise {
+                    Button { surpriseMe(shelves) } label: { Label("Surprise Me", systemImage: "dice") }
+                        .help("Play a random mix or playlist from Home")
+                }
+            }
         }
     }
 }
@@ -184,6 +211,7 @@ struct TracksPage: View {
     @Environment(Player.self) private var player
     let title: String
     let symbol: String
+    let sourceId: String
     let load: (Deezer) async throws -> [Item]
 
     var body: some View {
@@ -207,6 +235,7 @@ struct TracksPage: View {
                 }
                 .padding(.vertical, 20)
             }
+            .environment(\.playSource, Item(kind: .mix, id: sourceId, title: title, subtitle: ""))
         }
     }
 }
@@ -278,7 +307,17 @@ struct Card: View {
     var body: some View {
         NavigationLink(value: item) {
             VStack(alignment: item.kind == .artist ? .center : .leading, spacing: 8) {
-                Artwork(url: item.artwork, round: item.kind == .artist, radius: 14)
+                Group {
+                    if let covers = item.covers, covers.count == 4 {
+                        Grid(horizontalSpacing: 0, verticalSpacing: 0) {
+                            GridRow { Artwork(url: covers[0], radius: 0); Artwork(url: covers[1], radius: 0) }
+                            GridRow { Artwork(url: covers[2], radius: 0); Artwork(url: covers[3], radius: 0) }
+                        }
+                        .clipShape(.rect(cornerRadius: 14))
+                    } else {
+                        Artwork(url: item.artwork, round: item.kind == .artist, radius: 14)
+                    }
+                }
                     .aspectRatio(1, contentMode: .fit)
                     .shadow(color: .black.opacity(hover ? 0.35 : 0.15), radius: hover ? 14 : 6, y: hover ? 8 : 3)
                     .scaleEffect(hover ? 1.03 : 1)
@@ -362,7 +401,7 @@ struct Hero: View {
         Task {
             if case .success(let radio) = await model.run({ try await model.deezer.artistRadio(item.id) }), !radio.isEmpty {
                 player.shuffle = false
-                player.play(radio, at: 0)
+                player.play(radio, at: 0, from: Item(kind: .mix, id: "artist-\(item.id)", title: "\(item.title) Mix", subtitle: ""))
             }
         }
     }
@@ -477,34 +516,7 @@ struct TrackRow: View {
         .onTapGesture { player.play(tracks, at: index, from: source) }
         .contextMenu {
             Button("Play") { player.play(tracks, at: index, from: source) }
-            Button("Play Next") { player.playNext(track) }
-            Button("Add to Queue") { player.enqueue(track) }
-            Menu("Add to Playlist") {
-                Button("New Playlist…") { model.newPlaylistTracks = [track.id] }
-                if !model.myPlaylists.isEmpty { Divider() }
-                ForEach(model.myPlaylists) { p in
-                    Button(p.title) { model.playlistAction { try await model.deezer.addToPlaylist(p.id, [track.id]) } }
-                }
-            }
-            if let p = source, p.kind == .playlist, model.myPlaylists.contains(where: { $0.id == p.id }) {
-                Button("Remove from Playlist") { model.playlistAction { try await model.deezer.removeFromPlaylist(p.id, [track.id]) } }
-            }
-            Button("Play Track Mix") {
-                Task {
-                    if case .success(let mix) = await model.run({ try await model.deezer.trackMix(track.id) }), !mix.isEmpty {
-                        player.shuffle = false
-                        player.play(mix, at: 0)
-                    }
-                }
-            }
-            Button(model.liked.contains(track.id) ? "Unlike" : "Like") { model.toggleLike(track) }
-            Divider()
-            if track.albumId != 0 {
-                NavigationLink("Go to Album", value: Item(kind: .album, id: String(track.albumId), title: track.subtitle.components(separatedBy: " · ").last ?? "", subtitle: track.subtitle.components(separatedBy: " · ").first ?? "", artwork: track.artwork))
-            }
-            if track.artistId != 0 {
-                NavigationLink("Go to Artist", value: Item(kind: .artist, id: String(track.artistId), title: track.subtitle.components(separatedBy: " · ").first ?? "", subtitle: ""))
-            }
+            TrackMenu(track: track)
         }
     }
 }
