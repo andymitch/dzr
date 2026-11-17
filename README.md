@@ -34,6 +34,18 @@ Android:
 - Accent colours over black and white, Wallpaper colours, and a pure black (OLED) mode
 - Three navigation styles, including one without a bottom bar
 - Save a Track Mix as a playlist
+- Android Auto: Home (Flow, song mixes, recommended playlists), Library and search on the car's screen
+
+## Android Auto
+
+Android Auto only lists apps installed from the Play Store until you allow unknown sources. One-time setup on the phone:
+
+1. Open Android Auto's settings (Settings > Connected devices > Connection preferences > Android Auto).
+2. Scroll to the bottom and tap **Version** 10 times, then confirm to turn on developer settings.
+3. Open the menu (⋮) > **Developer settings** and turn on **Unknown sources**.
+4. Reconnect to the car. dzr shows up in the app launcher.
+
+Sign in to dzr on the phone first; the car shows "Sign in to dzr on your phone" until you do.
 
 ## Known gaps
 

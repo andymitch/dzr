@@ -38,6 +38,15 @@ class SharedArtworkContentProviderTest {
     }
 
     @Test
+    fun isRemoteArtworkUrl_onlyAllowsDeezerImageCdnOverHttps() {
+        assertThat(SharedArtworkContentProvider.isRemoteArtworkUrl("https://cdn-images.dzcdn.net/images/cover/abc/250x250.jpg")).isTrue()
+        assertThat(SharedArtworkContentProvider.isRemoteArtworkUrl("http://cdn-images.dzcdn.net/images/cover/abc/250x250.jpg")).isFalse()
+        assertThat(SharedArtworkContentProvider.isRemoteArtworkUrl("https://evil.example/dzcdn.net.jpg")).isFalse()
+        assertThat(SharedArtworkContentProvider.isRemoteArtworkUrl("https://dzcdn.net.evil.example/a.jpg")).isFalse()
+        assertThat(SharedArtworkContentProvider.isRemoteArtworkUrl("file:///data/data/com.andymitch.dzr/a.jpg")).isFalse()
+    }
+
+    @Test
     fun parseSongId_readsSharedArtworkSongUri() {
         val songId = SharedArtworkContentProvider.parseSongId(
             uriString = "content://com.andymitch.dzr.artwork/song/42",

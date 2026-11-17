@@ -10,6 +10,9 @@ import android.os.ParcelFileDescriptor
 import com.andymitch.dzr.utils.AlbumArtUtils
 import java.io.File
 import java.io.FileNotFoundException
+import java.net.URI
+import java.net.URL
+import java.security.MessageDigest
 
 class SharedArtworkContentProvider : ContentProvider() {
 
@@ -25,7 +28,7 @@ class SharedArtworkContentProvider : ContentProvider() {
 
     override fun getType(uri: Uri): String? {
         val appContext = context?.applicationContext ?: return null
-        return if (parseSongId(uri, appContext.packageName) != null) {
+        return if (parseSongId(uri, appContext.packageName) != null || uri.path == "/$PATH_REMOTE") {
             DEFAULT_CONTENT_TYPE
         } else {
             null
@@ -61,6 +64,7 @@ class SharedArtworkContentProvider : ContentProvider() {
 
     private fun resolveArtworkFile(uri: Uri): File? {
         val appContext = context?.applicationContext ?: return null
+        if (uri.path == "/$PATH_REMOTE") return resolveRemoteArtworkFile(appContext, uri)
         val songId = parseSongId(uri, appContext.packageName) ?: return null
         return AlbumArtUtils.ensureAlbumArtCachedFile(
             appContext = appContext,
@@ -68,9 +72,44 @@ class SharedArtworkContentProvider : ContentProvider() {
         )?.takeIf { it.exists() && it.isFile && it.canRead() }
     }
 
+    private fun resolveRemoteArtworkFile(appContext: Context, uri: Uri): File? {
+        val url = uri.getQueryParameter(QUERY_URL)?.takeIf(::isRemoteArtworkUrl) ?: return null
+        val name = MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }
+        val dir = File(appContext.cacheDir, PATH_REMOTE).apply { mkdirs() }
+        val file = File(dir, "$name.jpg")
+        if (file.exists()) return file
+        val temp = File.createTempFile(name, null, dir)
+        return runCatching {
+            val connection = URL(url).openConnection().apply {
+                connectTimeout = 10_000
+                readTimeout = 10_000
+            }
+            connection.getInputStream().use { input -> temp.outputStream().use { input.copyTo(it) } }
+            temp.renameTo(file)
+            file.takeIf { it.exists() }
+        }.also { temp.delete() }.getOrNull()
+    }
+
     companion object {
         private const val AUTHORITY_SUFFIX = ".artwork"
         private const val PATH_SONG = "song"
+        private const val PATH_REMOTE = "remote"
+        private const val QUERY_URL = "url"
+
+        internal fun isRemoteArtworkUrl(url: String): Boolean {
+            val uri = runCatching { URI(url) }.getOrNull() ?: return false
+            return uri.scheme == "https" && uri.host?.endsWith(".dzcdn.net") == true
+        }
+
+        fun buildRemoteUri(context: Context, url: String?): Uri? {
+            if (url == null || !isRemoteArtworkUrl(url)) return null
+            return Uri.Builder()
+                .scheme("content")
+                .authority(authority(context.packageName))
+                .path(PATH_REMOTE)
+                .appendQueryParameter(QUERY_URL, url)
+                .build()
+        }
         private const val DEFAULT_CONTENT_TYPE = "image/jpeg"
 
         fun authority(packageName: String): String = packageName + AUTHORITY_SUFFIX

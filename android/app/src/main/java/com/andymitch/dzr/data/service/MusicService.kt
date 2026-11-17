@@ -162,6 +162,12 @@ class MusicService : MediaLibraryService() {
     @Inject
     lateinit var listeningStatsTracker: ListeningStatsTracker
     @Inject
+    lateinit var carLibrary: CarLibrary
+    @Inject
+    lateinit var mediaMapper: com.andymitch.dzr.data.media.MediaMapper
+    @Inject
+    lateinit var deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository
+    @Inject
     @AppScope
     lateinit var appScope: CoroutineScope
 
@@ -180,6 +186,10 @@ class MusicService : MediaLibraryService() {
     private var lastReplayGainMediaId: String? = null
 
     private var favoriteSongIds = emptySet<String>()
+    private var carSearch: Pair<String, List<MediaItem>>? = null
+    private var carFlowId: String? = null
+    private var carFlowSongIds = emptySet<String>()
+    private var carFlowLoading = false
     private var mediaSession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var keepPlayingInBackground = true
@@ -657,17 +667,21 @@ class MusicService : MediaLibraryService() {
                 browser: MediaSession.ControllerInfo,
                 params: MediaLibraryService.LibraryParams?
             ): ListenableFuture<LibraryResult<MediaItem>> {
-                val rootItem = MediaItem.Builder()
-                    .setMediaId(LOCAL_LIBRARY_ROOT_ID)
-                    .setMediaMetadata(
-                        androidx.media3.common.MediaMetadata.Builder()
-                            .setTitle("dzr")
-                            .setIsBrowsable(true)
-                            .setIsPlayable(false)
-                            .setMediaType(androidx.media3.common.MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                            .build()
-                    )
-                    .build()
+                val rootItem = if (params?.isRecent == true) {
+                    MediaItem.Builder()
+                        .setMediaId(LOCAL_LIBRARY_ROOT_ID)
+                        .setMediaMetadata(
+                            androidx.media3.common.MediaMetadata.Builder()
+                                .setTitle("dzr")
+                                .setIsBrowsable(true)
+                                .setIsPlayable(false)
+                                .setMediaType(androidx.media3.common.MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                                .build()
+                        )
+                        .build()
+                } else {
+                    carLibrary.root()
+                }
                 return Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
             }
 
@@ -679,7 +693,18 @@ class MusicService : MediaLibraryService() {
                 pageSize: Int,
                 params: MediaLibraryService.LibraryParams?
             ): ListenableFuture<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> {
-                return Futures.immediateFuture(LibraryResult.ofItemList(emptyList(), params))
+                if (parentId == LOCAL_LIBRARY_ROOT_ID) {
+                    return Futures.immediateFuture(LibraryResult.ofItemList(emptyList(), params))
+                }
+                return serviceScope.future {
+                    if (!carLibrary.isSignedIn()) {
+                        LibraryResult.ofError(
+                            SessionError(SessionError.ERROR_SESSION_AUTHENTICATION_EXPIRED, "Sign in to dzr on your phone")
+                        )
+                    } else {
+                        LibraryResult.ofItemList(carLibrary.children(parentId).page(page, pageSize), params)
+                    }
+                }
             }
 
             override fun onGetItem(
@@ -711,7 +736,11 @@ class MusicService : MediaLibraryService() {
                 query: String,
                 params: MediaLibraryService.LibraryParams?
             ): ListenableFuture<LibraryResult<Void>> {
-                // Signal that search is supported; results delivered via onGetSearchResult
+                serviceScope.launch {
+                    val results = carLibrary.search(query)
+                    carSearch = query to results
+                    session.notifySearchResultChanged(browser, query, results.size, params)
+                }
                 return Futures.immediateFuture(LibraryResult.ofVoid())
             }
 
@@ -723,7 +752,10 @@ class MusicService : MediaLibraryService() {
                 pageSize: Int,
                 params: MediaLibraryService.LibraryParams?
             ): ListenableFuture<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> {
-                return Futures.immediateFuture(LibraryResult.ofItemList(emptyList(), params))
+                return serviceScope.future {
+                    val results = carSearch?.takeIf { it.first == query }?.second ?: carLibrary.search(query)
+                    LibraryResult.ofItemList(results.page(page, pageSize), params)
+                }
             }
 
             override fun onAddMediaItems(
@@ -749,6 +781,13 @@ class MusicService : MediaLibraryService() {
                 startPositionMs: Long
             ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
                 return serviceScope.future {
+                    carQueue(mediaItems)?.let { (items, index) ->
+                        return@future if (items.isEmpty()) {
+                            MediaSession.MediaItemsWithStartPosition(items, C.INDEX_UNSET, C.TIME_UNSET)
+                        } else {
+                            MediaSession.MediaItemsWithStartPosition(items, index, startPositionMs)
+                        }
+                    }
                     val resolvedItems = resolveMediaItemsByIds(mediaItems)
                     grantArtworkUriPermissions(
                         controller.packageName,
@@ -1196,6 +1235,7 @@ class MusicService : MediaLibraryService() {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer, forceNewSession = true)
+            extendCarFlowIfNeeded(mediaSession?.player ?: engine.masterPlayer)
 
 
             val eotTargetSongId = endOfTrackTimerSongId
@@ -2459,8 +2499,9 @@ class MusicService : MediaLibraryService() {
         session: MediaSession,
         targetFavoriteState: Boolean
     ): ListenableFuture<SessionResult> {
-        val songId = session.player.currentMediaItem?.mediaId
+        val mediaItem = session.player.currentMediaItem
             ?: return Futures.immediateFuture(SessionResult(SessionError.ERROR_UNKNOWN))
+        val songId = mediaItem.mediaId
 
         val isCurrentlyFavorite = favoriteSongIds.contains(songId)
         if (isCurrentlyFavorite == targetFavoriteState) {
@@ -2481,12 +2522,54 @@ class MusicService : MediaLibraryService() {
         serviceScope.launch {
             Timber.tag("MusicService")
                 .d("Applying favorite=$targetFavoriteState for songId: $songId")
+            val song = mediaMapper.resolveSongFromMediaItem(mediaItem)
+            if (targetFavoriteState && song != null) musicRepository.saveSong(song)
             musicRepository.setFavoriteStatus(songId, targetFavoriteState)
+            val deezerTrackId = songId.toLongOrNull()?.takeIf { song?.contentUriString?.startsWith("deezer://") == true }
+            if (deezerTrackId != null) {
+                withContext(Dispatchers.IO) {
+                    if (targetFavoriteState) deezerRepository.likeTrack(deezerTrackId) else deezerRepository.unlikeTrack(deezerTrackId)
+                }
+            }
             refreshMediaSessionUi(session)
             requestWidgetFullUpdate(force = true)
         }
 
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+    }
+
+    private fun <T> List<T>.page(page: Int, pageSize: Int): List<T> =
+        drop((page.toLong() * pageSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()).take(pageSize)
+
+    private suspend fun carQueue(mediaItems: List<MediaItem>): Pair<List<MediaItem>, Int>? {
+        val item = mediaItems.singleOrNull() ?: return null
+        val searchQuery = item.requestMetadata.searchQuery
+        val mediaId = when {
+            CarLibrary.isCarId(item.mediaId) -> item.mediaId
+            item.mediaId.isEmpty() && searchQuery != null -> carLibrary.voiceMediaId(searchQuery)
+            else -> return null
+        }
+        val queue = carLibrary.queue(mediaId)
+        val flowId = mediaId.takeIf { it.startsWith(CarLibrary.FLOW) }
+        carFlowId = flowId
+        carFlowSongIds = if (flowId != null) queue.first.map { it.mediaId }.toSet() else emptySet()
+        return queue
+    }
+
+    private fun extendCarFlowIfNeeded(player: Player) {
+        val flowId = carFlowId ?: return
+        if (carFlowLoading || player.currentMediaItem?.mediaId !in carFlowSongIds) return
+        if (player.currentMediaItemIndex < player.mediaItemCount - 3) return
+        carFlowLoading = true
+        serviceScope.launch {
+            val queued = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
+            val more = withContext(Dispatchers.IO) { carLibrary.queue(flowId).first }.filter { it.mediaId !in queued }
+            if (carFlowId == flowId) {
+                carFlowSongIds = carFlowSongIds + more.map { it.mediaId }
+                player.addMediaItems(more)
+            }
+            carFlowLoading = false
+        }
     }
 
     private suspend fun resolveMediaItemsByIds(
