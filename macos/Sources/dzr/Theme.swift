@@ -85,6 +85,7 @@ struct SettingsView: View {
     @Bindable private var theme = Theme.shared
     @State private var confirmRemove = false
     @State private var usedBytes: Int64 = 0
+    @State private var cacheBytes: Int64 = 0
 
     private var downloads: Binding<Quality> { Binding(get: { model.downloads.quality }, set: { model.downloads.quality = $0 }) }
 
@@ -123,6 +124,17 @@ struct SettingsView: View {
                 Button("Remove All Downloads…", role: .destructive) { confirmRemove = true }
                     .disabled(model.downloads.index.collections.isEmpty)
             }
+
+            Section("Cache") {
+                Stepper(value: Binding(get: { model.cache.ahead }, set: { model.cache.ahead = $0 }), in: SongCache.aheadRange) {
+                    LabeledContent("Songs to cache ahead", value: "\(model.cache.ahead)")
+                }
+                LabeledContent("Cache size", value: ByteCountFormatter.string(fromByteCount: cacheBytes, countStyle: .file))
+                Button("Clear Cache") {
+                    model.cache.clear()
+                    cacheBytes = 0
+                }
+            }
         }
         .confirmationDialog("Remove all downloads?", isPresented: $confirmRemove) {
             Button("Remove All Downloads", role: .destructive) {
@@ -132,7 +144,10 @@ struct SettingsView: View {
         } message: {
             Text("Downloaded songs will need a connection to play again.")
         }
-        .onAppear { usedBytes = model.downloads.bytesUsed }
+        .onAppear {
+            usedBytes = model.downloads.bytesUsed
+            cacheBytes = model.cache.bytesUsed
+        }
         .formStyle(.grouped)
         .frame(width: 460)
         .fixedSize()

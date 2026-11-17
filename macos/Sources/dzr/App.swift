@@ -77,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 final class AppModel {
     let deezer = Deezer(session: Session.load())
     let downloads: Downloads
+    let cache: SongCache
     let player: Player
     var signedIn: Bool
     var liked: Set<String> = []
@@ -91,7 +92,8 @@ final class AppModel {
 
     init() {
         downloads = Downloads(deezer: deezer)
-        player = Player(deezer: deezer, downloads: downloads)
+        cache = SongCache(deezer: deezer)
+        player = Player(deezer: deezer, downloads: downloads, cache: cache)
         signedIn = deezer.session != nil
         player.onUnauthorized = { [weak self] in self?.signOut() }
     }

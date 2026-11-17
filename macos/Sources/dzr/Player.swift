@@ -7,6 +7,7 @@ import Observation
 final class Player {
     private let deezer: Deezer
     private let downloads: Downloads
+    private let cache: SongCache
     private let av = AVQueuePlayer()
     private var timeObserver: Any?
     private var itemObserver: NSKeyValueObservation?
@@ -42,9 +43,10 @@ final class Player {
 
     private var streamQuality: Quality { flacFailed && quality == .flac ? .high : quality }
 
-    init(deezer: Deezer, downloads: Downloads) {
+    init(deezer: Deezer, downloads: Downloads, cache: SongCache) {
         self.deezer = deezer
         self.downloads = downloads
+        self.cache = cache
         av.actionAtItemEnd = .advance
         restore()
         timeObserver = av.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] t in
@@ -254,8 +256,14 @@ final class Player {
     }
 
     private func source(for track: Item) async throws -> (URL, Quality) {
-        if let local = downloads.localURL(track.id) { return local }
+        if let local = downloads.localURL(track.id) ?? cache.localURL(track.id) { return local }
         return try await deezer.streamURL(track.id, quality: streamQuality)
+    }
+
+    private func cacheAhead() {
+        var upcoming = Array(queue.upNext)
+        if queue.repeatMode == .all { upcoming += queue.tracks.prefix(queue.index) }
+        cache.prefetch(upcoming, quality: streamQuality) { [downloads] in downloads.entry($0) != nil }
     }
 
     private func dropPrepared() {
@@ -266,6 +274,7 @@ final class Player {
 
     private func prepareNext() {
         dropPrepared()
+        cacheAhead()
         if sleepAtEndOfSong { return }
         if queue.needsMore { fetchMore() }
         guard let n = queue.nextIndex(auto: true) else { return }
