@@ -164,6 +164,8 @@ class MusicService : MediaLibraryService() {
     @Inject
     lateinit var carLibrary: CarLibrary
     @Inject
+    lateinit var flowContinuation: FlowContinuation
+    @Inject
     lateinit var mediaMapper: com.andymitch.dzr.data.media.MediaMapper
     @Inject
     lateinit var deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository
@@ -187,9 +189,6 @@ class MusicService : MediaLibraryService() {
 
     private var favoriteSongIds = emptySet<String>()
     private var carSearch: Pair<String, List<MediaItem>>? = null
-    private var carFlowId: String? = null
-    private var carFlowSongIds = emptySet<String>()
-    private var carFlowLoading = false
     private var mediaSession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var keepPlayingInBackground = true
@@ -1235,7 +1234,7 @@ class MusicService : MediaLibraryService() {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer, forceNewSession = true)
-            extendCarFlowIfNeeded(mediaSession?.player ?: engine.masterPlayer)
+            flowContinuation.extendIfNeeded(mediaSession?.player ?: engine.masterPlayer, serviceScope)
 
 
             val eotTargetSongId = endOfTrackTimerSongId
@@ -2550,26 +2549,12 @@ class MusicService : MediaLibraryService() {
             else -> return null
         }
         val queue = carLibrary.queue(mediaId)
-        val flowId = mediaId.takeIf { it.startsWith(CarLibrary.FLOW) }
-        carFlowId = flowId
-        carFlowSongIds = if (flowId != null) queue.first.map { it.mediaId }.toSet() else emptySet()
-        return queue
-    }
-
-    private fun extendCarFlowIfNeeded(player: Player) {
-        val flowId = carFlowId ?: return
-        if (carFlowLoading || player.currentMediaItem?.mediaId !in carFlowSongIds) return
-        if (player.currentMediaItemIndex < player.mediaItemCount - 3) return
-        carFlowLoading = true
-        serviceScope.launch {
-            val queued = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
-            val more = withContext(Dispatchers.IO) { carLibrary.queue(flowId).first }.filter { it.mediaId !in queued }
-            if (carFlowId == flowId) {
-                carFlowSongIds = carFlowSongIds + more.map { it.mediaId }
-                player.addMediaItems(more)
-            }
-            carFlowLoading = false
+        if (mediaId.startsWith(CarLibrary.FLOW)) {
+            flowContinuation.start(queue.first) { carLibrary.queue(mediaId).first }
+        } else {
+            flowContinuation.stop()
         }
+        return queue
     }
 
     private suspend fun resolveMediaItemsByIds(

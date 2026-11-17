@@ -273,14 +273,13 @@ class PlayerViewModel @Inject constructor(
     val multiSelectionStateHolder: MultiSelectionStateHolder,
     val playlistSelectionStateHolder: PlaylistSelectionStateHolder,
     private val sessionToken: SessionToken,
-    private val mediaControllerFactory: com.andymitch.dzr.data.media.MediaControllerFactory
+    private val mediaControllerFactory: com.andymitch.dzr.data.media.MediaControllerFactory,
+    private val flowContinuation: com.andymitch.dzr.data.service.FlowContinuation
 ) : ViewModel() {
 
     private val _playerUiState = MutableStateFlow(PlayerUiState())
     val playerUiState: StateFlow<PlayerUiState> = _playerUiState.asStateFlow()
 
-    private var isFlowPlayback: Boolean = false
-    private var currentFlowUrl: String? = null
 
     // Dedicated queue flow so the player sheet's MiniPlayer branch does not
     // recompose whenever the queue changes. Consumers that actually need the
@@ -2958,48 +2957,6 @@ class PlayerViewModel @Inject constructor(
                             loadLyricsForCurrentSong()
                         }
                         
-                        // Check if we need to fetch more Flow tracks
-                        val currentIndex = if (dualPlayerEngine.isUsingWindowedQueue()) {
-                            dualPlayerEngine.getCurrentAbsoluteIndex()
-                        } else {
-                            playerCtrl.currentMediaItemIndex
-                        }
-                        val queueSize = _playerUiState.value.currentPlaybackQueue.size
-                        if (isFlowPlayback && currentFlowUrl != null && queueSize > 0 && currentIndex >= queueSize - 3) {
-                            launch {
-                                try {
-                                    var newSongs = emptyList<Song>()
-                                    var retries = 0
-                                    val currentQueue = _playerUiState.value.currentPlaybackQueue
-
-                                    while (newSongs.isEmpty() && retries < 4) {
-                                        val flowResponse = deezerRepository.getMultiFlowTracks(currentFlowUrl!!)
-                                        val newTracks = flowResponse?.data?.included?.filter { it.type == "track" } ?: emptyList()
-                                        if (newTracks.isNotEmpty()) {
-                                            val fetchedSongs = newTracks.map { track ->
-                                                com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(track)
-                                            }
-                                            newSongs = fetchedSongs.filter { newSong -> 
-                                                currentQueue.none { it.id == newSong.id }
-                                            }
-                                        }
-                                        retries++
-                                    }
-                                    
-                                    if (newSongs.isNotEmpty()) {
-                                        val updatedQueue = (currentQueue + newSongs).toPlaybackQueue()
-                                        _playerUiState.update { it.copy(currentPlaybackQueue = updatedQueue) }
-                                        queueStateHolder.setOriginalQueueOrder(updatedQueue)
-                                        
-                                        // Add to exo player
-                                        val mediaItems = newSongs.map { buildPlaybackMediaItem(it) }
-                                        playerCtrl.addMediaItems(mediaItems)
-                                    }
-                                } catch (e: Exception) {
-                                    Timber.tag("PlayerViewModel").e(e, "Failed to fetch more flow tracks")
-                                }
-                            }
-                        }
                     } ?: run {
                         lyricsStateHolder.cancelLoading()
                         playbackStateHolder.updateStablePlayerState {
@@ -3118,8 +3075,15 @@ class PlayerViewModel @Inject constructor(
         directPlaybackJob = viewModelScope.launch {
             transitionSchedulerJob?.cancel()
 
-            isFlowPlayback = flowUrl != null
-            currentFlowUrl = flowUrl
+            if (flowUrl != null) {
+                flowContinuation.start(songsToPlay.map { MediaItemBuilder.build(it) }) {
+                    deezerRepository.getMultiFlowTracks(flowUrl)?.data?.included.orEmpty()
+                        .filter { it.type == "track" }
+                        .map { MediaItemBuilder.build(com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong(it)) }
+                }
+            } else {
+                flowContinuation.stop()
+            }
 
             val validSongs = hydrateSongsIfNeeded(songsToPlay)
             throwIfDirectPlaybackRequestIsStale(requestToken)
@@ -3180,6 +3144,7 @@ class PlayerViewModel @Inject constructor(
     ) {
         cancelPendingFullQueuePlayback()
         val requestToken = beginDirectPlaybackRequest()
+        flowContinuation.stop()
         directPlaybackJob = viewModelScope.launch {
             val result = queueStateHolder.prepareShuffledQueueSuspending(songsToPlay, queueName, startAtZero)
             throwIfDirectPlaybackRequestIsStale(requestToken)

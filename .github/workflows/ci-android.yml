@@ -24,4 +24,4 @@ jobs:
         with:
           packages: platform-tools
       - working-directory: android
-        run: ./gradlew --no-daemon :app:assembleDebug
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug

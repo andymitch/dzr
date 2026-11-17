@@ -56,10 +56,7 @@ class ListeningStatsTrackerTest {
         tracker.finalizeCurrentSession(forceSynchronousPersistence = true)
 
         coVerify(timeout = 2_000) {
-            dailyMixManager.recordPlay(song.id, listenedMs, any())
-        }
-        coVerify(timeout = 2_000) {
-            playbackStatsRepository.recordPlayback(song.id, listenedMs, any())
+            playbackStatsRepository.recordPlayback(song.id, listenedMs, any(), any())
         }
     }
 
@@ -90,7 +87,7 @@ class ListeningStatsTrackerTest {
         tracker.finalizeCurrentSession(forceSynchronousPersistence = true)
 
         coVerify(timeout = 2_000) {
-            playbackStatsRepository.recordPlayback(song.id, expectedDurationMs, any())
+            playbackStatsRepository.recordPlayback(song.id, expectedDurationMs, any(), any())
         }
         assertThat(expectedDurationMs).isGreaterThan(TimeUnit.SECONDS.toMillis(5))
     }

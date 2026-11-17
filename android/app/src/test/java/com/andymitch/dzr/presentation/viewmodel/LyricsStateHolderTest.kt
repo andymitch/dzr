@@ -2,7 +2,6 @@ package com.andymitch.dzr.presentation.viewmodel
 
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
-import com.andymitch.dzr.data.media.SongMetadataEditor
 import com.andymitch.dzr.data.model.Lyrics
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.UserPreferencesRepository
@@ -48,11 +47,9 @@ class LyricsStateHolderTest {
     fun fetchLyricsForSong_usesStoredLyricsWithoutRemoteFetch() = runTest {
         val musicRepository = mockk<MusicRepository>(relaxed = true)
         val userPreferencesRepository = mockk<UserPreferencesRepository>(relaxed = true)
-        val songMetadataEditor = mockk<SongMetadataEditor>(relaxed = true)
         val holder = LyricsStateHolder(
             musicRepository = musicRepository,
-            userPreferencesRepository = userPreferencesRepository,
-            songMetadataEditor = songMetadataEditor
+            userPreferencesRepository = userPreferencesRepository
         )
         val callback = RecordingLyricsLoadCallback()
         val state = MutableStateFlow(StablePlayerState())
