@@ -467,7 +467,7 @@ fun ArtistDetailScreen(
                             }
                             
                             item {
-                                val visibleTopTracks = if (isTopTracksExpanded) uiState.topTracks else uiState.topTracks.take(4)
+                                val visibleTopTracks = uiState.topTracks.take(if (isTopTracksExpanded) 16 else 4)
                                 
                                 androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     visibleTopTracks.forEachIndexed { index, song ->
