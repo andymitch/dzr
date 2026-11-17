@@ -228,7 +228,8 @@ class PlayerViewModel @Inject constructor(
     val playlistSelectionStateHolder: PlaylistSelectionStateHolder,
     private val sessionToken: SessionToken,
     private val mediaControllerFactory: com.andymitch.dzr.data.media.MediaControllerFactory,
-    private val flowContinuation: com.andymitch.dzr.data.service.FlowContinuation
+    private val flowContinuation: com.andymitch.dzr.data.service.FlowContinuation,
+    private val castController: com.andymitch.dzr.data.service.CastController
 ) : ViewModel() {
 
     private val _playerUiState = MutableStateFlow(PlayerUiState())
@@ -3098,6 +3099,17 @@ class PlayerViewModel @Inject constructor(
         _isSheetVisible.value = true
 
         val startMediaItem = buildResolvedPlaybackMediaItem(effectiveStartSong)
+
+        val castingController = mediaController.takeIf { castController.isCasting.value }
+        if (castingController != null) {
+            val startIndex = songsToPlay.indexOfFirst { it.id == effectiveStartSong.id }.coerceAtLeast(0)
+            val window = songsToPlay.drop(startIndex).take(100).map { MediaItemBuilder.build(it) }
+            castingController.setMediaItems(window, 0, 0L)
+            castingController.prepare()
+            castingController.play()
+            _playerUiState.update { it.copy(isLoadingInitialSongs = false) }
+            return
+        }
 
         val playSongsAction = {
             dualPlayerEngine.cancelNext()

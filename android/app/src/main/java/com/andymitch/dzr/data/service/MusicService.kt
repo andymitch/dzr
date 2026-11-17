@@ -169,6 +169,8 @@ class MusicService : MediaLibraryService() {
     @Inject
     lateinit var songCache: com.andymitch.dzr.data.download.SongCache
     @Inject
+    lateinit var castController: CastController
+    @Inject
     lateinit var mediaMapper: com.andymitch.dzr.data.media.MediaMapper
     @Inject
     lateinit var deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository
@@ -224,6 +226,7 @@ class MusicService : MediaLibraryService() {
 
     companion object {
         private const val TAG = "MusicService_Dzr"
+        private const val CAST_WINDOW = 100
         const val NOTIFICATION_ID = androidx.media3.session.DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID
         const val ACTION_SLEEP_TIMER_EXPIRED = "com.andymitch.dzr.ACTION_SLEEP_TIMER_EXPIRED"
         const val EXTRA_FORCE_FOREGROUND_ON_START =
@@ -289,6 +292,7 @@ class MusicService : MediaLibraryService() {
 
     private fun publishMediaSessionPlayer(player: Player, logMessage: String) {
         val session = mediaSession ?: return
+        if (castController.isCasting.value && player !== castController.remote) return
         val oldPlayer = session.player
         if (oldPlayer !== player) {
             oldPlayer.removeListener(playerListener)
@@ -765,6 +769,7 @@ class MusicService : MediaLibraryService() {
             ): ListenableFuture<MutableList<MediaItem>> {
                 return serviceScope.future {
                     resolveMediaItemsByIds(mediaItems).also { resolvedItems ->
+                        if (castController.isCasting.value) castController.warm(resolvedItems.mediaItems)
                         grantArtworkUriPermissions(
                             controller.packageName,
                             resolvedItems.trustedArtworkGrantItems
@@ -782,6 +787,7 @@ class MusicService : MediaLibraryService() {
             ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
                 return serviceScope.future {
                     carQueue(mediaItems)?.let { (items, index) ->
+                        if (castController.isCasting.value) castController.warm(items.take(CAST_WINDOW))
                         return@future if (items.isEmpty()) {
                             MediaSession.MediaItemsWithStartPosition(items, C.INDEX_UNSET, C.TIME_UNSET)
                         } else {
@@ -789,6 +795,7 @@ class MusicService : MediaLibraryService() {
                         }
                     }
                     val resolvedItems = resolveMediaItemsByIds(mediaItems)
+                    if (castController.isCasting.value) castController.warm(resolvedItems.mediaItems.take(CAST_WINDOW))
                     grantArtworkUriPermissions(
                         controller.packageName,
                         resolvedItems.trustedArtworkGrantItems
@@ -814,6 +821,8 @@ class MusicService : MediaLibraryService() {
             it.setSmallIcon(R.drawable.monochrome_player)
         }
         setMediaNotificationProvider(localOnlyProvider)
+        castController.start(onAvailable = ::startCasting, onUnavailable = ::stopCasting)
+        flowContinuation.prepareItems = { castController.warm(it) }
         if (temporaryForegroundStartedInOnCreate) {
             serviceScope.launch {
                 delay(2_000L)
@@ -1086,6 +1095,7 @@ class MusicService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaSession
 
     override fun onDestroy() {
+        castController.release()
         PlaybackActivityTracker.setPlaybackActive(false)
         listeningStatsTracker.finalizeCurrentSession(forceSynchronousPersistence = true)
 
@@ -2528,7 +2538,39 @@ class MusicService : MediaLibraryService() {
     private fun <T> List<T>.page(page: Int, pageSize: Int): List<T> =
         drop((page.toLong() * pageSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()).take(pageSize)
 
+    private fun startCasting(remote: Player) {
+        val local = engine.masterPlayer
+        val items = if (engine.isUsingWindowedQueue()) engine.getFullQueue() else (0 until local.mediaItemCount).map(local::getMediaItemAt)
+        val index = if (engine.isUsingWindowedQueue()) engine.getCurrentAbsoluteIndex() else local.currentMediaItemIndex
+        val position = local.currentPosition
+        val playing = local.playWhenReady
+        local.pause()
+        castController.setCasting(true)
+        publishMediaSessionPlayer(remote, "Casting")
+        if (items.isEmpty() || index < 0) return
+        serviceScope.launch {
+            val window = items.drop(index).take(CAST_WINDOW)
+            castController.warm(window)
+            remote.setMediaItems(window, 0, position)
+            remote.prepare()
+            remote.playWhenReady = playing
+        }
+    }
+
+    private fun stopCasting(remote: Player) {
+        val mediaId = remote.currentMediaItem?.mediaId
+        val position = remote.currentPosition
+        val playing = remote.playWhenReady
+        castController.setCasting(false)
+        val local = engine.masterPlayer
+        publishMediaSessionPlayer(local, "Stopped casting")
+        val index = (0 until local.mediaItemCount).firstOrNull { local.getMediaItemAt(it).mediaId == mediaId }
+        if (index != null) local.seekTo(index, position)
+        if (playing) local.play()
+    }
+
     private fun cacheUpcoming(player: Player) {
+        if (castController.isCasting.value) return
         val timeline = player.currentTimeline
         if (timeline.isEmpty) return
         val window = Timeline.Window()

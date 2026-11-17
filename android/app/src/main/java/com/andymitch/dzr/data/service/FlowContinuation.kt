@@ -14,6 +14,7 @@ class FlowContinuation @Inject constructor() {
     private var fetch: (suspend () -> List<MediaItem>)? = null
     private var songIds = emptySet<String>()
     private var loading = false
+    var prepareItems: suspend (List<MediaItem>) -> Unit = {}
 
     fun start(items: List<MediaItem>, fetch: suspend () -> List<MediaItem>) {
         this.fetch = fetch
@@ -37,6 +38,7 @@ class FlowContinuation @Inject constructor() {
                 repeat(3) {
                     if (more.isEmpty()) more = withContext(Dispatchers.IO) { runCatching { fetch() }.getOrDefault(emptyList()) }.filter { it.mediaId !in queued }
                 }
+                if (more.isNotEmpty()) prepareItems(more)
                 if (this@FlowContinuation.fetch === fetch && more.isNotEmpty()) {
                     songIds = songIds + more.map { it.mediaId }
                     player.addMediaItems(more)
