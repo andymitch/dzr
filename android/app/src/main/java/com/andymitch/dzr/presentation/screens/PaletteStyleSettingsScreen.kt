@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
+import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
+
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -63,11 +67,8 @@ import com.andymitch.dzr.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import com.andymitch.dzr.data.preferences.AlbumArtColorAccuracy
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
 import com.andymitch.dzr.ui.theme.LocalDzrDarkTheme
 import com.andymitch.dzr.ui.theme.generateColorSchemeFromSeed
 import kotlin.math.roundToInt

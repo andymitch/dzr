@@ -1,15 +1,16 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import androidx.compose.runtime.Immutable
 import com.andymitch.dzr.data.model.Album
 import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.FolderSource
 import com.andymitch.dzr.data.model.MusicFolder
 import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.model.SearchResultItem
 import com.andymitch.dzr.data.model.SortOption
-import com.andymitch.dzr.data.model.SearchFilterType
 import com.andymitch.dzr.data.model.SearchHistoryItem
+
+import androidx.compose.runtime.Immutable
+import com.andymitch.dzr.data.model.FolderSource
+import com.andymitch.dzr.data.model.SearchResultItem
+import com.andymitch.dzr.data.model.SearchFilterType
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 

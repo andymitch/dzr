@@ -72,13 +72,5 @@ object MediaMetadataRetrieverPool {
         // No-op: retrievers are released immediately after each use.
     }
     
-    /**
-     * Returns the current number of retrievers held in the pool.
-     */
-    fun poolSize(): Int = 0
     
-    /**
-     * Returns the total number of retrievers created (including those in use).
-     */
-    fun totalCreated(): Int = createdCount.get()
 }

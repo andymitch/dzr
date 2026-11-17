@@ -17,9 +17,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 object PlaybackActivityTracker {
     private val active = AtomicBoolean(false)
 
-    /** True while a [MusicService] playback session is producing audio. */
-    val isPlaybackActive: Boolean
-        get() = active.get()
 
     /** Called by MusicService when playback transitions to/from playing. */
     fun setPlaybackActive(active: Boolean) {

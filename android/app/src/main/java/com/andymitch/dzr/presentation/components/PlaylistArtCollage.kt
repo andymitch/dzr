@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +27,6 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.dp
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import kotlin.math.floor
 import kotlin.math.sqrt
 

@@ -1,5 +1,11 @@
 package com.andymitch.dzr
 
+import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.presentation.viewmodel.MainViewModel
+import com.andymitch.dzr.presentation.utils.AppHapticsConfig
+import com.andymitch.dzr.utils.CrashLogData
+
 import com.andymitch.dzr.ui.theme.pureBlack
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
@@ -105,10 +111,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.andymitch.dzr.data.preferences.AppThemeMode
 import com.andymitch.dzr.data.preferences.NavBarStyle
 import com.andymitch.dzr.data.preferences.sanitizeNavBarCornerRadius
-import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.service.MusicService
-import com.andymitch.dzr.presentation.components.AllFilesAccessDialog
 import com.andymitch.dzr.presentation.components.AppSidebarDrawer
 import com.andymitch.dzr.presentation.components.CrashReportDialog
 import com.andymitch.dzr.presentation.components.DismissUndoBar
@@ -124,7 +127,6 @@ import com.andymitch.dzr.presentation.components.sanitizeNavigationBarBottomInse
 import com.andymitch.dzr.presentation.navigation.AppNavigation
 import com.andymitch.dzr.presentation.navigation.Screen
 import com.andymitch.dzr.presentation.screens.SetupScreen
-import com.andymitch.dzr.presentation.viewmodel.MainViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import com.andymitch.dzr.ui.theme.DzrTheme
 import com.andymitch.dzr.utils.CrashHandler
@@ -137,10 +139,8 @@ import timber.log.Timber
 import javax.inject.Inject
 
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
-import com.andymitch.dzr.presentation.utils.AppHapticsConfig
 import com.andymitch.dzr.presentation.utils.LocalAppHapticsConfig
 import com.andymitch.dzr.presentation.utils.NoOpHapticFeedback
-import com.andymitch.dzr.utils.CrashLogData
 import javax.annotation.concurrent.Immutable
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -165,7 +165,6 @@ class MainActivity : ComponentActivity() {
 
     private val playerViewModel: PlayerViewModel by viewModels()
     private val mainViewModel: MainViewModel by viewModels()
-    private var isUIVisiblyReady = false
     private var mediaControllerFuture: ListenableFuture<MediaController>? = null
     @Inject
     lateinit var userPreferencesRepository: UserPreferencesRepository // Inject here
@@ -174,7 +173,6 @@ class MainActivity : ComponentActivity() {
 
     // For handling shortcut navigation - using StateFlow so composables can observe changes
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
 
     private val requestAllFilesAccessLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
         // Handle the result in onResume
@@ -563,26 +561,19 @@ class MainActivity : ComponentActivity() {
                 Screen.Accounts.route,
                 Screen.PlaylistDetail.route,
                 Screen.SmartTrackList.route,
-                Screen.DailyMixScreen.route,
                 Screen.RecentlyPlayed.route,
-                Screen.GenreDetail.route,
                 Screen.AlbumDetail.route,
                 Screen.ArtistDetail.route,
-                Screen.DJSpace.route,
                 Screen.NavBarCrRad.route,
                 Screen.About.route,
                 Screen.Stats.route,
                 Screen.EditTransition.route,
                 Screen.Experimental.route,
-                Screen.ArtistSettings.route,
                 Screen.Equalizer.route,
                 Screen.SettingsCategory.route,
-                Screen.DelimiterConfig.route,
                 Screen.PaletteStyle.route,
                 Screen.RecentlyPlayed.route,
-                Screen.DeviceCapabilities.route,
-                Screen.EasterEgg.route,
-                Screen.WordDelimiterConfig.route
+                Screen.DeviceCapabilities.route
             )
         }
         val navBarStyleForVisibility by playerViewModel.navBarStyle.collectAsStateWithLifecycle()

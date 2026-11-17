@@ -1,8 +1,9 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.Song
+
 import android.content.Context
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ViewModelScoped
 import javax.inject.Inject

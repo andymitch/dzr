@@ -1,10 +1,11 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import android.os.SystemClock
-import androidx.media3.common.C
 import com.andymitch.dzr.data.DailyMixManager
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.stats.PlaybackStatsRepository
+
+import android.os.SystemClock
+import androidx.media3.common.C
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -130,16 +131,6 @@ class ListeningStatsTracker @Inject constructor(
         }
     }
 
-    @Synchronized
-    fun onPlayStateChanged(isPlaying: Boolean, positionMs: Long) {
-        val session = currentSession ?: return
-        val nowRealtime = SystemClock.elapsedRealtime()
-        accumulateRealtimeListening(session, nowRealtime)
-        session.isPlaying = isPlaying
-        session.lastRealtimeMs = nowRealtime
-        session.lastKnownPositionMs = positionMs.coerceAtLeast(0L)
-        session.lastUpdateEpochMs = System.currentTimeMillis()
-    }
 
     @Synchronized
     fun onProgress(positionMs: Long, isPlaying: Boolean) {

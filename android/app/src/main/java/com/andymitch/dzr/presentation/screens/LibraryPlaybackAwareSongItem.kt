@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Song
+
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -9,7 +11,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.subcomps.EnhancedSongListItem
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged

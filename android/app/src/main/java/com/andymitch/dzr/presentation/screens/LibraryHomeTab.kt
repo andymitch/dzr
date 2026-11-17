@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.LibraryViewModel
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,124 +19,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.network.deezer.DeezerTrack
 import com.andymitch.dzr.data.network.deezer.DeezerPlaylist
-import com.andymitch.dzr.presentation.viewmodel.LibraryViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import androidx.compose.ui.draw.clip
 
-@Composable
-fun LibraryHomeTab(
-    libraryViewModel: LibraryViewModel,
-    playerViewModel: PlayerViewModel,
-    bottomBarHeight: Dp
-) {
-    val flowConfigsState by libraryViewModel.deezerFlowConfigs.collectAsState()
-    val playlists by libraryViewModel.deezerRecommendedPlaylists.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = bottomBarHeight)
-    ) {
-        val flowConfigs = flowConfigsState?.data?.included ?: emptyList()
-        if (flowConfigs.isNotEmpty()) {
-            Text(
-                text = "Flow",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Not implementing full playback for configs here since this tab might be obsolete
-                items(flowConfigs.size) { index ->
-                    Text(text = flowConfigs[index].attributes?.title ?: "Flow")
-                }
-            }
-        }
 
-        val recommended = playlists?.data?.included ?: emptyList()
-        if (recommended.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Recommended Playlists",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(recommended) { playlist ->
-                    DeezerPlaylistItem(playlist = playlist, onClick = {
-                        // For now, we only implement playback for tracks, playlist click can be a stub
-                    })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DeezerTrackItem(track: DeezerTrack, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(140.dp)
-            .clickable { onClick() }
-    ) {
-        AsyncImage(
-            model = track.attributes?.image?.medium ?: track.attributes?.image?.small,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(AbsoluteSmoothCornerShape(16.dp, 60))
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = track.attributes?.title ?: "Unknown",
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = track.attributes?.artistName ?: "Unknown",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-fun DeezerPlaylistItem(playlist: DeezerPlaylist, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(140.dp)
-            .clickable { onClick() }
-    ) {
-        AsyncImage(
-            model = playlist.attributes?.image?.medium ?: playlist.attributes?.image?.small,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(AbsoluteSmoothCornerShape(16.dp, 60))
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = playlist.attributes?.name ?: "Unknown",
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
 
 fun mapDeezerTrackToSong(track: DeezerTrack): Song {
     return Song(

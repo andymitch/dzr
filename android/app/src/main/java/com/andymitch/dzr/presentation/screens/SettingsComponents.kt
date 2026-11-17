@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.viewmodel.LyricsRefreshProgress
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -64,7 +66,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.andymitch.dzr.R
-import com.andymitch.dzr.presentation.viewmodel.LyricsRefreshProgress
 import com.andymitch.dzr.ui.theme.RoundedSans
 import androidx.compose.ui.res.vectorResource
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -413,151 +414,4 @@ fun SliderSettingsItem(
     }
 }
 
-@Composable
-fun RefreshLyricsItem(
-        isRefreshing: Boolean,
-        progress: LyricsRefreshProgress,
-        onRefresh: () -> Unit
-) {
-    Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
-                        modifier = Modifier.padding(end = 16.dp).size(24.dp),
-                        contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                            painter = painterResource(id = R.drawable.rounded_lyrics_24),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary
-                    )
-                }
 
-                Column(
-                        modifier = Modifier.weight(1f).padding(end = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                            text = stringResource(R.string.presentation_batch_f_refresh_lyrics_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                            text = stringResource(R.string.presentation_batch_f_refresh_lyrics_subtitle),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                FilledIconButton(
-                        onClick = onRefresh,
-                        enabled = !isRefreshing,
-                        colors =
-                                IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                                )
-                ) {
-                    Icon(
-                            imageVector = Icons.Outlined.Sync,
-                            contentDescription = stringResource(R.string.presentation_batch_f_cd_refresh_lyrics),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            if (isRefreshing && progress.hasProgress) {
-                Spacer(modifier = Modifier.height(12.dp))
-                LinearProgressIndicator(
-                        progress = { progress.progress },
-                        modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                        text = stringResource(
-                            R.string.presentation_batch_f_refresh_lyrics_processing,
-                            progress.currentCount,
-                            progress.totalSongs
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ActionSettingsItem(
-    title: String,
-    subtitle: String,
-    icon: @Composable () -> Unit,
-    primaryActionLabel: String,
-    onPrimaryAction: () -> Unit,
-    secondaryActionLabel: String? = null,
-    onSecondaryAction: (() -> Unit)? = null,
-    enabled: Boolean = true
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
-                    modifier = Modifier.padding(end = 16.dp).size(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    icon()
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Primary Action
-            FilledTonalButton(
-                onClick = onPrimaryAction,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(primaryActionLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-
-            // Secondary Action (Optional)
-            if (secondaryActionLabel != null && onSecondaryAction != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onSecondaryAction,
-                    enabled = enabled,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(secondaryActionLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-    }
-}

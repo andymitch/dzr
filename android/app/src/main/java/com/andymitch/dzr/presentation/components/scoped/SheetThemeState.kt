@@ -1,5 +1,27 @@
 package com.andymitch.dzr.presentation.components.scoped
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
+import androidx.compose.animation.core.AnimationScope
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.DecayAnimationSpec
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.animateTo
+import androidx.compose.animation.core.calculateTargetValue
+import androidx.compose.animation.rememberSplineBasedDecay
+import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.lazy.LazyListItemInfo
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Stable
+import kotlin.math.abs
+import kotlin.math.absoluteValue
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -16,9 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.util.lerp
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.ThemePreference
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
 
 /**
  * Theme state for the player sheet.

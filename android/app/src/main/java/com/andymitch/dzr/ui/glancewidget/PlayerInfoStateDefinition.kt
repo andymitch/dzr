@@ -1,5 +1,7 @@
 package com.andymitch.dzr.ui.glancewidget
 
+import com.andymitch.dzr.data.model.PlayerInfo
+
 import android.content.Context
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
@@ -9,7 +11,6 @@ import androidx.datastore.preferences.protobuf.InvalidProtocolBufferException
 import androidx.glance.state.GlanceStateDefinition
 import java.io.InputStream
 import java.io.OutputStream
-import com.andymitch.dzr.data.model.PlayerInfo
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okio.IOException

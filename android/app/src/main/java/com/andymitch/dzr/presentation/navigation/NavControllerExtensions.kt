@@ -64,9 +64,6 @@ private val settingsChildRoutes = setOf(
     Screen.Experimental.route,
     Screen.NavBarCrRad.route,
     Screen.About.route,
-    Screen.ArtistSettings.route,
-    Screen.DelimiterConfig.route,
-    Screen.WordDelimiterConfig.route,
     Screen.Equalizer.route,
     Screen.DeviceCapabilities.route
 )

@@ -1,11 +1,12 @@
 package com.andymitch.dzr.ui.theme
 
+import com.andymitch.dzr.data.model.Genre
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+
 import android.util.LruCache
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import com.andymitch.dzr.data.model.Genre
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
 import kotlin.math.abs
 
 data class GenreThemeColor(

@@ -1,16 +1,17 @@
 package com.andymitch.dzr.data.repository
 
-import android.net.Uri
-import androidx.paging.PagingData
 import com.andymitch.dzr.data.model.Album
 import com.andymitch.dzr.data.model.Artist
 import com.andymitch.dzr.data.model.Lyrics
-import com.andymitch.dzr.data.model.LyricsSourcePreference
 import com.andymitch.dzr.data.model.Playlist
-import com.andymitch.dzr.data.model.SearchFilterType
 import com.andymitch.dzr.data.model.SearchHistoryItem
-import com.andymitch.dzr.data.model.SearchResultItem
 import com.andymitch.dzr.data.model.Song
+
+import android.net.Uri
+import androidx.paging.PagingData
+import com.andymitch.dzr.data.model.LyricsSourcePreference
+import com.andymitch.dzr.data.model.SearchFilterType
+import com.andymitch.dzr.data.model.SearchResultItem
 import kotlinx.coroutines.flow.Flow
 
 interface MusicRepository {

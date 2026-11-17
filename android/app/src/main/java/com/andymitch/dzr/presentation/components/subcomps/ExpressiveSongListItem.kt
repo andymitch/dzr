@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components.subcomps
 
+import com.andymitch.dzr.data.model.Song
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.presentation.components.SmartImageListTargetSize
 import com.andymitch.dzr.utils.formatDuration
@@ -36,81 +37,3 @@ import androidx.compose.ui.res.stringResource
 import com.andymitch.dzr.R
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
-@Composable
-fun ExpressiveSongListItem(
-    song: Song,
-    isPlaying: Boolean = false,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        color = Color.Transparent, // Let the background shine through or handle externally
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Album Art
-            SmartImage(
-                model = song.albumArtUriString,
-                contentDescription = stringResource(R.string.presentation_batch_g_list_cd_album_art_for, song.title),
-                targetSize = SmartImageListTargetSize,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(AbsoluteSmoothCornerShape(12.dp, 60)),
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Text Info
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if(isPlaying) FontWeight.Bold else FontWeight.Medium,
-                    color = if(isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(
-                        R.string.presentation_batch_g_list_song_artist_album,
-                        song.displayArtist,
-                        song.album
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Trailing Info (Duration or Indicator)
-            if (isPlaying) {
-                Icon(
-                    imageVector = Icons.Rounded.GraphicEq,
-                    contentDescription = stringResource(R.string.presentation_batch_g_list_cd_playing),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-            } else {
-                 Text(
-                    text = formatDuration(song.duration),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-            }
-        }
-    }
-}

@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.preferences.CollagePattern
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,8 +26,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.request.ImageRequest
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.preferences.CollagePattern
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers

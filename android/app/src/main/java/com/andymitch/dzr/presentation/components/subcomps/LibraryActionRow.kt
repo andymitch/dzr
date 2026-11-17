@@ -1,5 +1,51 @@
 package com.andymitch.dzr.presentation.components.subcomps
 
+import com.andymitch.dzr.data.model.MusicFolder
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.material.icons.automirrored.rounded.FormatAlignLeft
+import androidx.compose.material.icons.automirrored.rounded.FormatAlignRight
+import androidx.compose.material.icons.rounded.Abc
+import androidx.compose.material.icons.rounded.FormatAlignCenter
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.BrightnessHigh
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.draw.scale
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.andymitch.dzr.data.model.Lyrics
+import com.andymitch.dzr.presentation.components.ToggleSegmentButton
+import com.andymitch.dzr.presentation.components.player.BottomToggleRow
+import android.content.Context
+import android.content.res.Configuration
+import android.view.ContextThemeWrapper
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.andymitch.dzr.ui.theme.LocalDzrDarkTheme
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -74,7 +120,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.MusicFolder
 import com.andymitch.dzr.ui.theme.RoundedSans
 import java.io.File
 import androidx.compose.ui.res.stringResource
@@ -93,14 +138,8 @@ fun LibraryActionRow(
     showImportButton: Boolean = true,
     isPlaylistTab: Boolean,
     onImportM3uClick: () -> Unit = {},
-    isFoldersTab: Boolean,
     modifier: Modifier = Modifier,
     // Breadcrumb parameters
-    currentFolder: MusicFolder?,
-    folderRootPath: String,
-    folderRootLabel: String,
-    onFolderClick: (String) -> Unit,
-    onNavigateBack: () -> Unit,
     isShuffleEnabled: Boolean = false,
     // Storage Filter
     showStorageFilterButton: Boolean = false,
@@ -113,7 +152,6 @@ fun LibraryActionRow(
     customMainActionIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     customMainActionText: String? = null
 ) {
-    val shouldShowImport = isPlaylistTab && showImportButton
 
     Row(
         modifier = modifier
@@ -122,35 +160,12 @@ fun LibraryActionRow(
         horizontalArrangement = Arrangement.Absolute.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AnimatedContent(
-            targetState = isFoldersTab,
-            label = "ActionRowContent",
-            transitionSpec = {
-                if (targetState) { // Transition to Folders (Breadcrumbs)
-                    slideInVertically { height -> height } + fadeIn() togetherWith
-                            slideOutVertically { height -> -height } + fadeOut()
-                } else { // Transition to other tabs (Buttons)
-                    slideInVertically { height -> -height } + fadeIn() togetherWith
-                            slideOutVertically { height -> height } + fadeOut()
-                }
-            },
-            modifier = Modifier.weight(1f)
-        ) { isFolders ->
-            if (isFolders) {
-                Breadcrumbs(
-                    currentFolder = currentFolder,
-                    rootPath = folderRootPath,
-                    rootLabel = folderRootLabel,
-                    onFolderClick = onFolderClick,
-                    onNavigateBack = onNavigateBack
-                )
-            } else {
+        Box(modifier = Modifier.weight(1f)) {
                 val outerCorner = 26.dp
                 val innerCorner = 8.dp
 
                 val newButtonEndCorner = outerCorner
 
-                val importButtonStartCorner = innerCorner
                 val hasPlayButton = onPlayClick != null && !isPlaylistTab
                 val shuffleStartCorner by animateDpAsState(
                     targetValue = if (hasPlayButton) innerCorner else 26.dp,
@@ -241,7 +256,6 @@ fun LibraryActionRow(
                         // Import button removed per user request
                     }
             }
-        }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -378,126 +392,3 @@ fun LibraryActionRow(
     }
 }
 
-@Composable
-fun Breadcrumbs(
-    currentFolder: MusicFolder?,
-    rootPath: String,
-    rootLabel: String,
-    onFolderClick: (String) -> Unit,
-    onNavigateBack: () -> Unit
-) {
-    val rowState = rememberLazyListState()
-    val pathSegments = remember(currentFolder?.path, rootPath, rootLabel) {
-        val path = currentFolder?.path ?: rootPath
-        val normalizedRoot = rootPath.removeSuffix("/")
-        val normalizedPath = path.removeSuffix("/")
-        val relativePath = normalizedPath
-            .removePrefix(normalizedRoot)
-            .removePrefix("/")
-
-        if (!normalizedPath.startsWith(normalizedRoot) || relativePath.isEmpty() || normalizedPath == normalizedRoot) {
-            listOf(rootLabel to rootPath)
-        } else {
-            listOf(rootLabel to rootPath) + relativePath.split("/").scan("") { acc, segment ->
-                "$acc/$segment"
-            }.drop(1).map {
-                val file = File(rootPath, it)
-                file.name to file.path
-            }
-        }
-    }
-
-    val showStartFade by remember { derivedStateOf { rowState.canScrollBackward } }
-    val showEndFade by remember { derivedStateOf { rowState.canScrollForward } }
-
-    LaunchedEffect(pathSegments.size) {
-        if (pathSegments.isNotEmpty()) {
-            rowState.animateScrollToItem(pathSegments.lastIndex + 1)
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        FilledTonalIconButton(
-            onClick = onNavigateBack,
-            modifier = Modifier.size(36.dp),
-            enabled = currentFolder != null
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.auth_cd_back))
-        }
-        Spacer(Modifier.width(8.dp))
-
-        LazyRow(
-            state = rowState,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .weight(1f)
-                // 1. Force the content to be drawn in a separate layer.
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    // 2. Draw the original content (the LazyRow).
-                    drawContent()
-
-                    // 3. Draw the gradients that act as "erase masks".
-                    val gradientWidth = 24.dp.toPx()
-
-                    // Mask for the LEFT edge
-                    if (showStartFade) {
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                // Gradient from transparent to opaque (black)
-                                colors = listOf(Color.Transparent, Color.Black),
-                                endX = gradientWidth
-                            ),
-                            // DstIn keeps the LazyRow content only where this layer is opaque.
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
-
-                    // Mask for the RIGHT edge
-                    if (showEndFade) {
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                // Gradient from opaque (black) to transparent
-                                colors = listOf(Color.Black, Color.Transparent),
-                                startX = this.size.width - gradientWidth
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
-                }
-        ) {
-            item { Spacer(modifier = Modifier.width(12.dp)) }
-
-            items(pathSegments.size, key = { pathSegments[it].second }) { index ->
-                val (name, path) = pathSegments[index]
-                val isLast = index == pathSegments.lastIndex
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal,
-                    fontFamily = RoundedSans,
-                    color = if (isLast) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .clickable(enabled = !isLast) { onFolderClick(path) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-                if (!isLast) {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.width(12.dp)) }
-        }
-    }
-}

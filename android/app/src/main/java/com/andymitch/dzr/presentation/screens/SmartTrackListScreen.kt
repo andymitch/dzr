@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.LibraryViewModel
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,11 +28,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.SongInfoBottomSheet
 import com.andymitch.dzr.presentation.components.ExpressiveScrollBar
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
-import com.andymitch.dzr.presentation.viewmodel.LibraryViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import com.andymitch.dzr.utils.formatSongCount
 import com.andymitch.dzr.utils.formatTotalDuration
@@ -309,11 +310,8 @@ fun SmartTrackListScreen(
                 onAddToQueue = { },
                 onAddNextToQueue = { },
                 onAddToPlayList = { },
-                onDeleteFromDevice = { _, _, _ -> },
                 onNavigateToAlbum = { },
                 onNavigateToArtist = { },
-                onNavigateToGenre = { },
-                onEditSong = { _, _, _, _, _, _, _, _, _, _, _, _ -> },
                 removeFromListTrigger = { }
             )
         }

@@ -69,9 +69,6 @@ fun ImageCropView(
             w to h
         }
         
-        // Current Dimensions
-        val currentW = baseW * scale
-        val currentH = baseH * scale
         
         // Current Pan in Pixels
         // pan input is normalized: panX * viewportWidth

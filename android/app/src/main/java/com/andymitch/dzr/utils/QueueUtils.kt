@@ -1,6 +1,7 @@
 package com.andymitch.dzr.utils
 
 import com.andymitch.dzr.data.model.Song
+
 import kotlinx.coroutines.yield
 import kotlin.random.Random
 
@@ -12,19 +13,6 @@ object QueueUtils {
      */
     private const val SHUFFLE_YIELD_BATCH = 512
 
-    fun <T> fisherYatesCopy(source: List<T>, random: Random = Random.Default): List<T> {
-        if (source.size <= 1) return source.toList()
-        val mutable = source.toMutableList()
-        for (i in mutable.lastIndex downTo 1) {
-            val j = random.nextInt(i + 1)
-            if (i != j) {
-                val tmp = mutable[i]
-                mutable[i] = mutable[j]
-                mutable[j] = tmp
-            }
-        }
-        return mutable
-    }
 
     private fun generateShuffleOrder(size: Int, anchorIndex: Int, random: Random = Random.Default): IntArray {
         if (size <= 1) return IntArray(size) { it }
@@ -109,15 +97,6 @@ object QueueUtils {
         return order
     }
 
-    fun buildAnchoredShuffleQueue(
-        currentQueue: List<Song>,
-        anchorIndex: Int,
-        random: Random = Random.Default
-    ): List<Song> {
-        if (currentQueue.size <= 1) return currentQueue.toList()
-        val order = generateShuffleOrder(currentQueue.size, anchorIndex, random)
-        return List(order.size) { idx -> currentQueue[order[idx]] }
-    }
 
     /**
      * Suspendable shuffle that yields periodically for large queues (10,000+).

@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+
 import android.app.Activity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -66,7 +68,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.size.Size
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.ui.theme.RoundedSans
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
@@ -83,7 +84,6 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
  * @param onAddToPlaylist Open playlist picker for batch add
  * @param onToggleLikeAll Toggle like status - if all are liked, unlike all; otherwise like all
  * @param onShareAll Share all as ZIP file
- * @param onDeleteAll Delete all from device (with confirmation)
  */
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -101,10 +101,7 @@ fun MultiSelectionBottomSheet(
     onPlayNext: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onToggleLikeAll: (shouldLike: Boolean) -> Unit,
-    onShareAll: () -> Unit,
-    onDeleteAll: (activity: Activity, onResult: (Boolean) -> Unit) -> Unit,
-    onBatchEdit: () -> Unit
-) {
+    onShareAll: () -> Unit) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
@@ -212,25 +209,6 @@ fun MultiSelectionBottomSheet(
                         )
                     }
 
-                    //Batch edit button
-                    FilledTonalIconButton(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .padding(vertical = 6.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceBright,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        onClick = {
-                            onBatchEdit()
-                        },
-                    ) {
-                        Icon(
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            imageVector = Icons.Rounded.Edit,
-                            contentDescription = stringResource(R.string.cd_edit_song_metadata)
-                        )
-                    }
                 }
                 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -380,7 +358,7 @@ fun MultiSelectionBottomSheet(
                         }
                     }
                     
-                    // Row 3: Add to Playlist, Delete
+                    // Row 3: Add to Playlist
                     item {
                         Row(
                             modifier = Modifier
@@ -411,31 +389,6 @@ fun MultiSelectionBottomSheet(
                                 Text(stringResource(R.string.shortcut_playlist_short))
                             }
                             
-                            FilledTonalButton(
-                                modifier = Modifier
-                                    .weight(0.5f)
-                                    .heightIn(min = 66.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                ),
-                                shape = CircleShape,
-                                onClick = {
-                                    val activity = (context as? Activity)
-                                    if (activity != null) {
-                                        onDeleteAll(activity) { success ->
-                                            if (success) onDismiss()
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Delete,
-                                    contentDescription = stringResource(R.string.cd_delete_all_songs)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.action_delete_all))
-                            }
                         }
                     }
                 }

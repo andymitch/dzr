@@ -1,5 +1,9 @@
 package com.andymitch.dzr
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.presentation.viewmodel.LibraryStateHolder
+import com.andymitch.dzr.presentation.viewmodel.ThemeStateHolder
+
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,10 +16,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.ArtistImageRepository
-import com.andymitch.dzr.presentation.viewmodel.LibraryStateHolder
-import com.andymitch.dzr.presentation.viewmodel.ThemeStateHolder
 import com.andymitch.dzr.utils.AlbumArtCacheManager
 import com.andymitch.dzr.utils.AlbumArtUtils
 import com.andymitch.dzr.utils.CrashHandler

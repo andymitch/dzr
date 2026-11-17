@@ -2,6 +2,13 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.ArtistDetailViewModel
+import com.andymitch.dzr.presentation.viewmodel.ArtistAlbumSection
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+import com.andymitch.dzr.utils.shapes.RoundedStarShape
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import com.andymitch.dzr.presentation.navigation.navigateSafely
@@ -73,8 +80,6 @@ import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.ExpressiveScrollBar
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
@@ -84,12 +89,8 @@ import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.presentation.components.SongInfoBottomSheet
 import com.andymitch.dzr.presentation.components.resolveNavBarOccupiedHeight
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.viewmodel.ArtistDetailViewModel
-import com.andymitch.dzr.presentation.viewmodel.ArtistAlbumSection
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import com.andymitch.dzr.utils.formatSongCount
-import com.andymitch.dzr.utils.shapes.RoundedStarShape
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.ButtonDefaults
@@ -732,7 +733,6 @@ fun ArtistDetailScreen(
                 onAddToPlayList = {
                     showPlaylistBottomSheet = true
                 },
-                onDeleteFromDevice = playerViewModel::deleteFromDevice,
                 onNavigateToAlbum = {
                     navController.navigateSafelyReplacing(
                         route = Screen.AlbumDetail.createRoute(currentSong.albumId),
@@ -753,32 +753,6 @@ fun ArtistDetailScreen(
                         patternToPop = Screen.ArtistDetail.route
                     )
                     showSongInfoBottomSheet = false
-                },
-                onNavigateToGenre = {
-                    currentSong.genre?.let {
-                        navController.navigateSafelyReplacing(
-                            route = Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")),
-                            patternToPop = Screen.GenreDetail.route
-                        )
-                    }
-                    showSongInfoBottomSheet = false
-                },
-                onEditSong = { newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics, newTrackNumber, newDiscNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
-                    playerViewModel.editSongMetadata(
-                        currentSong,
-                        newTitle,
-                        newArtist,
-                        newAlbum,
-                        newAlbumArtist,
-                        newComposer,
-                        newGenre,
-                        newLyrics,
-                        newTrackNumber,
-                        newDiscNumber,
-                        replayGainTrackGainDb,
-                        replayGainAlbumGainDb,
-                        coverArtUpdate
-                    )
                 },
                 removeFromListTrigger = removeFromListTrigger
             )

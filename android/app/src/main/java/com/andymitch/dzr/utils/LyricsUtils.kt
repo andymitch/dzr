@@ -1,5 +1,9 @@
 package com.andymitch.dzr.utils
 
+import com.andymitch.dzr.data.model.Lyrics
+import com.andymitch.dzr.data.model.SyncedLine
+import com.andymitch.dzr.data.model.SyncedWord
+
 import android.os.Build
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -43,9 +47,6 @@ import net.sourceforge.pinyin4j.PinyinHelper
 import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat
 import net.sourceforge.pinyin4j.format.HanyuPinyinToneType
-import com.andymitch.dzr.data.model.Lyrics
-import com.andymitch.dzr.data.model.SyncedLine
-import com.andymitch.dzr.data.model.SyncedWord
 import kotlinx.coroutines.flow.Flow
 import timber.log.Timber
 
@@ -1072,35 +1073,7 @@ object LyricsUtils {
         }.joinToString("\n")
     }
 
-    /**
-     * Converts plain lyrics (list of lines) to a plain text string.
-     * Strips any auto-generated romanization suffix (after '\n') before storage.
-     * @param plainLines The list of plain text lines.
-     * @return A string with each line separated by a newline.
-     */
-    fun plainToString(plainLines: List<String>): String {
-        // Strip auto-generated romanization (if present after \n) when converting back to string for storage.
-        return plainLines.joinToString("\n") { it.substringBefore('\n') }
-    }
 
-    /**
-     * Converts Lyrics object to LRC or plain text format based on available data.
-     * Prefers synced lyrics if available.
-     * @param lyrics The Lyrics object to convert.
-     * @param preferSynced Whether to prefer synced lyrics over plain. Default true.
-     * @return A string representation of the lyrics.
-     */
-    fun toLrcString(lyrics: Lyrics, preferSynced: Boolean = true): String {
-        return if (preferSynced && !lyrics.synced.isNullOrEmpty()) {
-            syncedToLrcString(lyrics.synced)
-        } else if (!lyrics.plain.isNullOrEmpty()) {
-            plainToString(lyrics.plain)
-        } else if (!lyrics.synced.isNullOrEmpty()) {
-            syncedToLrcString(lyrics.synced)
-        } else {
-            ""
-        }
-    }
 }
 
 private fun stripLeadingLyricsDocumentNoise(value: String): String {
@@ -1166,7 +1139,6 @@ fun ProviderText(
     textAlign: TextAlign? = null,
     accentColor: Color? = null
 ) {
-    val uriHandler = LocalUriHandler.current
     val linkColor = accentColor ?: MaterialTheme.colorScheme.primary
     val textColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
     val annotatedString = buildAnnotatedString {

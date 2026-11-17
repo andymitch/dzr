@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components.scoped
 
+import com.andymitch.dzr.presentation.utils.AppHapticsConfig
+
 import android.view.View
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -14,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Density
 import androidx.core.view.HapticFeedbackConstantsCompat
-import com.andymitch.dzr.presentation.utils.AppHapticsConfig
 import com.andymitch.dzr.presentation.utils.performAppCompatHapticFeedback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -194,25 +195,3 @@ internal class QueueItemDismissGestureHandler(
     }
 }
 
-@Composable
-internal fun rememberQueueItemDismissGestureHandler(
-    scope: CoroutineScope,
-    density: Density,
-    hapticView: View,
-    appHapticsConfig: AppHapticsConfig,
-    offsetAnimatable: Animatable<Float, AnimationVector1D>,
-    itemWidthPx: Float,
-    onDismiss: () -> Unit
-): QueueItemDismissGestureHandler {
-    return remember(scope, density, hapticView, appHapticsConfig, offsetAnimatable, itemWidthPx, onDismiss) {
-        QueueItemDismissGestureHandler(
-            scope = scope,
-            density = density,
-            hapticView = hapticView,
-            appHapticsConfig = appHapticsConfig,
-            offsetAnimatable = offsetAnimatable,
-            itemWidthPx = itemWidthPx,
-            onDismiss = onDismiss
-        )
-    }
-}

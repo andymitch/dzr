@@ -1,12 +1,13 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
+
 import android.net.Uri
 import android.content.ComponentCallbacks2
 import android.os.Trace
 import androidx.compose.ui.graphics.Color
 import com.andymitch.dzr.data.preferences.AlbumArtColorAccuracy
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
-import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
 import com.andymitch.dzr.ui.theme.DarkColorScheme
 import com.andymitch.dzr.ui.theme.clearExtractedColorCache
 import kotlinx.collections.immutable.ImmutableList

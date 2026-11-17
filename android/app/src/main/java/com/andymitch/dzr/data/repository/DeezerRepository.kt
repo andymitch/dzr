@@ -1,5 +1,7 @@
 package com.andymitch.dzr.data.repository
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
 import com.andymitch.dzr.data.network.deezer.DeezerApiService
 import com.andymitch.dzr.data.network.deezer.DeezerLyricsResponse
 import com.andymitch.dzr.data.network.deezer.DeezerMultiFlowResponse
@@ -9,7 +11,6 @@ import com.andymitch.dzr.data.network.deezer.DeezerStreamUrlsResponse
 import com.andymitch.dzr.data.network.deezer.DeezerTrackInfoResponse
 import com.andymitch.dzr.data.network.deezer.DeezerGenericSearchResponse
 import com.andymitch.dzr.data.network.deezer.DeezerGenericSearchResponseObject
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 import com.andymitch.dzr.data.network.deezer.DeezerPlaylist

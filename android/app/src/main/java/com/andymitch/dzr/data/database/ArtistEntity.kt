@@ -1,11 +1,12 @@
 package com.andymitch.dzr.data.database
 
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.utils.normalizeMetadataTextOrEmpty
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.utils.normalizeMetadataTextOrEmpty
 
 @Entity(
     tableName = "artists",

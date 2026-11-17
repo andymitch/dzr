@@ -1,7 +1,8 @@
 package com.andymitch.dzr.presentation.navigation
 
-import DelimiterConfigScreen
-import com.andymitch.dzr.presentation.screens.WordDelimiterConfigScreen
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+
 import android.annotation.SuppressLint
 import androidx.annotation.OptIn
 import androidx.compose.animation.EnterTransition
@@ -32,19 +33,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.andymitch.dzr.data.preferences.LaunchTab
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.presentation.screens.AlbumDetailScreen
 import com.andymitch.dzr.presentation.screens.AccountScreen
 import com.andymitch.dzr.presentation.screens.ArtistDetailScreen
-import com.andymitch.dzr.presentation.screens.ArtistSettingsScreen
-import com.andymitch.dzr.presentation.screens.DailyMixScreen
 import com.andymitch.dzr.presentation.screens.EditTransitionScreen
-import com.andymitch.dzr.presentation.screens.EasterEggScreen
 import com.andymitch.dzr.presentation.screens.ExperimentalSettingsScreen
-import com.andymitch.dzr.presentation.screens.GenreDetailScreen
 import com.andymitch.dzr.presentation.screens.HomeScreen
 import com.andymitch.dzr.presentation.screens.LibraryScreen
-import com.andymitch.dzr.presentation.screens.MashupScreen
 import com.andymitch.dzr.presentation.screens.NavBarCornerRadiusScreen
 import com.andymitch.dzr.presentation.screens.PaletteStyleSettingsScreen
 import com.andymitch.dzr.presentation.screens.PlaylistDetailScreen
@@ -53,12 +48,10 @@ import com.andymitch.dzr.presentation.screens.RecentlyPlayedScreen
 import com.andymitch.dzr.presentation.screens.AboutScreen
 import com.andymitch.dzr.presentation.screens.SearchScreen
 import com.andymitch.dzr.presentation.screens.StatsScreen
-import com.andymitch.dzr.presentation.screens.DuplicateSongsScreen
 import com.andymitch.dzr.presentation.screens.SettingsScreen
 import com.andymitch.dzr.presentation.screens.SettingsCategoryScreen
 import com.andymitch.dzr.presentation.screens.EqualizerScreen
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import kotlinx.coroutines.flow.first
 import com.andymitch.dzr.presentation.components.ScreenWrapper
 
@@ -281,20 +274,6 @@ fun AppNavigation(
                 }
             }
             composable(
-                Screen.DailyMixScreen.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    DailyMixScreen(
-                        playerViewModel = playerViewModel,
-                        navController = navController
-                    )
-                }
-            }
-            composable(
                 Screen.RecentlyPlayed.route,
                 enterTransition = { enterTransition() },
                 exitTransition = { exitTransition() },
@@ -318,20 +297,6 @@ fun AppNavigation(
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     StatsScreen(
                         navController = navController
-                    )
-                }
-            }
-            composable(
-                Screen.Duplicates.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    DuplicateSongsScreen(
-                        navController = navController,
-                        playerViewModel = playerViewModel
                     )
                 }
             }
@@ -384,38 +349,6 @@ fun AppNavigation(
                 }
             }
 
-            composable(
-                Screen.DJSpace.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    MashupScreen()
-                }
-            }
-            composable(
-                route = Screen.GenreDetail.route,
-                arguments = listOf(navArgument("genreId") { type = NavType.StringType }),
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) { backStackEntry ->
-                val genreId = backStackEntry.arguments?.getString("genreId")
-                if (genreId != null) {
-                    ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                        GenreDetailScreen(
-                            navController = navController,
-                            genreId = genreId,
-                            playerViewModel = playerViewModel
-                        )
-                    }
-                } else {
-                    Text(stringResource(R.string.nav_error_genre_id_missing), modifier = Modifier)
-                }
-            }
             composable(
                 route = Screen.AlbumDetail.route,
                 arguments = listOf(
@@ -503,53 +436,6 @@ fun AppNavigation(
                         viewModel = playerViewModel,
                         onNavigationIconClick = { navController.navigateBack() }
                     )
-                }
-            }
-            composable(
-                Screen.EasterEgg.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    EasterEggScreen(
-                        viewModel = playerViewModel,
-                        onNavigationIconClick = { navController.navigateBack() },
-                    )
-                }
-            }
-            composable(
-                Screen.ArtistSettings.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    ArtistSettingsScreen(navController = navController)
-                }
-            }
-            composable(
-                Screen.DelimiterConfig.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    DelimiterConfigScreen(navController = navController)
-                }
-            }
-            composable(
-                Screen.WordDelimiterConfig.route,
-                enterTransition = { enterTransition() },
-                exitTransition = { exitTransition() },
-                popEnterTransition = { popEnterTransition() },
-                popExitTransition = { popExitTransition() },
-            ) {
-                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    WordDelimiterConfigScreen(navController = navController)
                 }
             }
             composable(

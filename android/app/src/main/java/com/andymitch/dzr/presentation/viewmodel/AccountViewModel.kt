@@ -1,10 +1,11 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.repository.DeezerRepository
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andymitch.dzr.data.network.deezer.DeezerUserMeResponse
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
-import com.andymitch.dzr.data.repository.DeezerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -3,6 +3,7 @@ package com.andymitch.dzr.presentation.viewmodel
 import com.andymitch.dzr.data.model.Lyrics
 import com.andymitch.dzr.data.repository.LyricsSearchResult
 
+
 sealed interface LyricsSearchUiState {
     object Idle : LyricsSearchUiState
     object Loading : LyricsSearchUiState

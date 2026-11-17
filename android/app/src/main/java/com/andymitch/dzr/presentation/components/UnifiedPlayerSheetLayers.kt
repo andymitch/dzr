@@ -1,5 +1,10 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
+import com.andymitch.dzr.presentation.components.scoped.FullPlayerVisualState
+import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
+
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -31,14 +36,10 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
 import com.andymitch.dzr.presentation.components.player.FullPlayerContent
-import com.andymitch.dzr.presentation.components.scoped.FullPlayerVisualState
 import com.andymitch.dzr.presentation.components.scoped.rememberFullPlayerRuntimePolicy
 import com.andymitch.dzr.presentation.viewmodel.PlayerSheetState
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
 
 @OptIn(UnstableApi::class)
 @Composable

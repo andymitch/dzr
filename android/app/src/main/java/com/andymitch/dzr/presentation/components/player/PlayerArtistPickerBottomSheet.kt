@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.components.player
 
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Song
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +41,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.ui.theme.RoundedSans
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -84,10 +85,6 @@ internal fun PlayerArtistPickerBottomSheet(
         normalizedItems.sortedByDescending { it.isPrimary }
     }
 
-    val countLabel = when (shortcutItems.size) {
-        1 -> stringResource(R.string.artist_picker_count_single)
-        else -> stringResource(R.string.artist_picker_count_multiple, shortcutItems.size)
-    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

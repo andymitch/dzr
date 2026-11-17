@@ -1,5 +1,7 @@
 package com.andymitch.dzr.ui.theme
 
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -20,7 +22,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
 import androidx.core.graphics.ColorUtils
 
 val LocalDzrDarkTheme = staticCompositionLocalOf { false }

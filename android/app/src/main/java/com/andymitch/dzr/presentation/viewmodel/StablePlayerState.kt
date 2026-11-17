@@ -1,9 +1,10 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import androidx.compose.runtime.Immutable
-import androidx.media3.common.Player
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.Lyrics
+
+import androidx.compose.runtime.Immutable
+import androidx.media3.common.Player
 
 @Immutable
 data class StablePlayerState(

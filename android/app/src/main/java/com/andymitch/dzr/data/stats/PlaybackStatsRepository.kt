@@ -1,11 +1,12 @@
 package com.andymitch.dzr.data.stats
 
+import com.andymitch.dzr.data.model.Song
+
 import android.content.Context
 import android.util.AtomicFile
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
-import com.andymitch.dzr.data.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileNotFoundException
@@ -494,9 +495,6 @@ class PlaybackStatsRepository @Inject constructor(
         )
     }
 
-    suspend fun exportEventsForBackup(): List<PlaybackEvent> = withContext(Dispatchers.IO) {
-        readEvents().map { event -> sanitizeEvent(event) }
-    }
 
     suspend fun loadPlaybackHistory(limit: Int = DEFAULT_PLAYBACK_HISTORY_LIMIT): List<PlaybackHistoryEntry> = withContext(Dispatchers.IO) {
         if (limit <= 0) return@withContext emptyList()
@@ -514,29 +512,6 @@ class PlaybackStatsRepository @Inject constructor(
             .toList()
     }
 
-    suspend fun importEventsFromBackup(
-        events: List<PlaybackEvent>,
-        clearExisting: Boolean = true
-    ) = withContext(Dispatchers.IO) {
-        val writeSucceeded = updateEventsAtomically { existingEvents ->
-            val base = if (clearExisting) {
-                emptyList()
-            } else {
-                existingEvents
-            }
-            val merged = (base + events)
-                .map { event -> sanitizeEvent(event) }
-                .distinctBy { event ->
-                    "${event.songId}:${event.startMillis()}:${event.endMillis()}:${event.durationMs}"
-                }
-                .sortedBy { event -> event.timestamp }
-                .toMutableList()
-            merged
-        }
-        if (writeSucceeded) {
-            notifyStatsChanged()
-        }
-    }
 
     fun requestRefresh() {
         notifyStatsChanged()

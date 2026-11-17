@@ -1,5 +1,8 @@
 package com.andymitch.dzr.ui.glancewidget
 
+import com.andymitch.dzr.data.model.PlayerInfo
+import com.andymitch.dzr.data.model.QueueItem
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -44,11 +47,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.andymitch.dzr.MainActivity
-import com.andymitch.dzr.data.model.PlayerInfo
 import com.andymitch.dzr.R
 import androidx.core.graphics.scale
 import androidx.glance.unit.ColorProvider
-import com.andymitch.dzr.data.model.QueueItem
 import com.andymitch.dzr.utils.createScalableBackgroundBitmap
 import java.util.Locale
 import timber.log.Timber
@@ -59,16 +60,12 @@ class DzrGlanceWidget : GlanceAppWidget() {
         // Sizes defined for different widget configurations
         private val VERY_THIN_LAYOUT_SIZE = DpSize(width = 200.dp, height = 60.dp)
         private val THIN_LAYOUT_SIZE = DpSize(width = 250.dp, height = 80.dp)
-        private val SMALL_HORIZONTAL_LAYOUT_SIZE = DpSize(width = 110.dp, height = 60.dp)
         private val ONE_BY_ONE_LAYOUT_SIZE = DpSize(width = 110.dp, height = 110.dp)
-        private val GABE_LAYOUT_SIZE = DpSize(width = 110.dp, height = 220.dp)
         private val GABE_TWO_HEIGHT_LAYOUT_SIZE = DpSize(width = 110.dp, height = 200.dp)
         private val SMALL_LAYOUT_SIZE = DpSize(width = 120.dp, height = 100.dp)
         private val MEDIUM_LAYOUT_SIZE = DpSize(width = 250.dp, height = 150.dp)
         private val LARGE_LAYOUT_SIZE = DpSize(width = 300.dp, height = 180.dp)
         private val EXTRA_LARGE_LAYOUT_SIZE = DpSize(width = 300.dp, height = 220.dp)
-        private val EXTRA_LARGE_PLUS_LAYOUT_SIZE = DpSize(width = 350.dp, height = 260.dp)
-        private val HUGE_LAYOUT_SIZE = DpSize(width = 400.dp, height = 300.dp)
     }
 
     override val sizeMode = SizeMode.Exact
@@ -1268,58 +1265,6 @@ class DzrGlanceWidget : GlanceAppWidget() {
         }
     }
 
-    @Composable
-    fun NextButtonDGlance(
-        modifier: GlanceModifier = GlanceModifier,
-        width: Dp? = null,
-        height: Dp? = null,
-        backgroundColor: ColorProvider = GlanceTheme.colors.surfaceVariant,
-        iconProvider: ImageProvider = ImageProvider(R.drawable.rounded_skip_next_24),
-        iconSize: Dp = 24.dp,
-        iconColor: ColorProvider = GlanceTheme.colors.onSurfaceVariant,
-        topLeftCorner: Dp = 8.dp,
-        topRightCorner: Dp = 8.dp,
-        bottomLeftCorner: Dp = 8.dp,
-        bottomRightCorner: Dp = 8.dp,
-    ) {
-        val context = LocalContext.current
-        val bgColor = backgroundColor.getColor(context)
-        val params = actionParametersOf(PlayerActions.key to PlayerActions.NEXT)
-
-        val sizeModifier = modifier.then(
-            when {
-                width != null && height != null -> GlanceModifier.size(width, height)
-                width != null -> GlanceModifier.width(width)
-                height != null -> GlanceModifier.height(height)
-                else -> GlanceModifier
-            }
-        )
-
-        val backgroundBitmap = createScalableBackgroundBitmap(
-            context = context,
-            color = bgColor,
-            topLeft = topLeftCorner,
-            topRight = topRightCorner,
-            bottomLeft = bottomLeftCorner,
-            bottomRight = bottomRightCorner,
-            width = width,
-            height = height
-        )
-
-        Box(
-            modifier = sizeModifier
-                .background(ImageProvider(backgroundBitmap))
-                .clickable(actionRunCallback<PlayerControlActionCallback>(params)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                provider = iconProvider,
-                contentDescription = context.getString(R.string.next_track),
-                modifier = GlanceModifier.size(iconSize),
-                colorFilter = ColorFilter.tint(iconColor)
-            )
-        }
-    }
 
     @Composable
     fun NextButtonGlance(
@@ -1390,11 +1335,3 @@ class DzrGlanceWidget : GlanceAppWidget() {
     }
 }
 
-// Helper to format duration in Glance (cannot use TimeUnit directly)
-private fun formatDurationGlance(millis: Long): String {
-    if (millis < 0) return "00:00"
-    val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
-}

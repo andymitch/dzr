@@ -1,5 +1,12 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+import com.andymitch.dzr.data.preferences.CollagePattern
+import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
+import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
+import com.andymitch.dzr.data.model.Song
+
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -9,13 +16,8 @@ import com.andymitch.dzr.data.preferences.AppThemeMode
 import com.andymitch.dzr.data.preferences.CarouselStyle
 import com.andymitch.dzr.data.preferences.LibraryNavigationMode
 import com.andymitch.dzr.data.preferences.ThemePreference
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.preferences.AlbumArtQuality
 import com.andymitch.dzr.data.preferences.AlbumArtColorAccuracy
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
-import com.andymitch.dzr.data.preferences.CollagePattern
-import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
-import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
 import com.andymitch.dzr.data.repository.LyricsRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.model.LyricsSourcePreference
@@ -32,7 +34,6 @@ import javax.inject.Inject
 import com.andymitch.dzr.R
 import com.andymitch.dzr.data.preferences.NavBarStyle
 import com.andymitch.dzr.data.preferences.LaunchTab
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.service.player.HiFiCapabilityChecker
 import java.io.File
 
@@ -100,9 +101,7 @@ data class LyricsRefreshProgress(
     val isComplete: Boolean = false,
     val failedSongs: List<FailedSongInfo> = emptyList()
 ) {
-    val hasProgress: Boolean get() = totalSongs > 0
     val progress: Float get() = if (totalSongs > 0) currentCount.toFloat() / totalSongs else 0f
-    val hasFailedSongs: Boolean get() = failedSongs.isNotEmpty()
 }
 
 // Helper classes for consolidated combine() collectors to reduce coroutine overhead
@@ -157,24 +156,9 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private val fileExplorerStateHolder = FileExplorerStateHolder(userPreferencesRepository, viewModelScope, context)
-
-    val currentPath = fileExplorerStateHolder.currentPath
-    val currentDirectoryChildren = fileExplorerStateHolder.currentDirectoryChildren
-    val blockedDirectories = fileExplorerStateHolder.blockedDirectories
-    val availableStorages = fileExplorerStateHolder.availableStorages
-    val selectedStorageIndex = fileExplorerStateHolder.selectedStorageIndex
-    val isLoadingDirectories = fileExplorerStateHolder.isLoading
-    val isExplorerPriming = fileExplorerStateHolder.isPrimingExplorer
-    val isExplorerReady = fileExplorerStateHolder.isExplorerReady
-    val isCurrentDirectoryResolved = fileExplorerStateHolder.isCurrentDirectoryResolved
-    private var hasPendingDirectoryRuleChanges = false
-    private var latestDirectoryRuleUpdateJob: Job? = null
 
 
 
-    private val _dataTransferEvents = MutableSharedFlow<String>()
-    val dataTransferEvents: SharedFlow<String> = _dataTransferEvents.asSharedFlow()
 
     init {
 
@@ -352,11 +336,6 @@ class SettingsViewModel @Inject constructor(
         }
 
 
-        viewModelScope.launch {
-            fileExplorerStateHolder.isLoading.collect { loading ->
-                _uiState.update { it.copy(isLoadingDirectories = loading) }
-            }
-        }
 
         // Beta Features Collectors
         viewModelScope.launch {
@@ -408,52 +387,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun toggleDirectoryAllowed(file: File) {
-        hasPendingDirectoryRuleChanges = true
-        latestDirectoryRuleUpdateJob = viewModelScope.launch {
-            fileExplorerStateHolder.toggleDirectoryAllowed(file)
-        }
-    }
 
-    fun applyPendingDirectoryRuleChanges() {
-        if (!hasPendingDirectoryRuleChanges) return
-        hasPendingDirectoryRuleChanges = false
-        viewModelScope.launch {
-            latestDirectoryRuleUpdateJob?.join()
-        }
-    }
 
-    fun loadDirectory(file: File) {
-        fileExplorerStateHolder.loadDirectory(file)
-    }
 
-    fun primeExplorer() {
-        fileExplorerStateHolder.primeExplorerRoot()
-    }
 
-    fun openExplorer() {
-        fileExplorerStateHolder.openExplorerRoot()
-    }
 
-    fun navigateUp() {
-        fileExplorerStateHolder.navigateUp()
-    }
 
-    fun refreshExplorer() {
-        fileExplorerStateHolder.refreshCurrentDirectory()
-    }
 
-    fun selectStorage(index: Int) {
-        fileExplorerStateHolder.selectStorage(index)
-    }
 
-    fun refreshAvailableStorages() {
-        fileExplorerStateHolder.refreshAvailableStorages()
-    }
 
-    fun isAtRoot(): Boolean = fileExplorerStateHolder.isAtRoot()
 
-    fun explorerRoot(): File = fileExplorerStateHolder.rootDirectory()
 
     // Method to save the player theme preference
     fun setPlayerThemePreference(preference: String) {
@@ -731,9 +674,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun refreshLibrary() {}
 
-    fun fullSyncLibrary() {}
 
     fun setMinSongDuration(durationMs: Int) {
         viewModelScope.launch {
@@ -772,7 +713,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun rebuildDatabase() {}
 
     fun setNavBarCornerRadius(radius: Int) {
         viewModelScope.launch { userPreferencesRepository.setNavBarCornerRadius(radius) }

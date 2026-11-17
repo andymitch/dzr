@@ -1,6 +1,7 @@
 package com.andymitch.dzr.presentation.viewmodel
 
 import com.andymitch.dzr.data.model.Song
+
 import com.andymitch.dzr.utils.QueueUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,7 +23,6 @@ class QueueStateHolder @Inject constructor() {
     
     // Original queue name before shuffle
     private var _originalQueueName: String = "None"
-    val originalQueueName: String get() = _originalQueueName
     
     /**
      * Store the original queue state before shuffling.
@@ -44,63 +44,10 @@ class QueueStateHolder @Inject constructor() {
      */
     fun hasOriginalQueue(): Boolean = _originalQueueOrder.isNotEmpty()
     
-    /**
-     * Get the original queue for restoring after unshuffle.
-     */
-    fun getOriginalQueueForRestore(): List<Song> = _originalQueueOrder.toList()
     
-    /**
-     * Clear the original queue state (e.g., when queue is cleared).
-     */
-    fun clearOriginalQueue() {
-        _originalQueueOrder = emptyList()
-        _originalQueueName = "None"
-    }
     
-    /**
-     * Create a shuffled version of a queue, keeping the current song at the start.
-     * Uses Fisher-Yates via [QueueUtils] for uniform randomness.
-     */
-    fun createShuffledQueue(
-        currentQueue: List<Song>,
-        currentSongId: String?
-    ): List<Song> {
-        if (currentQueue.isEmpty()) return emptyList()
 
-        val currentIndex = currentQueue.indexOfFirst { it.id == currentSongId }
-        return if (currentIndex >= 0) {
-            QueueUtils.buildAnchoredShuffleQueue(currentQueue, currentIndex)
-        } else {
-            QueueUtils.fisherYatesCopy(currentQueue)
-        }
-    }
 
-    /**
-     * Prepares a list for shuffled playback.
-     * 1. Saves original queue.
-     * 2. Picks a random start song.
-     * 3. Creates a shuffled list starting with that song.
-     */
-    fun prepareShuffledQueue(songs: List<Song>, queueName: String): Pair<List<Song>, Song>? {
-        if (songs.isEmpty()) return null
-
-        val startSong = songs.random()
-        saveOriginalQueueState(songs, queueName)
-
-        val startIndex = songs.indexOfFirst { it.id == startSong.id }.coerceAtLeast(0)
-        val shuffledQueue = QueueUtils.buildAnchoredShuffleQueue(songs, startIndex)
-
-        return Pair(shuffledQueue, startSong)
-    }
-
-    /**
-     * Prepares a list for shuffled playback with a specific start song.
-     */
-    fun prepareShuffledQueueWithStart(songs: List<Song>, startSong: Song, queueName: String): List<Song> {
-        saveOriginalQueueState(songs, queueName)
-        val startIndex = songs.indexOfFirst { it.id == startSong.id }.coerceAtLeast(0)
-        return QueueUtils.buildAnchoredShuffleQueue(songs, startIndex)
-    }
 
     /**
      * Suspendable variant for large queues.

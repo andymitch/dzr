@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Playlist
+
 import android.app.Activity
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -56,7 +58,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
-import com.andymitch.dzr.data.model.Playlist
 import com.andymitch.dzr.ui.theme.RoundedSans
 import com.andymitch.dzr.utils.resolvePlaylistCoverContentColor
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape

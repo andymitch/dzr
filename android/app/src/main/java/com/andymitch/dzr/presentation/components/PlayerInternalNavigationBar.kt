@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.BottomNavItem
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 import android.os.SystemClock
@@ -26,7 +28,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.andymitch.dzr.BottomNavItem
 import com.andymitch.dzr.data.preferences.NavBarStyle
 import com.andymitch.dzr.presentation.components.scoped.CustomNavigationBarItem
 import com.andymitch.dzr.presentation.navigation.Screen

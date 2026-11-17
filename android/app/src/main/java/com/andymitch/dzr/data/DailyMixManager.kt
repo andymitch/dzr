@@ -1,7 +1,8 @@
 package com.andymitch.dzr.data
 
-import android.content.Context
 import com.andymitch.dzr.data.model.Song
+
+import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,8 +11,4 @@ import javax.inject.Singleton
 class DailyMixManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    suspend fun getDailyMix(limit: Int): List<Song> = emptyList()
-    suspend fun generateAndSaveDailyMix(limit: Int): List<Song> = emptyList()
-    suspend fun getDynamicScore(song: Song, forceRecalculate: Boolean = false): Double = 0.0
-    suspend fun clearAllEngagementData() {}
 }

@@ -1,11 +1,12 @@
 package com.andymitch.dzr.di
 
-import com.andymitch.dzr.data.repository.LyricsRepository
 import com.andymitch.dzr.data.repository.LyricsRepositoryImpl
+import com.andymitch.dzr.data.repository.TransitionRepositoryImpl
+
+import com.andymitch.dzr.data.repository.LyricsRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.repository.MusicRepositoryImpl
 import com.andymitch.dzr.data.repository.TransitionRepository
-import com.andymitch.dzr.data.repository.TransitionRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

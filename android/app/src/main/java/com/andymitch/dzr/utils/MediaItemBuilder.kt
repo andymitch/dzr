@@ -1,5 +1,7 @@
 package com.andymitch.dzr.utils
 
+import com.andymitch.dzr.data.model.Song
+
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -11,7 +13,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import com.andymitch.dzr.data.provider.SharedArtworkContentProvider
-import com.andymitch.dzr.data.model.Song
 import java.io.File
 
 object MediaItemBuilder {

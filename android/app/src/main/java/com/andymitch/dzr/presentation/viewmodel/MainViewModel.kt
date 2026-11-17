@@ -1,8 +1,11 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
+import com.andymitch.dzr.data.repository.UpdateCheckerRepository
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 
 import com.andymitch.dzr.utils.LogUtils
@@ -15,8 +18,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
-import com.andymitch.dzr.data.repository.UpdateCheckerRepository
 import com.andymitch.dzr.data.network.GitHubRelease
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,34 +57,10 @@ class MainViewModel @Inject constructor(
             initialValue = null
         )
 
-    val hasCompletedInitialSync: StateFlow<Boolean> = userPreferencesRepository.lastSyncTimestampFlow
-        .map { it > 0L }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = true // Optimistic strategy: assume synced by default
-        )
 
 
 
-    /**
-     * Emits once each time a library sync ends in failure, so the UI can surface a
-     * one-shot toast (the progress flow alone silently reverts to idle on failure).
-     */
-    val syncFailed: Flow<Unit> = kotlinx.coroutines.flow.emptyFlow()
 
-    /**
-     * A Flow that emits `true` if the Room database has no songs.
-     * Helps us know whether this is the first time the app is opened.
-     */
-    val isLibraryEmpty: StateFlow<Boolean> = musicRepository
-        .getAudioFiles()
-        .map { it.isEmpty() }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
 
     /**
      * Function to start syncing the music library.
@@ -108,8 +85,5 @@ class MainViewModel @Inject constructor(
             android.util.Log.d("SyncDebug", "Finished syncing playlists, tracks, albums, and artists")
             playlistPreferencesRepository.isSyncingLibraryFlow.value = false
         }
-    }
-    fun retrySync() {
-        startSync()
     }
 }

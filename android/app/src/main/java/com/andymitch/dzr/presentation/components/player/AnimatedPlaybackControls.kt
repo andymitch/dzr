@@ -90,7 +90,6 @@ fun AnimatedPlaybackControls(
     val coroutineScope = rememberCoroutineScope()
 
     val motionScheme = remember { MotionScheme.expressive() }
-    val defaultSpatialDpSpec = remember { motionScheme.defaultSpatialSpec<Dp>() }
 
     LaunchedEffect(lastClicked, clickTrigger) {
         if (lastClicked != null) {

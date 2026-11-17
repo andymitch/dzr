@@ -1,6 +1,9 @@
 package com.andymitch.dzr.data.preferences
 
 import com.andymitch.dzr.data.model.Playlist
+import com.andymitch.dzr.data.repository.DeezerRepository
+import com.andymitch.dzr.data.database.SongEntity
+
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
@@ -9,13 +12,11 @@ import javax.inject.Singleton
 import com.andymitch.dzr.data.database.LocalPlaylistDao
 import com.andymitch.dzr.data.database.PlaylistEntity
 import com.andymitch.dzr.data.database.toPlaylist
-import com.andymitch.dzr.data.repository.DeezerRepository
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 
 import com.andymitch.dzr.data.database.MusicDao
 import com.andymitch.dzr.data.database.FavoritesDao
-import com.andymitch.dzr.data.database.SongEntity
 import com.andymitch.dzr.data.database.FavoritesEntity
 import com.andymitch.dzr.data.network.deezer.DeezerPlaylistDetailResponse
 
@@ -309,11 +310,9 @@ class PlaylistPreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun updatePlaylistOrder(playlistId: String, newOrder: List<String>) {}
     suspend fun getPlaylistsOnce(): List<Playlist> = userPlaylistsFlow.first()
     suspend fun removeSongFromPlaylist(playlistId: String, songId: String) = removeSongsFromPlaylist(playlistId, listOf(songId))
     suspend fun reorderSongsInPlaylist(playlistId: String, songIds: List<String>) {}
-    suspend fun removeSongFromAllPlaylists(songId: String) {}
     suspend fun setPlaylistSongOrderMode(playlistId: String, mode: String) {}
     suspend fun updatePlaylist(playlist: Playlist) {}
     suspend fun addOrRemoveSongFromPlaylists(songId: String, playlistIds: List<String>): List<String> {
@@ -321,28 +320,4 @@ class PlaylistPreferencesRepository @Inject constructor(
         return emptyList()
     }
     suspend fun setPlaylistsSortOption(sortOption: String) {}
-    suspend fun updatePlaylistCover(
-        playlistId: String,
-        coverImageUri: String? = null,
-        coverColorArgb: Int? = null,
-        coverIconName: String? = null,
-        coverShapeType: String? = null,
-        d1: Float? = null,
-        d2: Float? = null,
-        d3: Float? = null,
-        d4: Float? = null
-    ) {}
-    suspend fun createSmartPlaylist(
-        name: String,
-        smartRuleKey: String,
-        coverColorArgb: Int? = null,
-        coverIconName: String? = null,
-        coverShapeType: String? = null,
-        d1: Float? = null,
-        d2: Float? = null,
-        d3: Float? = null,
-        d4: Float? = null
-    ): Playlist {
-        throw NotImplementedError("Stubbed")
-    }
 }

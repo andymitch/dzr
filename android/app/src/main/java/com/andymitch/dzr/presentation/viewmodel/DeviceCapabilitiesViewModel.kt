@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.service.player.ActiveDecoderInfo
+
 import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -18,7 +20,6 @@ import androidx.media3.common.util.UnstableApi
 
 
 
-import com.andymitch.dzr.data.service.player.ActiveDecoderInfo
 import com.andymitch.dzr.data.service.player.DualPlayerEngine
 import com.andymitch.dzr.data.service.player.HiFiCapabilityChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -313,12 +314,6 @@ class DeviceCapabilitiesViewModel @Inject constructor(
             }
     }
 
-    private fun getDeviceStorageStats(): Pair<Long, Long> {
-        return runCatching {
-            val statFs = StatFs(Environment.getExternalStorageDirectory().path)
-            statFs.availableBytes to statFs.totalBytes
-        }.getOrElse { 0L to 0L }
-    }
 
 
 
@@ -406,30 +401,4 @@ private fun normalizeMimeType(mimeType: String): String {
     }
 }
 
-private fun compatibleMimeTypes(mimeType: String): Set<String> {
-    val normalized = normalizeMimeType(mimeType)
-    return when (normalized) {
-        "audio/mpeg" -> setOf("audio/mpeg", "audio/mp3", "audio/x-mp3", "audio/mpeg3")
-        "audio/mp4a-latm" -> setOf("audio/mp4a-latm", "audio/aac", "audio/x-aac", "audio/m4a", "audio/mp4", "audio/aacp")
-        "audio/flac" -> setOf("audio/flac", "audio/x-flac")
-        "audio/wav" -> setOf("audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave", "audio/raw")
-        "audio/vorbis" -> setOf("audio/vorbis", "audio/ogg", "audio/x-vorbis", "application/ogg")
-        "audio/x-ms-wma" -> setOf("audio/x-ms-wma", "audio/wma")
-        "audio/x-aiff" -> setOf("audio/x-aiff", "audio/aiff", "audio/aif", "audio/x-aifc")
-        "audio/ac3" -> setOf("audio/ac3", "audio/eac3", "audio/eac3-joc")
-        "audio/vnd.dts" -> setOf("audio/vnd.dts", "audio/vnd.dts.hd")
-        "audio/3gpp" -> setOf("audio/3gpp", "audio/amr")
-        "audio/amr-wb" -> setOf("audio/amr-wb")
-        "audio/evrc" -> setOf("audio/evrc", "audio/x-evrc")
-        "audio/qcelp" -> setOf("audio/qcelp", "audio/x-qcelp")
-        "audio/x-ima-adpcm" -> setOf("audio/x-ima-adpcm", "audio/ima-adpcm", "audio/raw")
-        else -> setOf(normalized)
-    }
-}
 
-private fun isMimeTypeSupported(
-    mimeType: String,
-    supportedTypes: Set<String>
-): Boolean {
-    return compatibleMimeTypes(mimeType).any { normalizeMimeType(it) in supportedTypes }
-}

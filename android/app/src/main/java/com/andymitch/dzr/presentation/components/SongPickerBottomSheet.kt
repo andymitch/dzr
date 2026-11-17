@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.LibraryTabId
+import com.andymitch.dzr.data.model.Song
+
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -85,8 +88,6 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.LibraryTabId
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.screens.TabAnimation
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import com.andymitch.dzr.ui.theme.RoundedSans

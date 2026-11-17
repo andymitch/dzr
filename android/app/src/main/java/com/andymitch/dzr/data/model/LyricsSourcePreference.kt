@@ -21,9 +21,6 @@ enum class LyricsSourcePreference(val displayName: String) {
     LOCAL_FIRST("Local First");
     
     companion object {
-        fun fromOrdinal(ordinal: Int): LyricsSourcePreference {
-            return values().getOrElse(ordinal) { EMBEDDED_FIRST }
-        }
         
         fun fromName(name: String?): LyricsSourcePreference {
             return values().find { it.name == name } ?: EMBEDDED_FIRST

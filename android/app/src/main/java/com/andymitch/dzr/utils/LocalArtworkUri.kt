@@ -12,7 +12,6 @@ object LocalArtworkUri {
     private const val CACHE_BUST_QUERY = "t"
 
     fun buildSongUri(songId: Long): String = "$SCHEME://$HOST_SONG/$songId"
-    fun buildSongUriWithTimestamp(songId: Long): String = buildSongUri(songId) + "?t=${System.currentTimeMillis()}"
 
     fun isLocalArtworkUri(uriString: String?): Boolean {
         return uriString?.let { it.startsWith("$SCHEME://") || it.startsWith("$LEGACY_SCHEME://") } == true

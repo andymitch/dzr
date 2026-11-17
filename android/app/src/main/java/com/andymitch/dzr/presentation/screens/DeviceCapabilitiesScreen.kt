@@ -1,5 +1,13 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.viewmodel.AudioCapabilities
+import com.andymitch.dzr.presentation.viewmodel.DeviceCapabilitiesState
+import com.andymitch.dzr.presentation.viewmodel.ExoPlayerInfo
+import com.andymitch.dzr.presentation.viewmodel.FormatSupportInfo
+import com.andymitch.dzr.presentation.viewmodel.LocalMusicStorageSummary
+import com.andymitch.dzr.presentation.viewmodel.MemorySummary
+import com.andymitch.dzr.presentation.viewmodel.PlaybackCompatibilitySummary
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import android.text.format.Formatter
@@ -82,15 +90,8 @@ import androidx.navigation.NavController
 import com.andymitch.dzr.R
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
-import com.andymitch.dzr.presentation.viewmodel.AudioCapabilities
 import com.andymitch.dzr.presentation.viewmodel.AudioOutputCategory
-import com.andymitch.dzr.presentation.viewmodel.DeviceCapabilitiesState
 import com.andymitch.dzr.presentation.viewmodel.DeviceCapabilitiesViewModel
-import com.andymitch.dzr.presentation.viewmodel.ExoPlayerInfo
-import com.andymitch.dzr.presentation.viewmodel.FormatSupportInfo
-import com.andymitch.dzr.presentation.viewmodel.LocalMusicStorageSummary
-import com.andymitch.dzr.presentation.viewmodel.MemorySummary
-import com.andymitch.dzr.presentation.viewmodel.PlaybackCompatibilitySummary
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape

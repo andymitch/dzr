@@ -70,58 +70,9 @@ object AlbumArtUtils {
         "screenshots"
     )
 
-    /**
-     * Main function to get album art for local songs.
-     *
-     * Local artwork is intentionally embedded-only. Falling back to folder images such as
-     * cover.jpg/thumb.jpg can pick unrelated Gallery files when music is stored in mixed
-     * directories, and can duplicate the same image across unrelated tracks.
-     */
-    fun getAlbumArtUri(
-        appContext: Context,
-        path: String,
-        songId: Long,
-        forceRefresh: Boolean
-    ): String? {
-        return if (hasLocalAlbumArt(appContext, path, songId, forceRefresh)) {
-            LocalArtworkUri.buildSongUri(songId)
-        } else {
-            null
-        }
-    }
 
-    fun getCachedAlbumArtUri(
-        appContext: Context,
-        songId: Long
-    ): Uri? {
-        val cachedFile = getCachedAlbumArtFile(appContext, songId)
-        if (!cachedFile.exists()) return null
 
-        cachedFile.setLastModified(System.currentTimeMillis())
-        return shareableCacheUri(appContext, cachedFile)
-    }
 
-    fun hasCachedAlbumArt(
-        appContext: Context,
-        songId: Long
-    ): Boolean {
-        return getCachedAlbumArtFile(appContext, songId).exists()
-    }
-
-    /**
-     * Enhanced album art detection without eagerly persisting the whole library to cache.
-     */
-    fun getEmbeddedAlbumArtUri(
-        appContext: Context,
-        filePath: String,
-        songId: Long,
-        deepScan: Boolean
-    ): Uri? {
-        ensureAlbumArtCachedFile(appContext, songId, filePath, deepScan)?.let { cachedFile ->
-            return shareableCacheUri(appContext, cachedFile)
-        }
-        return null
-    }
 
     fun ensureAlbumArtCachedFile(
         appContext: Context,
@@ -181,57 +132,7 @@ object AlbumArtUtils {
         }
     }
 
-    private fun hasLocalAlbumArt(
-        appContext: Context,
-        filePath: String,
-        songId: Long,
-        deepScan: Boolean
-    ): Boolean {
-        val audioFile = File(filePath)
-        if (!audioFile.exists() || !audioFile.canRead()) {
-            return false
-        }
 
-        val cachedFile = getCachedAlbumArtFile(appContext, songId)
-        val noArtFile = noArtMarkerFile(appContext, songId)
-
-        if (!deepScan) {
-            if (noArtFile.exists()) {
-                if (cachedFile.exists()) {
-                    cachedFile.delete()
-                }
-                return false
-            }
-
-            if (cachedFile.exists() && cachedFile.length() > 0) {
-                return true
-            }
-        } else {
-            noArtFile.delete()
-        }
-
-        val hasEmbeddedArt = extractEmbeddedAlbumArtBytes(filePath)?.isNotEmpty() == true
-        if (hasEmbeddedArt) {
-            noArtFile.delete()
-            return true
-        }
-
-        cachedFile.delete()
-        noArtFile.createNewFile()
-        return false
-    }
-
-    /**
-     * Look for external album art files in the same directory.
-     *
-     * This is kept for explicit, controlled callers only. The default local-song artwork path
-     * must remain embedded-only so the app does not pull unrelated personal Gallery files.
-     */
-    fun getExternalAlbumArtUri(filePath: String): Uri? {
-        return runCatching {
-            findExternalAlbumArtFile(filePath)?.let(Uri::fromFile)
-        }.getOrNull()
-    }
 
     internal fun findExternalAlbumArtFile(filePath: String): File? {
         val audioFile = File(filePath)
@@ -253,35 +154,7 @@ object AlbumArtUtils {
         return normalized !in genericMixedDirectoryNames
     }
 
-    /**
-     * MediaStore's album-art cache can alias unrelated local songs when album metadata is weak or
-     * collapsed into "Unknown Album". Keep this helper available for controlled callers, but do
-     * not use it as an automatic per-song fallback.
-     */
-    fun getMediaStoreAlbumArtUri(appContext: Context, albumId: Long): Uri? {
-        if (albumId <= 0) return null
 
-        val potentialUri = ContentUris.withAppendedId(
-            "content://media/external/audio/albumart".toUri(),
-            albumId
-        )
-
-        return try {
-            appContext.contentResolver.openFileDescriptor(potentialUri, "r")?.use {
-                potentialUri // only return if open succeeded
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * Save embedded art to cache with unique naming
-     */
-    fun saveAlbumArtToCache(appContext: Context, bytes: ByteArray, songId: Long): Uri {
-        val file = cacheAlbumArtBytes(appContext, bytes, songId)
-        return shareableCacheUri(appContext, file)
-    }
 
     /**
      * Delete both the cached artwork and the "no art" marker for a specific song.
@@ -526,15 +399,4 @@ object AlbumArtUtils {
         }.getOrNull()
     }
 
-    private fun shareableCacheUri(appContext: Context, file: File): Uri {
-        return try {
-            FileProvider.getUriForFile(
-                appContext,
-                "${appContext.packageName}.provider",
-                file
-            )
-        } catch (e: Exception) {
-            Uri.fromFile(file)
-        }
-    }
 }

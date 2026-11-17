@@ -3,8 +3,9 @@ package com.andymitch.dzr.data.repository
 import com.andymitch.dzr.data.model.TransitionResolution
 import com.andymitch.dzr.data.model.TransitionRule
 import com.andymitch.dzr.data.model.TransitionSettings
-import com.andymitch.dzr.data.model.TransitionSource
 import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
+import com.andymitch.dzr.data.model.TransitionSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf

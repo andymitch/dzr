@@ -1,5 +1,10 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel.Companion.FOLDER_PLAYLIST_PREFIX
+import com.andymitch.dzr.data.model.SortOption
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
 
@@ -117,7 +122,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
 import com.andymitch.dzr.presentation.components.PlaylistBottomSheet
 import com.andymitch.dzr.presentation.components.QueuePlaylistSongItem
@@ -128,8 +132,6 @@ import com.andymitch.dzr.presentation.components.SongInfoBottomSheet
 import com.andymitch.dzr.presentation.components.resolveNavBarOccupiedHeight
 import com.andymitch.dzr.presentation.navigation.Screen
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel.Companion.FOLDER_PLAYLIST_PREFIX
 import com.andymitch.dzr.presentation.utils.LocalAppHapticsConfig
 import com.andymitch.dzr.presentation.utils.performAppCompatHapticFeedback
 import com.andymitch.dzr.presentation.viewmodel.PlaylistSongsOrderMode
@@ -139,7 +141,6 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import com.andymitch.dzr.presentation.components.LibrarySortBottomSheet
-import com.andymitch.dzr.data.model.SortOption
 import com.andymitch.dzr.data.model.PlaylistShapeType
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -1127,7 +1128,6 @@ fun PlaylistDetailScreen(
                 onAddToPlayList = {
                     showPlaylistBottomSheet = true;
                 },
-                onDeleteFromDevice = playerViewModel::deleteFromDevice,
                 onNavigateToAlbum = {
                     navController.navigateSafelyReplacing(
                         route = Screen.AlbumDetail.createRoute(currentSong.albumId),
@@ -1148,32 +1148,6 @@ fun PlaylistDetailScreen(
                         patternToPop = Screen.ArtistDetail.route
                     )
                     showSongInfoBottomSheet = false
-                },
-                onNavigateToGenre = {
-                    currentSong.genre?.let {
-                        navController.navigateSafelyReplacing(
-                            route = Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")),
-                            patternToPop = Screen.GenreDetail.route
-                        )
-                    }
-                    showSongInfoBottomSheet = false
-                },
-                onEditSong = { newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics, newTrackNumber, newDiscNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
-                    playerViewModel.editSongMetadata(
-                        currentSong,
-                        newTitle,
-                        newArtist,
-                        newAlbum,
-                        newAlbumArtist,
-                        newComposer,
-                        newGenre,
-                        newLyrics,
-                        newTrackNumber,
-                        newDiscNumber,
-                        replayGainTrackGainDb,
-                        replayGainAlbumGainDb,
-                        coverArtUpdate
-                    )
                 },
                 removeFromListTrigger = {
                     playlistViewModel.removeSongFromPlaylist(playlistId, currentSong.id)

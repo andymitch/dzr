@@ -1,5 +1,7 @@
 package com.andymitch.dzr.data.service.player
 
+import com.andymitch.dzr.data.model.TransitionSettings
+
 import android.app.ActivityManager
 import android.content.Context
 import android.media.AudioAttributes
@@ -34,7 +36,6 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp3.Mp3Extractor
 import androidx.media3.extractor.flac.FlacExtractor
-import com.andymitch.dzr.data.model.TransitionSettings
 import com.andymitch.dzr.utils.envelope
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope

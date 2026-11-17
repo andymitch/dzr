@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.PlaylistUiState
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,12 +47,9 @@ import androidx.compose.ui.unit.dp
 import com.andymitch.dzr.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.isSmartPlaylist
 import com.andymitch.dzr.presentation.components.subcomps.LibraryActionRow
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistUiState
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import com.andymitch.dzr.ui.theme.RoundedSans
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -170,14 +171,7 @@ fun PlaylistBottomSheet(
                     showSortButton = false,
                     showImportButton = false,
                     onSortClick = { },
-                    isPlaylistTab = true,
-                    isFoldersTab = false,
-                    currentFolder = null,
-                    folderRootPath = "",
-                    folderRootLabel = "Internal Storage",
-                    onFolderClick = { },
-                    onNavigateBack = { }
-                )
+                    isPlaylistTab = true)
 
                 Spacer(modifier = Modifier.height(8.dp))
 

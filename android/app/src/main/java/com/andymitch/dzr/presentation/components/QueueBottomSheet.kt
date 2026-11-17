@@ -1,5 +1,10 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
+import com.andymitch.dzr.presentation.components.scoped.QueueItemDismissGestureHandler
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -142,15 +147,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.AutoScrollingText
 import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.presentation.components.subcomps.PlayingEqIcon
 import com.andymitch.dzr.presentation.components.player.AnimatedPlaybackControls
 import com.andymitch.dzr.presentation.viewmodel.PlayerUiState
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
-import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
 import com.andymitch.dzr.presentation.utils.LocalAppHapticsConfig
 import com.andymitch.dzr.presentation.utils.performAppCompatHapticFeedback
 import com.andymitch.dzr.ui.theme.RoundedSans
@@ -183,7 +185,6 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.layout.onGloballyPositioned
-import com.andymitch.dzr.presentation.components.scoped.QueueItemDismissGestureHandler
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import coil.size.Size

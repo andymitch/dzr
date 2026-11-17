@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components.scoped
 
+import com.andymitch.dzr.data.model.Song
+
 import com.andymitch.dzr.presentation.navigation.navigateFromPlayer
 
 import androidx.annotation.OptIn
@@ -8,7 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.navigation.Screen
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -23,8 +24,7 @@ internal data class SheetActionHandlers(
     val onSelectedSongForInfoChange: (Song?) -> Unit,
     val onLaunchSaveQueueOverlay: (List<Song>, String, (String, Set<String>) -> Unit) -> Unit,
     val onNavigateToAlbum: (Song) -> Unit,
-    val onNavigateToArtist: (Song) -> Unit,
-    val onNavigateToGenre: (Song) -> Unit
+    val onNavigateToArtist: (Song) -> Unit
 )
 
 @OptIn(UnstableApi::class)
@@ -99,21 +99,6 @@ internal fun rememberSheetActionHandlers(
             }
         }
     }
-    val onNavigateToGenre = remember(scope, navController) {
-        { song: Song ->
-            scope.launch {
-                sheetMotionControllerState.value.snapCollapsed(sheetCollapsedTargetYState.value)
-            }
-            playerViewModelState.value.collapsePlayerSheet()
-            queueSheetControllerState.value.animate(false)
-            sheetModalOverlayControllerState.value.updateSelectedSongForInfo(null)
-            if (!song.genre.isNullOrEmpty()) {
-                val encodedGenre = java.net.URLEncoder.encode(song.genre, "UTF-8")
-                navController.navigateFromPlayer(Screen.GenreDetail.createRoute(encodedGenre))
-            }
-        }
-    }
-
     return SheetActionHandlers(
         openQueueSheet = openQueueSheet,
         animateQueueSheet = animateQueueSheet,
@@ -123,7 +108,6 @@ internal fun rememberSheetActionHandlers(
         onSelectedSongForInfoChange = onSelectedSongForInfoChange,
         onLaunchSaveQueueOverlay = onLaunchSaveQueueOverlay,
         onNavigateToAlbum = onNavigateToAlbum,
-        onNavigateToArtist = onNavigateToArtist,
-        onNavigateToGenre = onNavigateToGenre
+        onNavigateToArtist = onNavigateToArtist
     )
 }

@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
+
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -74,7 +76,6 @@ import androidx.navigation.NavController
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource

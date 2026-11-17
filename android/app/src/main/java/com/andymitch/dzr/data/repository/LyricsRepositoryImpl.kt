@@ -1,8 +1,9 @@
 package com.andymitch.dzr.data.repository
 
 import com.andymitch.dzr.data.model.Lyrics
-import com.andymitch.dzr.data.model.LyricsSourcePreference
 import com.andymitch.dzr.data.model.Song
+
+import com.andymitch.dzr.data.model.LyricsSourcePreference
 import javax.inject.Inject
 import javax.inject.Singleton
 

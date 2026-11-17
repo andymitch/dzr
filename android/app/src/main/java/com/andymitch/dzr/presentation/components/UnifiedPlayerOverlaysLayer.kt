@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
+
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
@@ -30,10 +34,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.andymitch.dzr.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
-import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
@@ -175,9 +176,7 @@ internal fun UnifiedPlayerSongInfoLayer(
     currentQueueSourceNameProvider: () -> String,
     onDismissSongInfo: () -> Unit,
     onNavigateToAlbum: (Song) -> Unit,
-    onNavigateToArtist: (Song) -> Unit,
-    onNavigateToGenre: (Song) -> Unit
-) {
+    onNavigateToArtist: (Song) -> Unit) {
     selectedSongForInfo?.let { staticSong ->
         val context = LocalContext.current
         var showPlaylistBottomSheet by remember(staticSong.id) { mutableStateOf(false) }
@@ -223,31 +222,8 @@ internal fun UnifiedPlayerSongInfoLayer(
                 onAddToPlayList = {
                     showPlaylistBottomSheet = true
                 },
-                onDeleteFromDevice = { activity, songToDelete, onResult ->
-                    playerViewModel.deleteFromDevice(activity, songToDelete, onResult)
-                    onDismissSongInfo()
-                },
                 onNavigateToAlbum = { onNavigateToAlbum(liveSong) },
                 onNavigateToArtist = { onNavigateToArtist(liveSong) },
-                onNavigateToGenre = { onNavigateToGenre(liveSong) },
-                onEditSong = { title, artist, album, albumArtist, composer, genre, lyrics, trackNumber, discNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
-                    playerViewModel.editSongMetadata(
-                        liveSong,
-                        title,
-                        artist,
-                        album,
-                        albumArtist,
-                        composer,
-                        genre,
-                        lyrics,
-                        trackNumber,
-                        discNumber,
-                        replayGainTrackGainDb,
-                        replayGainAlbumGainDb,
-                        coverArtUpdate
-                    )
-                    onDismissSongInfo()
-                },
                 removeFromListTrigger = {
                     playerViewModel.removeSongFromQueue(liveSong.id)
                     onDismissSongInfo()
@@ -294,7 +270,6 @@ internal fun UnifiedPlayerQueueAndSongInfoHost(
     onLaunchSaveQueueOverlay: (List<Song>, String, (String, Set<String>) -> Unit) -> Unit,
     onNavigateToAlbum: (Song) -> Unit,
     onNavigateToArtist: (Song) -> Unit,
-    onNavigateToGenre: (Song) -> Unit,
     queuePredictiveBackProgress: Animatable<Float, AnimationVector1D>,
     queuePredictiveBackSwipeEdge: State<Int?>
 ) {
@@ -440,9 +415,7 @@ internal fun UnifiedPlayerQueueAndSongInfoHost(
                 currentQueueSourceNameProvider = queueSourceNameProvider,
                 onDismissSongInfo = { onSelectedSongForInfoChange(null) },
                 onNavigateToAlbum = onNavigateToAlbum,
-                onNavigateToArtist = onNavigateToArtist,
-                onNavigateToGenre = onNavigateToGenre
-            )
+                onNavigateToArtist = onNavigateToArtist)
         }
     }
 }

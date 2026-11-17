@@ -1,15 +1,16 @@
 package com.andymitch.dzr.data.database
 
+import com.andymitch.dzr.data.model.ArtistRef
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.utils.normalizeMetadataText
+import com.andymitch.dzr.utils.normalizeMetadataTextOrEmpty
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.andymitch.dzr.data.model.ArtistRef
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.utils.LocalArtworkUri
-import com.andymitch.dzr.utils.normalizeMetadataText
-import com.andymitch.dzr.utils.normalizeMetadataTextOrEmpty
 import org.json.JSONArray
 import org.json.JSONObject
 

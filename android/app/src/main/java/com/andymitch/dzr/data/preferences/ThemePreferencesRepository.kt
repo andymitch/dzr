@@ -74,10 +74,6 @@ class ThemePreferencesRepository @Inject constructor(
             preferences[Keys.ALBUM_ART_PALETTE_STYLE] = style.storageKey
         }
 
-    suspend fun setAlbumArtColorAccuracy(level: Int) =
-        dataStore.edit { preferences ->
-            preferences[Keys.ALBUM_ART_COLOR_ACCURACY] = AlbumArtColorAccuracy.clamp(level)
-        }
 
     suspend fun setAlbumArtPaletteSettings(
         style: AlbumArtPaletteStyle,

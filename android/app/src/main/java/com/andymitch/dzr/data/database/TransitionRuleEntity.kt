@@ -1,11 +1,12 @@
 package com.andymitch.dzr.data.database
 
+import com.andymitch.dzr.data.model.TransitionSettings
+
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
-import com.andymitch.dzr.data.model.TransitionSettings
 
 @Entity(
     tableName = "transition_rules",

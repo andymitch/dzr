@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.model.Song
+
 import android.content.Context
 import android.os.PowerManager
 import android.os.SystemClock
@@ -8,7 +11,6 @@ import androidx.media3.common.Player
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import com.andymitch.dzr.data.service.player.DualPlayerEngine
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,7 +28,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
-import com.andymitch.dzr.data.model.Song
 import timber.log.Timber
 import com.andymitch.dzr.utils.QueueUtils
 import com.andymitch.dzr.utils.MediaItemBuilder

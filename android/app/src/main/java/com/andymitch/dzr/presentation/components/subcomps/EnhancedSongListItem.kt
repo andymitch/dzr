@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components.subcomps
 
+import com.andymitch.dzr.data.model.Song
+
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -54,7 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.lerp as lerpDp
 import coil.size.Size
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.AutoScrollingText
 import com.andymitch.dzr.presentation.components.ShimmerBox
 import androidx.compose.ui.res.stringResource

@@ -2,6 +2,7 @@ package com.andymitch.dzr.presentation.model
 
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.stats.PlaybackStatsRepository
+
 import com.andymitch.dzr.data.stats.StatsTimeRange
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize

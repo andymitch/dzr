@@ -1,5 +1,12 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Playlist
+import com.andymitch.dzr.data.model.SearchHistoryItem
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 import com.andymitch.dzr.presentation.navigation.navigateBack
 import com.andymitch.dzr.presentation.navigation.navigateSafelyReplacing
@@ -70,13 +77,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.andymitch.dzr.data.model.Album
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.Playlist
 import com.andymitch.dzr.data.model.SearchFilterType
-import com.andymitch.dzr.data.model.SearchHistoryItem
 import com.andymitch.dzr.data.model.SearchResultItem
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.presentation.components.SmartImageListTargetSize
 import com.andymitch.dzr.presentation.components.SongInfoBottomSheet
@@ -112,8 +114,6 @@ import com.andymitch.dzr.presentation.components.PlaylistCover
 import com.andymitch.dzr.presentation.components.resolveMainScreenBottomGradientHeight
 import com.andymitch.dzr.presentation.components.resolveNavBarOccupiedHeight
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.screens.search.components.GenreCategoriesGrid
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import com.andymitch.dzr.utils.formatSongCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -541,7 +541,6 @@ fun SearchScreen(
                 onAddToPlayList = {
                     showPlaylistBottomSheet = true;
                 },
-                onDeleteFromDevice = playerViewModel::deleteFromDevice,
                 onNavigateToAlbum = {
                     navController.navigateSafelyReplacing(
                         route = Screen.AlbumDetail.createRoute(currentSong.albumId),
@@ -562,29 +561,6 @@ fun SearchScreen(
                         patternToPop = Screen.ArtistDetail.route
                     )
                     showSongInfoBottomSheet = false
-                },
-                onNavigateToGenre = {
-                    currentSong.genre?.let {
-                        navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
-                    }
-                    showSongInfoBottomSheet = false
-                },
-                onEditSong = { newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics, newTrackNumber, newDiscNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
-                    playerViewModel.editSongMetadata(
-                        currentSong,
-                        newTitle,
-                        newArtist,
-                        newAlbum,
-                        newAlbumArtist,
-                        newComposer,
-                        newGenre,
-                        newLyrics,
-                        newTrackNumber,
-                        newDiscNumber,
-                        replayGainTrackGainDb,
-                        replayGainAlbumGainDb,
-                        coverArtUpdate
-                    )
                 },
             )
             if (showPlaylistBottomSheet) {
@@ -613,89 +589,7 @@ fun SearchResultSectionHeader(title: String) {
     )
 }
 
-@Composable
-fun SearchHistoryList(
-    historyItems: List<SearchHistoryItem>,
-    onHistoryClick: (String) -> Unit,
-    onHistoryDelete: (String) -> Unit,
-    onClearAllHistory: () -> Unit
-) {
-    val localDensity = LocalDensity.current
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                stringResource(R.string.recent_searches),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            if (historyItems.isNotEmpty()) {
-                TextButton(onClick = onClearAllHistory) {
-                    Text(stringResource(R.string.clear_all), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(
-                top = 8.dp,
-            )
-        ) {
-            items(historyItems, key = { "history_${it.id ?: it.query}" }, contentType = { "search_history" }) { item ->
-                SearchHistoryListItem(
-                    item = item,
-                    onHistoryClick = onHistoryClick,
-                    onHistoryDelete = onHistoryDelete
-                )
-            }
-        }
-    }
-}
 
-@Composable
-fun SearchHistoryListItem(
-    item: SearchHistoryItem,
-    onHistoryClick: (String) -> Unit,
-    onHistoryDelete: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(Unit) { detectTapGestures(onTap = { onHistoryClick(item.query) }) }
-            .padding(horizontal = 8.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(
-                imageVector = Icons.Rounded.History,
-                contentDescription = stringResource(R.string.cd_search_history_icon),
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = item.query,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        IconButton(onClick = { onHistoryDelete(item.query) }) {
-            Icon(
-                imageVector = Icons.Rounded.DeleteForever,
-                contentDescription = stringResource(R.string.cd_delete_search_history_item),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
-        }
-    }
-}
 
 
 @Composable

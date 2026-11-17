@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -14,7 +16,6 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Size
 import com.andymitch.dzr.data.preferences.AlbumArtColorAccuracy
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
 import com.andymitch.dzr.ui.theme.clearExtractedColorCache
 import com.andymitch.dzr.ui.theme.extractSeedColor
 import com.andymitch.dzr.ui.theme.generateColorSchemeFromSeed
@@ -44,16 +45,7 @@ class ColorSchemeProcessor @Inject constructor(
 ) {
     // In-memory LRU cache for faster access (avoids DB reads for hot paths)
     private val memoryCache = LruCache<String, ColorSchemePair>(20)
-    private val processingMutex = Mutex()
-    private val inProgressUris = mutableSetOf<String>()
 
-    /**
-     * Channel for queuing color scheme requests.
-     * Used by PlayerViewModel for background processing.
-     * Capacity is bounded with DROP_OLDEST to prevent unbounded growth during rapid
-     * track changes (e.g. fast seek through a large playlist).
-     */
-    val requestChannel = Channel<String>(capacity = 32, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
 
     /**
      * Gets or generates a color scheme for the given album art URI.
@@ -197,29 +189,7 @@ class ColorSchemeProcessor @Inject constructor(
         }
     }
 
-    /**
-     * Checks if a URI is currently being processed.
-     * Used to avoid duplicate work.
-     */
-    suspend fun markProcessing(uri: String): Boolean {
-        return processingMutex.withLock {
-            if (inProgressUris.contains(uri)) {
-                false
-            } else {
-                inProgressUris.add(uri)
-                true
-            }
-        }
-    }
 
-    /**
-     * Marks a URI as finished processing.
-     */
-    suspend fun markComplete(uri: String) {
-        processingMutex.withLock {
-            inProgressUris.remove(uri)
-        }
-    }
 
     /**
      * Clears the in-memory cache.
@@ -229,12 +199,6 @@ class ColorSchemeProcessor @Inject constructor(
         memoryCache.evictAll()
     }
 
-    /**
-     * Removes a specific URI from the cache.
-     */
-    fun evictFromCache(uri: String) {
-        removeUriFromMemoryCache(uri)
-    }
 
     /**
      * Invalidates the color scheme for a URI in both memory and database.

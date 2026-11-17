@@ -1,5 +1,7 @@
 package com.andymitch.dzr.ui.glancewidget
 
+import com.andymitch.dzr.data.model.PlayerInfo
+
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -29,7 +31,6 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
 import com.andymitch.dzr.MainActivity
-import com.andymitch.dzr.data.model.PlayerInfo
 
 class GridWidget2x2 : GlanceAppWidget() {
 

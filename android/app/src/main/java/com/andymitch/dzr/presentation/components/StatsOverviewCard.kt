@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.stats.PlaybackStatsRepository
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +38,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.stats.PlaybackStatsRepository
 import com.andymitch.dzr.data.stats.StatsTimeRange
 import com.andymitch.dzr.presentation.stats.displayNameRes
 import com.andymitch.dzr.utils.formatListeningDurationCompact

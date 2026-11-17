@@ -103,7 +103,6 @@ import com.andymitch.dzr.data.model.SyncedLine
 import com.andymitch.dzr.data.model.SyncedWord
 import com.andymitch.dzr.data.repository.LyricsSearchResult
 import com.andymitch.dzr.presentation.screens.TabAnimation
-import com.andymitch.dzr.presentation.components.subcomps.FetchLyricsDialog
 import com.andymitch.dzr.presentation.components.subcomps.PlayerSeekBar
 import com.andymitch.dzr.presentation.viewmodel.LyricsSearchUiState
 import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
@@ -224,13 +223,6 @@ private fun linearizedChannel(channel: Int): Double {
 fun LyricsSheet(
     stablePlayerStateFlow: StateFlow<StablePlayerState>,
     playbackPositionFlow: StateFlow<Long>,
-    lyricsSearchUiState: LyricsSearchUiState,
-    resetLyricsForCurrentSong: () -> Unit,
-    onSearchLyrics: (Boolean) -> Unit,
-    onPickResult: (LyricsSearchResult) -> Unit,
-    onManualSearch: (String, String?) -> Unit,
-    onImportLyrics: () -> Unit,
-    onDismissLyricsSearch: () -> Unit,
     lyricsSyncOffset: Int,
     onLyricsSyncOffsetChange: (Int) -> Unit,
     lyricsTextStyle: TextStyle,
@@ -244,7 +236,6 @@ fun LyricsSheet(
     immersiveLyricsTimeout: Long,
     isImmersiveTemporarilyDisabled: Boolean,
     onSetImmersiveTemporarilyDisabled: (Boolean) -> Unit,
-    onSaveLyricsToFile: (Song, Lyrics, Boolean) -> Unit,
     // BottomToggleRow Params
     isShuffleEnabled: Boolean,
     repeatMode: Int,
@@ -422,11 +413,8 @@ fun LyricsSheet(
         tween(durationMillis = 450, easing = FastOutSlowInEasing)
     }
 
-    var showFetchLyricsDialog by remember { mutableStateOf(false) }
     // Flag to prevent dialog from showing briefly after reset
-    var wasResetTriggered by remember { mutableStateOf(false) }
     // Save lyrics dialog state
-    var showSaveLyricsDialog by remember { mutableStateOf(false) }
     var showSyncControls by remember { mutableStateOf(false) }
     var previewSeekPositionMs by remember(currentSong?.id) { mutableStateOf<Long?>(null) }
 
@@ -505,96 +493,6 @@ fun LyricsSheet(
     fun resetImmersiveTimer() {
         lastInteractionTime = System.currentTimeMillis()
         immersiveMode = false
-    }
-
-    LaunchedEffect(currentSong, lyrics, isLoadingLyrics) {
-        if (currentSong != null && lyrics == null && !isLoadingLyrics) {
-            // Only show dialog if reset was not just triggered
-            if (!wasResetTriggered) {
-                showFetchLyricsDialog = true
-            }
-        } else if (lyrics != null || isLoadingLyrics) {
-            showFetchLyricsDialog = false
-            wasResetTriggered = false // Reset the flag when lyrics are loaded
-        }
-    }
-
-    if (showFetchLyricsDialog) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = MaterialTheme.typography,
-            shapes = MaterialTheme.shapes
-        ) {
-            FetchLyricsDialog(
-                uiState = lyricsSearchUiState,
-                currentSong = currentSong,
-                onConfirm = onSearchLyrics,
-                onPickResult = onPickResult,
-                onManualSearch = onManualSearch,
-                onDismiss = {
-                    showFetchLyricsDialog = false
-                    onDismissLyricsSearch()
-                    if (lyrics == null && !isLoadingLyrics) {
-                        onBackClick()
-                    }
-                },
-                onImport = onImportLyrics
-            )
-        }
-    }
-
-    // Save Lyrics Dialog
-    if (showSaveLyricsDialog && lyrics != null && currentSong != null) {
-        val hasSynced = !lyrics?.synced.isNullOrEmpty()
-        val hasPlain = !lyrics?.plain.isNullOrEmpty()
-        
-        AlertDialog(
-            onDismissRequest = { showSaveLyricsDialog = false },
-            title = { Text(stringResource(R.string.save_lyrics_dialog_title)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.save_lyrics_dialog_message))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    if (hasSynced) {
-                        FilledTonalButton(
-                            onClick = {
-                                showSaveLyricsDialog = false
-                                onSaveLyricsToFile(
-                                    currentSong!!,
-                                    lyrics!!,
-                                    true
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.save_synced_lyrics))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    if (hasPlain) {
-                        OutlinedButton(
-                            onClick = {
-                                showSaveLyricsDialog = false
-                                onSaveLyricsToFile(
-                                    currentSong!!,
-                                    lyrics!!,
-                                    false
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.save_plain_lyrics))
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showSaveLyricsDialog = false }) {
-                    Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        )
     }
 
     
@@ -1013,11 +911,6 @@ fun LyricsSheet(
                     lyrics = lyrics,
                     showSyncedLyrics = showSyncedLyrics == true,
                     isSyncControlsVisible = showSyncControls,
-                    onSaveLyricsAsLrc = { showSaveLyricsDialog = true },
-                    onResetImportedLyrics = {
-                        wasResetTriggered = true
-                        resetLyricsForCurrentSong()
-                    },
                     onToggleSyncControls = {
                         resetImmersiveTimer()
                         showSyncControls = !showSyncControls

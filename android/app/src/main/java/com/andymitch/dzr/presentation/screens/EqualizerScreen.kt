@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.equalizer.EqualizerPreset
+import com.andymitch.dzr.presentation.viewmodel.EqualizerViewModel
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository.EqualizerViewMode
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import android.annotation.SuppressLint
@@ -101,10 +105,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.equalizer.EqualizerPreset
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.ExpressiveTopBarContent
-import com.andymitch.dzr.presentation.viewmodel.EqualizerViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -143,7 +145,6 @@ import com.andymitch.dzr.presentation.components.CustomPresetsSheet
 import com.andymitch.dzr.presentation.components.ReorderPresetsSheet
 import com.andymitch.dzr.presentation.components.SavePresetDialog
 import com.andymitch.dzr.presentation.components.RenamePresetDialog
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository.EqualizerViewMode
 import androidx.compose.material.icons.rounded.ViewQuilt
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.navigationBars
@@ -1375,123 +1376,7 @@ private fun UnsupportedEffectCard(
     }
 }
 
-@Composable
-private fun UnsupportedEffectRow(
-    title: String,
-    message: String = "",
-    onDismiss: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) // Subtle warning
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        val resolvedMessage = if (message.isNotEmpty()) {
-            message
-        } else {
-            stringResource(R.string.presentation_batch_d_eq_effect_not_supported_device)
-        }
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Block,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-                Text(
-                    text = resolvedMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                )
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = stringResource(R.string.dismiss),
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun IndividualEffectRow(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isEnabled: Boolean,
-    strength: Int,
-    onEnabledChange: (Boolean) -> Unit,
-    onStrengthChange: (Int) -> Unit,
-    maxStrength: Int = 1000
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = onEnabledChange,
-                thumbContent = if (isEnabled) {
-                    {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Rounded.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                        )
-                    }
-                } else null
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Slider(
-            value = strength.toFloat(),
-            onValueChange = { onStrengthChange(it.roundToInt()) },
-            valueRange = 0f..maxStrength.toFloat(),
-            enabled = isEnabled,
-            modifier = Modifier.fillMaxWidth(),
-            track = { sliderState ->
-                SliderDefaults.Track(
-                    sliderState = sliderState,
-                    modifier = Modifier.height(36.dp)
-                )
-            }
-        )
-    }
-}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable

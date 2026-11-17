@@ -1,13 +1,14 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.repository.DeezerRepository
+
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.andymitch.dzr.data.model.Album
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.repository.MusicRepository
-import com.andymitch.dzr.data.repository.DeezerRepository
 import com.andymitch.dzr.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

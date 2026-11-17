@@ -1,13 +1,14 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.preferences.CollagePattern
+import com.andymitch.dzr.utils.shapes.RoundedStarShape
+
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.andymitch.dzr.data.preferences.CollagePattern
-import com.andymitch.dzr.utils.shapes.RoundedStarShape
 
 @Stable
 fun buildCollageConfigs(

@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Playlist
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.utils.shapes.RoundedStarShape
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,11 +30,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.andymitch.dzr.data.model.Playlist
 import com.andymitch.dzr.data.model.PlaylistShapeType
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.utils.resolvePlaylistCoverContentColor
-import com.andymitch.dzr.utils.shapes.RoundedStarShape
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
 @Composable

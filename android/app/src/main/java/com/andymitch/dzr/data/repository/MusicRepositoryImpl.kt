@@ -14,7 +14,7 @@ class MusicRepositoryImpl @Inject constructor(
     private val lyricsRepository: LyricsRepository,
     private val songRepository: SongRepository
 ) : MusicRepository {
-    override fun getAudioFiles(): Flow<List<Song>> = songRepository.getSongs()
+    override fun getAudioFiles(): Flow<List<Song>> = flowOf(emptyList())
     override fun getPaginatedSongs(sortOption: com.andymitch.dzr.data.model.SortOption, storageFilter: com.andymitch.dzr.data.model.StorageFilter): Flow<PagingData<Song>> = songRepository.getPaginatedSongs(sortOption, storageFilter)
     override fun getPaginatedAlbums( sortOption: com.andymitch.dzr.data.model.SortOption, storageFilter: com.andymitch.dzr.data.model.StorageFilter , minTracks: Int  ): Flow<PagingData<Album>> = songRepository.getPaginatedAlbums(sortOption, storageFilter, minTracks)
     override fun getPaginatedArtists( sortOption: com.andymitch.dzr.data.model.SortOption, storageFilter: com.andymitch.dzr.data.model.StorageFilter  ): Flow<PagingData<Artist>> = songRepository.getPaginatedArtists(sortOption, storageFilter)

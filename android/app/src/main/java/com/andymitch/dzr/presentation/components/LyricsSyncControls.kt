@@ -23,6 +23,9 @@ import androidx.compose.ui.res.stringResource
 import com.andymitch.dzr.R
 import androidx.compose.ui.unit.sp
 
+
+
+
 @Composable
 fun LyricsSyncControls(
     modifier: Modifier = Modifier,
@@ -93,6 +96,7 @@ fun LyricsSyncControls(
         )
     }
 }
+
 
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.SyncButton(

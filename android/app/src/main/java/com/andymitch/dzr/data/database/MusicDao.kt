@@ -1,5 +1,7 @@
 package com.andymitch.dzr.data.database
 
+import com.andymitch.dzr.utils.AudioMeta
+
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
@@ -8,7 +10,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import androidx.sqlite.db.SimpleSQLiteQuery
-import com.andymitch.dzr.utils.AudioMeta
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 

@@ -1,5 +1,9 @@
 package com.andymitch.dzr.data.service.tile
 
+import com.andymitch.dzr.data.model.MusicFolder
+import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -10,9 +14,6 @@ import androidx.annotation.RequiresApi
 import com.andymitch.dzr.MainActivity
 import com.andymitch.dzr.MainActivityIntentContract
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.MusicFolder
-import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn

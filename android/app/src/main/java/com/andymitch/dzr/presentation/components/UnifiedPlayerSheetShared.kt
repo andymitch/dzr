@@ -2,6 +2,8 @@
 
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.ui.theme.RoundedSans
 
 internal val LocalMaterialTheme = staticCompositionLocalOf<ColorScheme> { error("No ColorScheme provided") }

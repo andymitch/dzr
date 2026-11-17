@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.model.RecentlyPlayedSongUiModel
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import com.andymitch.dzr.presentation.navigation.navigateSafely
@@ -73,7 +77,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.stats.StatsTimeRange
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
 import com.andymitch.dzr.presentation.components.PlaylistBottomSheet
@@ -82,10 +85,8 @@ import com.andymitch.dzr.presentation.components.SongInfoBottomSheet
 import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.presentation.components.subcomps.EnhancedSongListItem
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.model.RecentlyPlayedSongUiModel
 import com.andymitch.dzr.presentation.model.collectRecentlyPlayedSongIds
 import com.andymitch.dzr.presentation.model.mapRecentlyPlayedSongs
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -302,7 +303,6 @@ fun RecentlyPlayedScreen(
                 onAddToPlayList = {
                     showPlaylistBottomSheet = true
                 },
-                onDeleteFromDevice = playerViewModel::deleteFromDevice,
                 onNavigateToAlbum = {
                     navController.navigateSafely(Screen.AlbumDetail.createRoute(song.albumId))
                     showSongInfoBottomSheet = false
@@ -314,29 +314,6 @@ fun RecentlyPlayedScreen(
                 onNavigateToArtistById = { artistId ->
                     navController.navigateSafely(Screen.ArtistDetail.createRoute(artistId))
                     showSongInfoBottomSheet = false
-                },
-                onNavigateToGenre = {
-                    song.genre?.let {
-                        navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
-                    }
-                    showSongInfoBottomSheet = false
-                },
-                onEditSong = { newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics, newTrackNumber, newDiscNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
-                    playerViewModel.editSongMetadata(
-                        song,
-                        newTitle,
-                        newArtist,
-                        newAlbum,
-                        newAlbumArtist,
-                        newComposer,
-                        newGenre,
-                        newLyrics,
-                        newTrackNumber,
-                        newDiscNumber,
-                        replayGainTrackGainDb,
-                        replayGainAlbumGainDb,
-                        coverArtUpdate
-                    )
                 },
                 removeFromListTrigger = {}
             )
@@ -380,7 +357,6 @@ private fun ExpressiveRecentlyPlayedHeader(
     selectedRange: StatsTimeRange,
     scrollState: LazyListState
 ) {
-    val highlightedArt = remember(songs) { songs.take(4).map { it.song.albumArtUriString } }
     val parallaxOffset by remember {
         derivedStateOf {
             if (scrollState.firstVisibleItemIndex == 0) scrollState.firstVisibleItemScrollOffset * 0.36f else 0f

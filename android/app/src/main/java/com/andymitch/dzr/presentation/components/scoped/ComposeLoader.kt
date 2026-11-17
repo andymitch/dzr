@@ -16,34 +16,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
 
-// ------------------------------------------------------------
-// 1) Phase loader: compose a subtree only after a threshold, then keep it alive
-// ------------------------------------------------------------
-@Composable
-fun DeferAt(
-    expansionFraction: Float,
-    threshold: Float,
-    keepAliveKey: Any? = "default",
-    content: @Composable () -> Unit
-) {
-    var ready by rememberSaveable(keepAliveKey) { mutableStateOf(false) }
-    LaunchedEffect(expansionFraction) {
-        if (!ready && expansionFraction >= threshold) ready = true
-    }
-    if (ready) content()
-}
 
 
-@Composable
-fun DeferUntil(
-    condition: Boolean,
-    keepAliveKey: Any? = "default",
-    content: @Composable () -> Unit
-) {
-    var ready by rememberSaveable(keepAliveKey) { mutableStateOf(false) }
-    LaunchedEffect(condition) { if (condition) ready = true }
-    if (ready) content()
-}
 
 // ------------------------------------------------------------
 // 2) Progress sampler for long-running sliders/meters
@@ -71,7 +45,6 @@ fun rememberSmoothProgress(
     // immediately allocated a new Job + had to re-issue its first `sampleNow` and
     // `delay`, which contributed to the post-interaction gesture lag.
     val latestSampleWhilePlayingMs by rememberUpdatedState(sampleWhilePlayingMs)
-    val latestSampleWhilePausedMs by rememberUpdatedState(sampleWhilePausedMs)
     val latestIsVisible by rememberUpdatedState(isVisible)
 
     val safeUpperBound = totalDuration.coerceAtLeast(0L)

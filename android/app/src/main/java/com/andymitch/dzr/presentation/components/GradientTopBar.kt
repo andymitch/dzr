@@ -42,57 +42,6 @@ import com.andymitch.dzr.ui.theme.RoundedSans
 import com.andymitch.dzr.ui.theme.DzrStatusBarStyle
 import androidx.compose.ui.res.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun GenreGradientTopBar(
-    title: String,
-    startColor: Color,
-    endColor: Color,
-    contentColor: Color,
-    scrollBehavior: TopAppBarScrollBehavior,
-    onNavigationIconClick: () -> Unit,
-) {
-    val gradientBrush = remember(startColor, endColor) {
-        Brush.verticalGradient(colors = listOf(startColor, endColor))
-    }
-
-    DzrStatusBarStyle(color = startColor)
-
-    LargeTopAppBar(
-        scrollBehavior = scrollBehavior,
-        title = {
-            Text(
-                modifier = Modifier.padding(start = 6.dp),
-                text = title,
-                color = contentColor,
-                fontFamily = RoundedSans
-            )
-        },
-        expandedHeight = 160.dp,
-        modifier = Modifier.background(brush = gradientBrush),
-        navigationIcon = {
-            IconButton(
-                modifier = Modifier.padding(start = 10.dp),
-                onClick = onNavigationIconClick,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = contentColor
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.auth_cd_back),
-                    tint = startColor
-                )
-            }
-        },
-        colors = topAppBarColors(
-            containerColor = Color.Transparent, // Background is handled by the gradient brush
-            scrolledContainerColor = Color.Transparent,
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer, // Or a color that contrasts well with your typical gradient
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer // Same as title
-        )
-    )
-}
 
 
 @OptIn(ExperimentalMaterial3Api::class)

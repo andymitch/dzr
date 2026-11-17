@@ -1,5 +1,7 @@
 package com.andymitch.dzr.ui.glancewidget
 
+import com.andymitch.dzr.data.model.PlayerInfo
+
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -32,7 +34,6 @@ import androidx.glance.text.TextStyle
 import androidx.media3.common.Player
 import com.andymitch.dzr.MainActivity
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.PlayerInfo
 import kotlin.text.ifEmpty
 
 class ControlWidget4x2 : GlanceAppWidget() {

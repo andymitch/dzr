@@ -1,11 +1,12 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.andymitch.dzr.data.equalizer.EqualizerManager
 import com.andymitch.dzr.data.equalizer.EqualizerPreset
 import com.andymitch.dzr.data.preferences.EqualizerPreferencesRepository
 import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.andymitch.dzr.data.equalizer.EqualizerManager
 import com.andymitch.dzr.data.service.player.DualPlayerEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -477,17 +478,6 @@ class EqualizerViewModel @Inject constructor(
         }
     }
     
-    /**
-     * Reattaches the equalizer to a new audio session.
-     * Call this when the player swaps during crossfade.
-     */
-    fun reattachToPlayer() {
-        viewModelScope.launch {
-            val audioSessionId = dualPlayerEngine.getAudioSessionId()
-            Timber.tag(TAG).d("Reattaching equalizer to new audio session: $audioSessionId")
-            equalizerManager.attachToAudioSessionIfNeeded(audioSessionId)
-        }
-    }
 
     private fun persistLatestStateAsync() {
         val latest = _uiState.value

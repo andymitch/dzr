@@ -1,19 +1,16 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import com.andymitch.dzr.R
-import com.andymitch.dzr.data.media.AudioMetadataReader
-import com.andymitch.dzr.data.media.CoverArtUpdate
 import com.andymitch.dzr.data.model.Lyrics
-import com.andymitch.dzr.data.model.LyricsSourcePreference
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.LyricsSearchResult
+
+import com.andymitch.dzr.R
+import com.andymitch.dzr.data.media.AudioMetadataReader
+import com.andymitch.dzr.data.model.LyricsSourcePreference
 import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.repository.NoLyricsFoundException
-import com.andymitch.dzr.utils.LyricsImportSecurity
-import com.andymitch.dzr.utils.LyricsImportValidationResult
 import com.andymitch.dzr.utils.LyricsUtils
-import com.andymitch.dzr.utils.ValidatedLyricsImport
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -151,12 +148,6 @@ class LyricsStateHolder @Inject constructor(
         _currentSongSyncOffset.value = offset
     }
 
-    /**
-     * Set the lyrics search UI state.
-     */
-    fun setSearchState(state: LyricsSearchUiState) {
-        _searchUiState.value = state
-    }
 
     /**
      * Reset the lyrics search state to idle.
@@ -165,231 +156,16 @@ class LyricsStateHolder @Inject constructor(
         _searchUiState.value = LyricsSearchUiState.Idle
     }
 
-    /**
-     * Fetch lyrics for the given song, respecting the user's source preference.
-     */
-    fun fetchLyricsForSong(
-        song: Song,
-        forcePickResults: Boolean,
-        sourcePreference: LyricsSourcePreference,
-        contextHelper: (Int) -> String
-    ) {
-        loadingJob?.cancel()
-        loadingJob = scope?.launch {
-            _searchUiState.value = LyricsSearchUiState.Loading
 
-            if (!forcePickResults) {
-                val storedLyrics = withContext(Dispatchers.IO) {
-                    musicRepository.getStoredLyrics(song)
-                }
-                if (storedLyrics != null) {
-                    val (lyrics, rawLyrics) = storedLyrics
-                    _searchUiState.value = LyricsSearchUiState.Success(lyrics)
-                    _songUpdates.emit(song.withPersistedLyrics(rawLyrics, refreshedAlbumArtUri = null) to lyrics)
-                    _messageEvents.emit(contextHelper(R.string.lyrics_already_available))
-                    return@launch
-                }
-            }
 
-            // Build ordered list of local source checks based on user preference.
-            // API_FIRST: skip local sources, go straight to remote.
-            // EMBEDDED_FIRST: check embedded, then local .lrc, then remote.
-            // LOCAL_FIRST: check local .lrc, then embedded, then remote.
-            val localSourceChecks: List<suspend () -> Pair<String, Int>?> = when (sourcePreference) {
-                LyricsSourcePreference.API_FIRST -> emptyList()
-                LyricsSourcePreference.EMBEDDED_FIRST -> listOf(
-                    { readEmbeddedLyricsFromFile(song)?.let { it to R.string.lyrics_embedded_already_available } },
-                    { readLocalLyricsFile(song)?.let { it to R.string.local_lrc_already_available } }
-                )
-                LyricsSourcePreference.LOCAL_FIRST -> listOf(
-                    { readLocalLyricsFile(song)?.let { it to R.string.local_lrc_already_available } },
-                    { readEmbeddedLyricsFromFile(song)?.let { it to R.string.lyrics_embedded_already_available } }
-                )
-            }
 
-            // Try local sources in priority order.
-            for (sourceCheck in localSourceChecks) {
-                val result = withContext(Dispatchers.IO) { sourceCheck() }
-                if (result != null) {
-                    val (rawLyrics, messageResId) = result
-                    val parsed = LyricsUtils.parseLyrics(rawLyrics)
-                    if (hasValidLyrics(parsed)) {
-                        val lyrics = parsed.copy(areFromRemote = false)
-                        _searchUiState.value = LyricsSearchUiState.Success(lyrics)
 
-                        val songId = song.id.toLongOrNull()
-                        if (songId != null) {
-                            musicRepository.updateLyrics(songId, rawLyrics)
-                        }
 
-                        _songUpdates.emit(song.copy(lyrics = rawLyrics) to lyrics)
-                        _messageEvents.emit(contextHelper(messageResId))
-                        return@launch
-                    }
-                }
-            }
 
-            // Fall through to remote fetch.
-            if (forcePickResults) {
-                musicRepository.searchRemoteLyrics(song)
-                    .onSuccess { (query, results) ->
-                        _searchUiState.value = LyricsSearchUiState.PickResult(query, results)
-                    }
-                    .onFailure { error ->
-                        handleError(error)
-                    }
-            } else {
-                musicRepository.getLyricsFromRemote(song)
-                    .onSuccess { (lyrics, rawLyrics) ->
-                        _searchUiState.value = LyricsSearchUiState.Success(lyrics)
-                        val refreshedAlbumArtUri = persistLyricsToFileMetadataIfPossible(song, rawLyrics)
-                        val updatedSong = song.withPersistedLyrics(rawLyrics, refreshedAlbumArtUri)
-                        _songUpdates.emit(updatedSong to lyrics)
-                    }
-                    .onFailure { error ->
-                        handleError(error)
-                    }
-            }
-        }
-    }
 
-    /**
-     * Manual search by query.
-     */
-    fun searchLyricsManually(title: String, artist: String?) {
-        if (title.isBlank()) return
-        loadingJob?.cancel()
-        loadingJob = scope?.launch {
-            _searchUiState.value = LyricsSearchUiState.Loading
-            musicRepository.searchRemoteLyricsByQuery(title, artist)
-                .onSuccess { (q, results) ->
-                    _searchUiState.value = LyricsSearchUiState.PickResult(q, results)
-                }
-                .onFailure { error -> handleError(error) }
-        }
-    }
 
-    /**
-     * Accept a search result.
-     */
-    fun acceptLyricsSearchResult(result: LyricsSearchResult, currentSong: Song) {
-        scope?.launch {
-            _searchUiState.value = LyricsSearchUiState.Success(result.lyrics)
 
-            // 1. Update DB cache
-            currentSong.id.toLongOrNull()?.let { songId ->
-                musicRepository.updateLyrics(songId, result.rawLyrics)
-            }
 
-            // 2. Attempt metadata write-back to the audio file
-            val refreshedAlbumArtUri = persistLyricsToFileMetadataIfPossible(currentSong, result.rawLyrics)
-            val updatedSong = currentSong.withPersistedLyrics(result.rawLyrics, refreshedAlbumArtUri)
-
-            // 3. Notify
-            _songUpdates.emit(updatedSong to result.lyrics)
-        }
-    }
-
-    /**
-     * Import from file.
-     */
-    fun importLyricsFromFile(songId: Long, validatedImport: ValidatedLyricsImport, currentSong: Song?) {
-        scope?.launch {
-            val sanitizedContent = validatedImport.sanitizedContent
-            val parsedLyrics = validatedImport.parsedLyrics
-
-            musicRepository.updateLyrics(songId, sanitizedContent)
-
-            if (currentSong != null && currentSong.id.toLongOrNull() == songId) {
-                val refreshedAlbumArtUri = persistLyricsToFileMetadataIfPossible(currentSong, sanitizedContent)
-                val updatedSong = currentSong.withPersistedLyrics(sanitizedContent, refreshedAlbumArtUri)
-                _songUpdates.emit(updatedSong to parsedLyrics.takeIf(::hasValidLyrics))
-            }
-
-            _messageEvents.emit("Lyrics imported successfully!")
-        }
-    }
-
-    fun resetLyrics(songId: Long) {
-        resetSearchState()
-        scope?.launch {
-            musicRepository.resetLyrics(songId)
-            _songUpdates.emit(Song.emptySong().copy(id = songId.toString()) to null)
-        }
-    }
-
-    fun resetAllLyrics() {
-        resetSearchState()
-        scope?.launch {
-            musicRepository.resetAllLyrics()
-        }
-    }
-
-    private fun handleError(error: Throwable) {
-        _searchUiState.value = if (error is NoLyricsFoundException) {
-            LyricsSearchUiState.NotFound("Lyrics not found")
-        } else {
-            LyricsSearchUiState.Error(error.message ?: "Unknown error")
-        }
-    }
-
-    private fun hasValidLyrics(lyrics: Lyrics?): Boolean {
-        if (lyrics == null) return false
-        return !lyrics.synced.isNullOrEmpty() || !lyrics.plain.isNullOrEmpty()
-    }
-
-    private fun readEmbeddedLyricsFromFile(song: Song): String? {
-        song.lyrics
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?.let { return it }
-
-        return runCatching {
-            AudioMetadataReader.read(File(song.path))
-                ?.lyrics
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
-        }.getOrNull()
-    }
-
-    private fun readLocalLyricsFile(song: Song): String? {
-        return runCatching {
-            val songFile = File(song.path)
-            val directory = songFile.parentFile ?: return@runCatching null
-            for (extension in LyricsImportSecurity.supportedFileExtensions()) {
-                val lyricsFile = File(directory, "${songFile.nameWithoutExtension}.$extension")
-                if (!lyricsFile.exists() || !lyricsFile.canRead()) continue
-
-                when (val validation = LyricsImportSecurity.validateLocalLyricsFile(lyricsFile)) {
-                    is LyricsImportValidationResult.Valid -> return@runCatching validation.value.sanitizedContent
-                    is LyricsImportValidationResult.Invalid -> continue
-                }
-            }
-            null
-        }.getOrNull()
-    }
-
-    private suspend fun persistLyricsToFileMetadataIfPossible(song: Song, rawLyrics: String): String? {
-        val songId = song.id.toLongOrNull() ?: return null
-        val normalizedLyrics = rawLyrics.trim()
-        if (normalizedLyrics.isBlank()) return null
-
-        return withContext(Dispatchers.IO) {
-            val existingArtwork = runCatching {
-                AudioMetadataReader.read(File(song.path))?.artwork
-            }.getOrNull()
-
-            val coverArtUpdate = existingArtwork?.let { artwork ->
-                CoverArtUpdate(
-                    bytes = artwork.bytes,
-                    mimeType = artwork.mimeType ?: "image/jpeg"
-                )
-            }
-
-            musicRepository.updateLyrics(songId.toLong(), normalizedLyrics)
-            null
-        }
-    }
 
     fun onCleared() {
         loadingJob?.cancel()
@@ -398,11 +174,3 @@ class LyricsStateHolder @Inject constructor(
     }
 }
 
-internal fun Song.withPersistedLyrics(rawLyrics: String, refreshedAlbumArtUri: String?): Song {
-    return copy(
-        lyrics = rawLyrics,
-        // Lyrics writes can refresh the cached cover-art file path. Carry it forward immediately
-        // so the full player doesn't keep rendering a deleted image URI until the next app reload.
-        albumArtUriString = refreshedAlbumArtUri ?: albumArtUriString
-    )
-}

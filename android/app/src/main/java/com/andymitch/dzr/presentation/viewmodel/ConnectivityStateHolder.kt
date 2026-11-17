@@ -62,7 +62,6 @@ class ConnectivityStateHolder @Inject constructor(
     val wifiName: StateFlow<String?> = _wifiName.asStateFlow()
 
     private val _isOnline = MutableStateFlow(false)
-    val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
     // Bluetooth State
     private val _isBluetoothEnabled = MutableStateFlow(false)
@@ -83,9 +82,6 @@ class ConnectivityStateHolder @Inject constructor(
     private val _offlinePlaybackBlocked = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
     val offlinePlaybackBlocked: SharedFlow<Unit> = _offlinePlaybackBlocked.asSharedFlow()
     
-    fun triggerOfflineBlockedEvent() {
-        _offlinePlaybackBlocked.tryEmit(Unit)
-    }
 
     /**
      * Manually refresh local connection info (e.g. WiFi SSID).

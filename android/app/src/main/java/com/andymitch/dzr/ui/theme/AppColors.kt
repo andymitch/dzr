@@ -1,9 +1,10 @@
 package com.andymitch.dzr.ui.theme
 
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
+
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
 
 fun accentColorScheme(accent: Color): ColorSchemePair {
     val neutral = generateMonochromeColorSchemeFromSeed(accent)

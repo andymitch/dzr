@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.model.SettingsCategory
+import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 import androidx.compose.animation.core.Animatable
@@ -77,10 +80,8 @@ import com.andymitch.dzr.R
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.ExpressiveTopBarContent
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
-import com.andymitch.dzr.presentation.model.SettingsCategory
 import com.andymitch.dzr.presentation.navigation.Screen
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -133,7 +134,6 @@ fun SettingsScreen(
     val launchTab = uiState.launchTab
     val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
 
-    var showCornerRadiusOverlay by remember { mutableStateOf(false) }
 
     val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
     var collapseFraction by remember { mutableStateOf(0f) }
@@ -216,8 +216,7 @@ fun SettingsScreen(
                 ExpressiveSettingsGroup {
                     val mainCategories = SettingsCategory.entries.filter {
                         it != SettingsCategory.ABOUT && 
-                        it != SettingsCategory.DEVICE_CAPABILITIES &&
-                        it != SettingsCategory.LIBRARY
+                        it != SettingsCategory.DEVICE_CAPABILITIES
                     }
 
                     val totalItems = mainCategories.size + 4 // Account + Device + Accounts + About
@@ -318,62 +317,6 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-fun ExpressiveNavigationItem(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    colors: Pair<Color, Color>,
-    onClick: () -> Unit,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp)
-) {
-    Surface(
-        onClick = onClick,
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(colors.first)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = colors.second,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Text(
-                    text = subtitle,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                    maxLines = 2
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun ExpressiveCategoryItem(
@@ -468,13 +411,6 @@ fun ExpressiveCategoryItem(
     }
 }
 
-private fun getAccountsColors(isDark: Boolean): Pair<Color, Color> {
-    return if (isDark) {
-        Color(0xFF37474F) to Color(0xFFBBD9E8)
-    } else {
-        Color(0xFFD6EAF5) to Color(0xFF103548)
-    }
-}
 
 @Composable
 fun ExpressiveSettingsGroup(content: @Composable () -> Unit) {
@@ -491,7 +427,6 @@ fun ExpressiveSettingsGroup(content: @Composable () -> Unit) {
 private fun getCategoryColors(category: SettingsCategory, isDark: Boolean): Pair<Color, Color> {
     return if (isDark) {
         when (category) {
-            SettingsCategory.LIBRARY -> Color(0xFF004A77) to Color(0xFFC2E7FF) 
             SettingsCategory.APPEARANCE -> Color(0xFF7D5260) to Color(0xFFFFD8E4) 
             SettingsCategory.PLAYBACK -> Color(0xFF633B48) to Color(0xFFFFD8EC) 
             SettingsCategory.BEHAVIOR -> Color(0xFF3E4C63) to Color(0xFFD7E3FF)
@@ -502,7 +437,6 @@ private fun getCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
         }
     } else {
         when (category) {
-            SettingsCategory.LIBRARY -> Color(0xFFD7E3FF) to Color(0xFF005AC1)
             SettingsCategory.APPEARANCE -> Color(0xFFFFD8E4) to Color(0xFF631835)
             SettingsCategory.PLAYBACK -> Color(0xFFFFD8EC) to Color(0xFF631B4B)
             SettingsCategory.BEHAVIOR -> Color(0xFFD7E3FF) to Color(0xFF253347)

@@ -2,6 +2,11 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.presentation.viewmodel.AlbumDetailViewModel
+import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
+import com.andymitch.dzr.utils.shapes.RoundedStarShape
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import com.andymitch.dzr.presentation.navigation.navigateSafely
@@ -91,7 +96,6 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Album
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.ExpressiveScrollBar
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
@@ -101,11 +105,8 @@ import com.andymitch.dzr.presentation.components.SongInfoBottomSheet
 import com.andymitch.dzr.presentation.components.resolveNavBarOccupiedHeight
 import com.andymitch.dzr.presentation.components.subcomps.EnhancedSongListItem
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.viewmodel.AlbumDetailViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import com.andymitch.dzr.utils.formatSongCount
-import com.andymitch.dzr.utils.shapes.RoundedStarShape
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
@@ -468,7 +469,6 @@ fun AlbumDetailScreen(
                     onAddToPlayList = {
                         showPlaylistBottomSheet = true;
                     },
-                    onDeleteFromDevice = playerViewModel::deleteFromDevice,
                     onNavigateToAlbum = {
                         navController.navigateSafelyReplacing(
                             route = Screen.AlbumDetail.createRoute(currentSong.albumId),
@@ -489,32 +489,6 @@ fun AlbumDetailScreen(
                             patternToPop = Screen.ArtistDetail.route
                         )
                         showSongInfoBottomSheet = false
-                    },
-                    onNavigateToGenre = {
-                        currentSong.genre?.let {
-                            navController.navigateSafelyReplacing(
-                                route = Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")),
-                                patternToPop = Screen.GenreDetail.route
-                            )
-                        }
-                        showSongInfoBottomSheet = false
-                    },
-                    onEditSong = { newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics, newTrackNumber, newDiscNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
-                        playerViewModel.editSongMetadata(
-                            currentSong,
-                            newTitle,
-                            newArtist,
-                            newAlbum,
-                            newAlbumArtist,
-                            newComposer,
-                            newGenre,
-                            newLyrics,
-                            newTrackNumber,
-                            newDiscNumber,
-                            replayGainTrackGainDb,
-                            replayGainAlbumGainDb,
-                            coverArtUpdate
-                        )
                     },
                     removeFromListTrigger = removeFromListTrigger
                 )

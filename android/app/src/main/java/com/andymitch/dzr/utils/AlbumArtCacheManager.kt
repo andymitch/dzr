@@ -22,10 +22,6 @@ object AlbumArtCacheManager {
     
     private const val TAG = "AlbumArtCacheManager"
     
-    /**
-     * Maximum cache size in bytes (200MB default)
-     */
-    const val DEFAULT_MAX_CACHE_SIZE_BYTES = 200L * 1024 * 1024
     
     /**
      * Prefix for album art cache files
@@ -135,98 +131,10 @@ object AlbumArtCacheManager {
         }
     }
     
-    /**
-     * Cleans orphaned cache files for songs that no longer exist.
-     * Should be called after sync operations.
-     * 
-     * @param context Application context
-     * @param validSongIds Set of song IDs that still exist in the library
-     * @return Number of orphaned files deleted
-     */
-    suspend fun cleanOrphanedCacheFiles(
-        context: Context,
-        validSongIds: Set<Long>
-    ): Int = withContext(Dispatchers.IO) {
-        cleanupMutex.withLock {
-            val cacheDir = AlbumArtUtils.getAlbumArtDir(context)
-            val allArtFiles = getAllAlbumArtRelatedFiles(cacheDir)
-            
-            if (allArtFiles.isEmpty()) {
-                return@withLock 0
-            }
-            
-            var deletedCount = 0
-            
-            for (file in allArtFiles) {
-                val songId = extractSongIdFromFilename(file.name)
-                if (songId != null && songId !in validSongIds) {
-                    if (file.delete()) {
-                        deletedCount++
-                    }
-                }
-            }
-            
-            if (deletedCount > 0) {
-                Timber.tag(TAG).d("Cleaned $deletedCount orphaned album art files")
-            }
-            
-            deletedCount
-        }
-    }
     
-    /**
-     * Gets the current cache size in bytes.
-     * 
-     * @param context Application context
-     * @return Total size of album art cache in bytes
-     */
-    suspend fun getCacheSizeBytes(context: Context): Long = withContext(Dispatchers.IO) {
-        getAlbumArtFiles(AlbumArtUtils.getAlbumArtDir(context)).sumOf { it.length() }
-    }
     
-    /**
-     * Gets the current cache size in a human-readable format.
-     * 
-     * @param context Application context
-     * @return Cache size as "X.X MB" string
-     */
-    suspend fun getCacheSizeFormatted(context: Context): String {
-        val bytes = getCacheSizeBytes(context)
-        val mb = bytes.toDouble() / (1024 * 1024)
-        return String.format(Locale.US, "%.1f MB", mb)
-    }
     
-    /**
-     * Gets the number of cached album art files.
-     * 
-     * @param context Application context
-     * @return Number of cached files
-     */
-    fun getCachedFileCount(context: Context): Int {
-        return getAlbumArtFiles(AlbumArtUtils.getAlbumArtDir(context)).size
-    }
     
-    /**
-     * Clears all album art cache files.
-     * 
-     * @param context Application context
-     * @return Number of files deleted
-     */
-    suspend fun clearAllCache(context: Context): Int = withContext(Dispatchers.IO) {
-        cleanupMutex.withLock {
-            val files = getAllAlbumArtRelatedFiles(AlbumArtUtils.getAlbumArtDir(context))
-            var deletedCount = 0
-            
-            for (file in files) {
-                if (file.delete()) {
-                    deletedCount++
-                }
-            }
-            
-            Timber.tag(TAG).d("Cleared all album art cache: $deletedCount files")
-            deletedCount
-        }
-    }
     
     /**
      * Gets all album art cache files (excluding "no art" markers).
@@ -264,35 +172,5 @@ object AlbumArtCacheManager {
             .toList()
     }
     
-    /**
-     * Gets all album art related files (including "no art" markers).
-     */
-    private fun getAllAlbumArtRelatedFiles(cacheDir: File): List<File> {
-        return cacheDir.listFiles { file ->
-            file.isFile && file.name.startsWith(CACHE_PREFIX)
-        }?.toList() ?: emptyList()
-    }
     
-    /**
-     * Extracts song ID from cache filename.
-     * Handles formats: "song_art_123.jpg" and "song_art_123_no.jpg"
-     * 
-     * @param filename The filename to parse
-     * @return Song ID or null if parsing fails
-     */
-    private fun extractSongIdFromFilename(filename: String): Long? {
-        return try {
-            // Remove prefix "song_art_"
-            val withoutPrefix = filename.removePrefix(CACHE_PREFIX)
-            
-            // Extract the ID (before any underscore or dot)
-            val idPart = withoutPrefix
-                .substringBefore("_")
-                .substringBefore(".")
-            
-            idPart.toLongOrNull()
-        } catch (e: Exception) {
-            null
-        }
-    }
 }

@@ -1,5 +1,8 @@
 package com.andymitch.dzr.data.service.player
 
+import com.andymitch.dzr.data.model.TransitionResolution
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -7,9 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.andymitch.dzr.data.model.TransitionMode
-import com.andymitch.dzr.data.model.TransitionResolution
 import com.andymitch.dzr.data.model.TransitionSource
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.TransitionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

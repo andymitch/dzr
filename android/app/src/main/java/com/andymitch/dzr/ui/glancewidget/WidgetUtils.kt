@@ -1,5 +1,7 @@
 package com.andymitch.dzr.ui.glancewidget
 
+import com.andymitch.dzr.data.model.PlayerInfo
+
 import android.graphics.Bitmap
 import android.util.LruCache
 import androidx.compose.runtime.Composable
@@ -7,7 +9,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.glance.GlanceTheme
 import androidx.glance.color.ColorProvider
 import androidx.glance.unit.ColorProvider
-import com.andymitch.dzr.data.model.PlayerInfo
 
 object AlbumArtBitmapCache {
     private const val CACHE_SIZE_BYTES = 4 * 1024 * 1024 // 4 MiB

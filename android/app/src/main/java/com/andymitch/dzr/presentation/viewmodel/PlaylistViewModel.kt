@@ -1,20 +1,22 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import android.net.Uri
-import android.content.Intent
-import android.widget.Toast
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.andymitch.dzr.data.DailyMixManager
 import com.andymitch.dzr.data.model.Playlist
 import com.andymitch.dzr.data.model.SmartPlaylistRule
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.SortOption
+import com.andymitch.dzr.data.playlist.M3uManager
+import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
+import com.andymitch.dzr.data.repository.DeezerRepository
+
+import android.net.Uri
+import android.content.Intent
+import android.widget.Toast
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.andymitch.dzr.data.model.fromPlaylistSource
 import com.andymitch.dzr.data.model.isSmartPlaylist
 import com.andymitch.dzr.data.model.toPlaylistSource
-import com.andymitch.dzr.data.playlist.M3uManager
-import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,7 +45,6 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import timber.log.Timber
-import com.andymitch.dzr.data.repository.DeezerRepository
 
 data class PlaylistUiState(
     val playlists: List<Playlist> = emptyList(),
@@ -1080,32 +1081,6 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Merge selected playlists into a new playlist
-     * Collects all songs from all selected playlists (removing duplicates)
-     */
-    fun mergeSelectedPlaylists(playlistIds: List<String>, newPlaylistName: String) {
-        if (newPlaylistName.isBlank()) return
-
-        viewModelScope.launch {
-            try {
-                // Get all songs from selected playlists
-                val selectedPlaylists = _uiState.value.playlists.filter { it.id in playlistIds }
-                val mergedSongIds = selectedPlaylists
-                    .flatMap { it.songIds }
-                    .distinct() // Remove duplicates
-                    .toList()
-
-                if (mergedSongIds.isNotEmpty()) {
-                    // Create new playlist with merged songs
-                    playlistPreferencesRepository.createPlaylist(newPlaylistName, mergedSongIds)
-                    _playlistCreationEvent.emit(true)
-                }
-            } catch (e: Exception) {
-                Timber.tag("PlaylistViewModel").e(e, "Error merging playlists")
-            }
-        }
-    }
 
     /**
      * Get all playlists with their song data for bulk operations
@@ -1238,15 +1213,6 @@ class PlaylistViewModel @Inject constructor(
                     }
                 }
 
-                // Create new playlist with merged songs
-                val newPlaylist = Playlist(
-                    id = UUID.randomUUID().toString(),
-                    name = newPlaylistName,
-                    songIds = allSongs.toList(),
-                    createdAt = System.currentTimeMillis(),
-                    lastModified = System.currentTimeMillis(),
-                    isQueueGenerated = false
-                )
 
                 playlistPreferencesRepository.createPlaylist(
                     name = newPlaylistName,

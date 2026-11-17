@@ -1,5 +1,13 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.LibraryTabId
+import com.andymitch.dzr.data.model.MusicFolder
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.model.SortOption
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
 import android.content.ComponentCallbacks2
 import android.os.Trace
 import kotlinx.coroutines.flow.flowOn
@@ -9,13 +17,6 @@ import kotlinx.coroutines.flow.map
 import androidx.compose.ui.graphics.toArgb
 import androidx.paging.PagingData
 import androidx.paging.filter
-import com.andymitch.dzr.data.model.Album
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.LibraryTabId
-import com.andymitch.dzr.data.model.MusicFolder
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.model.SortOption
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -540,21 +541,7 @@ class LibraryStateHolder @Inject constructor(
         }
     }
 
-    /**
-     * Updates a single song in the in-memory list.
-     * Used effectively after metadata edits to reflect changes immediately.
-     */
-    fun updateSong(updatedSong: Song) {
-        _allSongs.update { currentList ->
-            currentList.map { if (it.id == updatedSong.id) updatedSong else it }.toImmutableList()
-        }
-    }
 
-    fun removeSong(songId: String) {
-        _allSongs.update { currentList ->
-            currentList.filter { it.id != songId }.toImmutableList()
-        }
-    }
 
     fun setStorageFilter(filter: com.andymitch.dzr.data.model.StorageFilter) {
         _currentStorageFilter.value = filter

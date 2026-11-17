@@ -68,8 +68,6 @@ fun LyricsMoreBottomSheet(
     lyrics: Lyrics?,
     showSyncedLyrics: Boolean,
     isSyncControlsVisible: Boolean,
-    onSaveLyricsAsLrc: () -> Unit,
-    onResetImportedLyrics: () -> Unit,
     onToggleSyncControls: () -> Unit,
     isImmersiveTemporarilyDisabled: Boolean,
     onSetImmersiveTemporarilyDisabled: (Boolean) -> Unit,

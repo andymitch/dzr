@@ -2,6 +2,30 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.stats.PlaybackStatsRepository
+import com.andymitch.dzr.presentation.viewmodel.StatsViewModel
+import com.andymitch.dzr.utils.shapes.RoundedStarShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.media3.common.util.UnstableApi
+import com.andymitch.dzr.data.model.Genre
+import com.andymitch.dzr.presentation.components.getNavigationBarHeight
+import com.andymitch.dzr.presentation.components.resolveNavBarOccupiedHeight
+import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
+import com.andymitch.dzr.ui.theme.LocalDzrDarkTheme
+import androidx.annotation.DrawableRes
+import java.text.Normalizer
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import androidx.compose.animation.core.Animatable
@@ -108,14 +132,12 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.stats.PlaybackStatsRepository
 import com.andymitch.dzr.data.stats.StatsTimeRange
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.ExpressiveTopBarContent
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
 import com.andymitch.dzr.presentation.components.SmartImage
 import com.andymitch.dzr.presentation.screens.TabAnimation
-import com.andymitch.dzr.presentation.viewmodel.StatsViewModel
 import com.andymitch.dzr.utils.formatListeningDurationCompact
 import com.andymitch.dzr.utils.formatListeningDurationLong
 import java.util.Locale
@@ -129,7 +151,6 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.andymitch.dzr.presentation.stats.displayNameRes
 import androidx.compose.material.icons.outlined.Album
-import com.andymitch.dzr.utils.shapes.RoundedStarShape
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.PlayCircleOutline
 import com.andymitch.dzr.ui.theme.ExpTitleTypography
@@ -270,7 +291,6 @@ fun StatsScreen(
                     ContainedLoadingIndicator()
                 }
             } else {
-                val showDailyRhythm = summary?.range == StatsTimeRange.DAY || summary?.range == StatsTimeRange.WEEK
 
                 LazyColumn(
                     state = lazyListState,
@@ -517,123 +537,8 @@ private fun StatsEmptyState(
 }
 
 
-@Composable
-private fun SummaryPill(
-    label: String,
-    value: String
-) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.85f))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
 
-@Composable
-private fun SummaryHeroTile(
-    title: String,
-    value: String,
-    supporting: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f)
-                    )
-                )
-            )
-            .padding(horizontal = 24.dp, vertical = 20.dp)
-            .widthIn(min = 160.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = supporting,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
-@Composable
-private fun SummaryProgressRow(
-    title: String,
-    label: String?,
-    supporting: String,
-    progress: Float,
-    modifier: Modifier = Modifier
-) {
-    val displayLabel = label ?: stringResource(R.string.presentation_batch_g_stats_em_dash)
-    val progressValue = progress.coerceIn(0f, 1f)
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.9f))
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = displayLabel,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        LinearWavyProgressIndicator(
-            progress = { progressValue },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(50)),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-        Text(
-            text = supporting,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
 
 @Composable
 private fun RangeTabsHeader(
@@ -809,18 +714,7 @@ private fun HabitMetric(
     }
 }
 
-private fun formatMinutesWindowLabel(startMinute: Int, endMinute: Int): String {
-    val safeStart = startMinute.coerceIn(0, 24 * 60)
-    val safeEnd = endMinute.coerceIn(0, 24 * 60)
-    return "${formatHourLabel(safeStart)} – ${formatHourLabel(safeEnd)}"
-}
 
-private fun formatHourLabel(minute: Int): String {
-    val normalized = minute.coerceIn(0, 24 * 60)
-    val hours = normalized / 60
-    val mins = normalized % 60
-    return String.format(Locale.getDefault(), "%02d:%02d", hours % 24, mins)
-}
 
 @Composable
 private fun HighlightRow(

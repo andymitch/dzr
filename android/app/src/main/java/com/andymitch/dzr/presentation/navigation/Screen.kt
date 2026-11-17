@@ -23,15 +23,8 @@ sealed class Screen(val route: String) {
     object SmartTrackList : Screen("smart_track_list/{listType}") {
         fun createRoute(listType: String) = "smart_track_list/$listType"
     }
-
-    object  DailyMixScreen : Screen("daily_mix")
     object RecentlyPlayed : Screen("recently_played")
     object Stats : Screen("stats")
-    object Duplicates : Screen("duplicates")
-    object GenreDetail : Screen("genre_detail/{genreId}") { // New screen
-        fun createRoute(genreId: String) = "genre_detail/$genreId"
-    }
-    object DJSpace : Screen("dj_space")
     // The base route is "album_detail". The full route with the argument is defined in AppNavigation.
     object AlbumDetail : Screen("album_detail/{albumId}?autoPlay={autoPlay}") {
         // Helper function to build the navigation route with the album ID.
@@ -48,14 +41,7 @@ sealed class Screen(val route: String) {
     }
 
     object About : Screen("about")
-    object EasterEgg : Screen("easter_egg")
-
-    object ArtistSettings : Screen("artist_settings")
-    object DelimiterConfig : Screen("delimiter_config")
-    object WordDelimiterConfig : Screen("word_delimiter_config")
     object Equalizer : Screen("equalizer")
     object DeviceCapabilities : Screen("device_capabilities")
-    object NavidromeDashboard : Screen("navidrome_dashboard")
-    object JellyfinDashboard : Screen("jellyfin_dashboard")
 
 }

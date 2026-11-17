@@ -3,6 +3,7 @@ package com.andymitch.dzr.presentation.viewmodel
 import com.andymitch.dzr.data.DailyMixManager
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
 import com.andymitch.dzr.data.repository.MusicRepository
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -109,15 +110,6 @@ class DailyMixStateHolder @Inject constructor(
         }
     }
 
-    /**
-     * Force update the daily mix regardless of day.
-     */
-    fun forceUpdate(favoriteSongIdsFlow: kotlinx.coroutines.flow.Flow<Set<String>>) {
-        scope?.launch {
-            updateDailyMix(favoriteSongIdsFlow)
-            userPreferencesRepository.saveLastDailyMixUpdateTimestamp(System.currentTimeMillis())
-        }
-    }
 
     /**
      * Check if daily mix needs updating (new day) and update if so.
@@ -137,26 +129,7 @@ class DailyMixStateHolder @Inject constructor(
         }
     }
 
-    /**
-     * Set the daily mix songs directly.
-     */
-    fun setDailyMixSongs(songs: List<Song>) {
-        _dailyMixSongs.value = songs.toImmutableList()
-        scope?.launch {
-            userPreferencesRepository.saveDailyMixSongIds(songs.map { it.id })
-        }
-    }
 
-    /**
-     * Get a candidate pool for mix generation.
-     */
-    suspend fun getCandidatePool(
-        allSongs: List<Song>,
-        favoriteIds: Set<String>,
-        maxSize: Int = 100
-    ): List<Song> {
-        return emptyList()
-    }
 
     fun onCleared() {
         updateJob?.cancel()

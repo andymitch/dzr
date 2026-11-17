@@ -1,10 +1,14 @@
 package com.andymitch.dzr.presentation.components.player
 
+import com.andymitch.dzr.data.model.Lyrics
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
-import com.andymitch.dzr.data.model.Lyrics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -122,27 +126,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.AlbumArtQuality
 import com.andymitch.dzr.data.preferences.CarouselStyle
-import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
 import com.andymitch.dzr.presentation.components.AlbumCarouselSection
 import com.andymitch.dzr.presentation.components.AutoScrollingTextOnDemand
 import com.andymitch.dzr.presentation.components.LocalMaterialTheme
 import com.andymitch.dzr.presentation.components.LyricsSheet
 import com.andymitch.dzr.presentation.components.queueSourceLabel
 import com.andymitch.dzr.presentation.components.scoped.rememberSmoothProgress
-import com.andymitch.dzr.presentation.components.subcomps.FetchLyricsDialog
 import com.andymitch.dzr.presentation.viewmodel.LyricsSearchUiState
 import com.andymitch.dzr.presentation.viewmodel.PlayerSheetState
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
 import com.andymitch.dzr.ui.theme.RoundedSans
 import com.andymitch.dzr.utils.AudioMetaUtils.mimeTypeToFormat
-import com.andymitch.dzr.utils.LyricsImportFailureReason
-import com.andymitch.dzr.utils.LyricsImportSecurity
-import com.andymitch.dzr.utils.LyricsImportValidationResult
-import com.andymitch.dzr.utils.ValidatedLyricsImport
 import com.andymitch.dzr.utils.formatDuration
 import androidx.compose.foundation.lazy.items
 import kotlinx.collections.immutable.ImmutableList
@@ -164,36 +160,6 @@ private const val SKIP_COMMAND_GUARD_MS = 96L
 
 private enum class SkipDirection { PREVIOUS, NEXT }
 
-private suspend fun validateLyricsImport(
-    context: Context,
-    uri: Uri
-): LyricsImportValidationResult = withContext(Dispatchers.IO) {
-    val contentResolver = context.contentResolver
-
-    var fileName = ""
-    var fileSize: Long? = null
-    contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-        val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-        val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
-        if (cursor.moveToFirst()) {
-            fileName = if (nameIndex != -1) cursor.getString(nameIndex) else ""
-            fileSize = if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) {
-                cursor.getLong(sizeIndex)
-            } else {
-                null
-            }
-        }
-    }
-
-    contentResolver.openInputStream(uri)?.use { inputStream ->
-        LyricsImportSecurity.validateImportedLyricsFile(
-            fileName = fileName,
-            mimeType = contentResolver.getType(uri),
-            inputStream = inputStream,
-            reportedSizeBytes = fileSize
-        )
-    } ?: LyricsImportValidationResult.Invalid(LyricsImportFailureReason.EMPTY_CONTENT)
-}
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @SuppressLint("StateFlowValueCalledInComposition")
@@ -254,7 +220,6 @@ fun FullPlayerContent(
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
     var showAudioQualityDialog by remember { mutableStateOf(false) }
     
-    val lyricsSearchUiState by playerViewModel.lyricsSearchUiState.collectAsStateWithLifecycle()
 
     // Single subscription — replaces 11 independent collectAsStateWithLifecycle calls.
     // distinctUntilChanged in the ViewModel ensures this only emits when something
@@ -277,45 +242,9 @@ fun FullPlayerContent(
         queueGestureBottomExclusion.toPx()
     }
 
-    var showFetchLyricsDialog by remember { mutableStateOf(false) }
     var totalDrag by remember { mutableStateOf(0f) }
 
     val context = LocalContext.current
-    val fileImportScope = rememberCoroutineScope()
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri: Uri? ->
-            uri?.let {
-                fileImportScope.launch {
-                    try {
-                        val validation = validateLyricsImport(context, it)
-                        val validatedImport: ValidatedLyricsImport = when (validation) {
-                            is LyricsImportValidationResult.Valid -> validation.value
-                            is LyricsImportValidationResult.Invalid -> {
-                                playerViewModel.sendToast(
-                                    LyricsImportSecurity.messageFor(validation.reason)
-                                )
-                                return@launch
-                            }
-                        }
-
-                        val currentSongId = currentSong?.id?.toLongOrNull()
-                        if (currentSongId == null) {
-                            playerViewModel.sendToast("No song selected for lyrics import.")
-                            return@launch
-                        }
-
-                        playerViewModel.importLyricsFromFile(currentSongId, validatedImport)
-                        showFetchLyricsDialog = false
-                        showLyricsSheet = true
-                    } catch (e: Exception) {
-                        Timber.e(e, "Error reading imported lyrics file")
-                        playerViewModel.sendToast("Error reading file.")
-                    }
-                }
-            }
-        }
-    )
 
     // totalDurationValue is derived from stablePlayerState, so it's fine.
     // OPTIMIZATION: Use passed provider instead of collecting flow
@@ -342,58 +271,7 @@ fun FullPlayerContent(
     val hasLyrics = lyricsProvider().let { !it?.synced.isNullOrEmpty() || !it?.plain.isNullOrEmpty() }
 
     val onLyricsClick = {
-        val lyrics = lyricsProvider()
-        if (lyrics?.synced.isNullOrEmpty() && lyrics?.plain.isNullOrEmpty()) {
-            playerViewModel.fetchLyricsForCurrentSong(forcePickResults = false)
-        }
         showLyricsSheet = true
-    }
-
-    if (showFetchLyricsDialog) {
-        MaterialTheme(
-            colorScheme = LocalMaterialTheme.current,
-            typography = MaterialTheme.typography,
-            shapes = MaterialTheme.shapes
-        ) {
-            FetchLyricsDialog(
-                uiState = lyricsSearchUiState,
-                currentSong = song, // Use 'song' which is derived from args/retained
-                onConfirm = { forcePick ->
-                    // The user confirms, start the search
-                    playerViewModel.fetchLyricsForCurrentSong(forcePick)
-                },
-                onPickResult = { result ->
-                    playerViewModel.acceptLyricsSearchResultForCurrentSong(result)
-                },
-                onManualSearch = { title, artist ->
-                    playerViewModel.searchLyricsManually(title, artist)
-                },
-                onDismiss = {
-                    // The user cancels or closes the dialog
-                    showFetchLyricsDialog = false
-                    playerViewModel.resetLyricsSearchState()
-                },
-                onImport = {
-                    filePickerLauncher.launch(com.andymitch.dzr.utils.LyricsImportSecurity.pickerMimeTypes())
-                }
-            )
-        }
-    }
-
-    // Observer to react to the lyrics search result
-    LaunchedEffect(lyricsSearchUiState) {
-        when (val state = lyricsSearchUiState) {
-            is LyricsSearchUiState.Success -> {
-                if (showFetchLyricsDialog) {
-                    showFetchLyricsDialog = false
-                    showLyricsSheet = true
-                    playerViewModel.resetLyricsSearchState()
-                }
-            }
-            is LyricsSearchUiState.Error -> {
-            }
-            else -> Unit
-        }
     }
 
     val onAlbumSongSelected: (Song, Int) -> Unit = { newSong, index ->
@@ -839,22 +717,11 @@ fun FullPlayerContent(
         LyricsSheet(
             stablePlayerStateFlow = playerViewModel.stablePlayerState,
             playbackPositionFlow = playerViewModel.currentPlaybackPosition,
-            lyricsSearchUiState = lyricsSearchUiState,
-            resetLyricsForCurrentSong = {
-                showLyricsSheet = false
-                playerViewModel.resetLyricsForCurrentSong()
-            },
-            onSearchLyrics = { forcePick -> playerViewModel.fetchLyricsForCurrentSong(forcePick) },
-            onPickResult = { playerViewModel.acceptLyricsSearchResultForCurrentSong(it) },
-            onManualSearch = { title, artist -> playerViewModel.searchLyricsManually(title, artist) },
-            onImportLyrics = { filePickerLauncher.launch(com.andymitch.dzr.utils.LyricsImportSecurity.pickerMimeTypes()) },
-            onDismissLyricsSearch = { playerViewModel.resetLyricsSearchState() },
             lyricsSyncOffset = lyricsSyncOffset,
             onLyricsSyncOffsetChange = { currentSong?.id?.let { songId -> playerViewModel.setLyricsSyncOffset(songId, it) } },
             lyricsTextStyle = MaterialTheme.typography.titleLarge,
             colorScheme = LocalMaterialTheme.current,
             onBackClick = { showLyricsSheet = false },
-            onSaveLyricsToFile = playerViewModel::saveLyricsToFile,
             onSeekTo = { playerViewModel.seekTo(it) },
             onPlayPause = {
                 playerViewModel.playPause()

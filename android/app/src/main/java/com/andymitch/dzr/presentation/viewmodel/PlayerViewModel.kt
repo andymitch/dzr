@@ -1,5 +1,19 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.LibraryTabId
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Genre
+import com.andymitch.dzr.data.model.Lyrics
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.model.SortOption
+import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.repository.LyricsSearchResult
+import com.andymitch.dzr.utils.AppShortcutManager
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.net.Uri
@@ -8,7 +22,6 @@ import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.core.Animatable
 import androidx.core.content.ContextCompat
-import com.andymitch.dzr.data.model.LibraryTabId
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,40 +50,24 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.andymitch.dzr.R
 import com.andymitch.dzr.data.EotStateHolder
-import com.andymitch.dzr.data.media.CoverArtUpdate
-import com.andymitch.dzr.data.model.Album
-import com.andymitch.dzr.data.model.Artist
 import com.andymitch.dzr.data.model.FolderSource
-import com.andymitch.dzr.data.model.Genre
-import com.andymitch.dzr.data.model.Lyrics
 import com.andymitch.dzr.data.model.LyricsSourcePreference
 import com.andymitch.dzr.data.model.SearchFilterType
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.model.SortOption
 import com.andymitch.dzr.data.model.toLibraryTabIdOrNull
 import com.andymitch.dzr.data.provider.SharedArtworkContentProvider
 import com.andymitch.dzr.data.preferences.CarouselStyle
 import com.andymitch.dzr.data.preferences.LibraryNavigationMode
 import com.andymitch.dzr.data.preferences.NavBarStyle
-import com.andymitch.dzr.data.preferences.FullPlayerLoadingTweaks
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
-import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.preferences.AlbumArtQuality
 import com.andymitch.dzr.data.preferences.ThemePreference
-import com.andymitch.dzr.data.repository.LyricsSearchResult
 import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.service.MusicNotificationProvider
 import com.andymitch.dzr.data.service.MusicService
 import com.andymitch.dzr.data.service.player.DualPlayerEngine
-import com.andymitch.dzr.utils.AppShortcutManager
-import com.andymitch.dzr.utils.ValidatedLyricsImport
 import com.andymitch.dzr.utils.QueueUtils
 import com.andymitch.dzr.utils.MediaItemBuilder
 import com.andymitch.dzr.utils.LocalArtworkUri
 import com.andymitch.dzr.utils.LyricsUtils
-import com.andymitch.dzr.utils.StorageType
-import com.andymitch.dzr.utils.StorageUtils
 import com.andymitch.dzr.utils.ZipShareHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -141,11 +138,6 @@ private fun ImmutableList<Song>.replaceSong(updatedSong: Song): ImmutableList<So
     return asPersistentPlaybackQueue().set(index, updatedSong)
 }
 
-private fun ImmutableList<Song>.removeSongById(songId: String): ImmutableList<Song> {
-    val index = indexOfFirst { it.id == songId }
-    if (index == -1) return this
-    return asPersistentPlaybackQueue().removeAt(index)
-}
 
 private fun ImmutableList<Song>.moveSong(fromIndex: Int, toIndex: Int): ImmutableList<Song> {
     if (fromIndex == toIndex || fromIndex !in indices || toIndex !in indices) return this
@@ -195,43 +187,8 @@ private data class PreparedPlaybackQueueSegments(
     val currentIndex: Int
 )
 
-private data class PendingMetadataEdit(
-    val song: Song,
-    val title: String,
-    val artist: String,
-    val album: String,
-    val albumArtist: String,
-    val composer: String,
-    val genre: String,
-    val lyrics: String,
-    val trackNumber: Int,
-    val discNumber: Int?,
-    val replayGainTrackGainDb: String?,
-    val replayGainAlbumGainDb: String?,
-    val coverArtUpdate: CoverArtUpdate?
-)
 
-private data class PendingBatchMetadataEdit(
-    val songs: List<Song>,
-    val title: String?,
-    val artist: String?,
-    val album: String?,
-    val albumArtist: String?,
-    val composer: String?,
-    val genre: String?,
-    val lyrics: String?,
-    val trackNumber: Int?,
-    val discNumber: Int?,
-    val replayGainTrackGainDb: String?,
-    val replayGainAlbumGainDb: String?,
-    val coverArtUpdate: CoverArtUpdate?
-)
 
-private data class PendingLyricsSave(
-    val song: Song,
-    val lyrics: Lyrics,
-    val preferSynced: Boolean
-)
 
 private data class ResolvedAlbumSelection(
     val albums: List<Album>,
@@ -264,10 +221,7 @@ class PlayerViewModel @Inject constructor(
     private val sleepTimerStateHolder: SleepTimerStateHolder,
     private val searchStateHolder: SearchStateHolder,
     private val libraryStateHolder: LibraryStateHolder,
-    private val folderNavigationStateHolder: FolderNavigationStateHolder,
     private val libraryTabsStateHolder: LibraryTabsStateHolder,
-    private val metadataEditStateHolder: MetadataEditStateHolder,
-    private val songRemovalStateHolder: SongRemovalStateHolder,
     private val externalMediaStateHolder: ExternalMediaStateHolder,
     val themeStateHolder: ThemeStateHolder,
     val multiSelectionStateHolder: MultiSelectionStateHolder,
@@ -340,13 +294,6 @@ class PlayerViewModel @Inject constructor(
     private val _playlistPickerStorageFilter = MutableStateFlow(com.andymitch.dzr.data.model.StorageFilter.OFFLINE)
     val playlistPickerStorageFilter: StateFlow<com.andymitch.dzr.data.model.StorageFilter> = _playlistPickerStorageFilter.asStateFlow()
 
-    /**
-     * Paginated songs for efficient display in LibraryScreen.
-     * Uses Paging 3 for memory-efficient loading of large libraries.
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val paginatedSongs: Flow<PagingData<Song>> = libraryStateHolder.songsPagingFlow
-        .cachedIn(viewModelScope)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val playlistPickerFavoriteSongs: Flow<PagingData<Song>> = combine(
@@ -406,7 +353,6 @@ class PlayerViewModel @Inject constructor(
     private val _predictiveBackSwipeEdge = MutableStateFlow<Int?>(null)
     val predictiveBackSwipeEdge: StateFlow<Int?> = _predictiveBackSwipeEdge.asStateFlow()
     private val _isQueueSheetVisible = MutableStateFlow(false)
-    val isQueueSheetVisible: StateFlow<Boolean> = _isQueueSheetVisible.asStateFlow()
 
     val playerContentExpansionFraction = Animatable(0f)
 
@@ -585,8 +531,6 @@ class PlayerViewModel @Inject constructor(
     val activeTimerDurationMinutes: StateFlow<Int?> = sleepTimerStateHolder.activeTimerDurationMinutes
     val playCount: StateFlow<Float> = sleepTimerStateHolder.playCount
 
-    // Lyrics search UI state - managed by LyricsStateHolder
-    val lyricsSearchUiState: StateFlow<LyricsSearchUiState> = lyricsStateHolder.searchUiState
 
     private var bufferingDebounceJob: Job? = null
 
@@ -600,24 +544,9 @@ class PlayerViewModel @Inject constructor(
     val toastEvents = _toastEvents.asSharedFlow()
 
     // MediaStore write-permission request (needed for metadata editing without MANAGE_EXTERNAL_STORAGE)
-    private val _writePermissionRequest = MutableSharedFlow<android.content.IntentSender>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val writePermissionRequest: SharedFlow<android.content.IntentSender> = _writePermissionRequest.asSharedFlow()
 
     // MediaStore delete-permission request (for deletion without MANAGE_EXTERNAL_STORAGE)
-    private val _deletePermissionRequest = MutableSharedFlow<android.content.IntentSender>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val deletePermissionRequest: SharedFlow<android.content.IntentSender> = _deletePermissionRequest.asSharedFlow()
 
-    private var pendingMetadataEdit: PendingMetadataEdit? = null
-    private var pendingBatchMetadataEdit: PendingBatchMetadataEdit? = null
-    private var pendingLyricsSave: PendingLyricsSave? = null
-    private var pendingDeleteSong: Song? = null
-    private var pendingDeleteCallback: ((Boolean) -> Unit)? = null
 
     private val _albumNavigationRequests = MutableSharedFlow<Long>(extraBufferCapacity = 1)
     val albumNavigationRequests = _albumNavigationRequests.asSharedFlow()
@@ -638,42 +567,6 @@ class PlayerViewModel @Inject constructor(
     private var directPlaybackToken: Long = 0L
     private var pendingQueueSegmentsJob: Job? = null
 
-    fun requestLocateCurrentSong() {
-        val currentSong = stablePlayerState.value.currentSong ?: return
-
-        viewModelScope.launch {
-            try {
-                val sortOption = playerUiState.value.currentSongSortOption
-                
-                // Logic must match effectiveStorageFilter in LibraryStateHolder
-                val baseFilter = playerUiState.value.currentStorageFilter
-                val hideLocal = playerUiState.value.hideLocalMedia
-                val storageFilter = if (hideLocal) {
-                    com.andymitch.dzr.data.model.StorageFilter.ONLINE
-                } else {
-                    baseFilter
-                }
-
-                val sortedIds = musicRepository.getSongIdsSorted(sortOption, storageFilter)
-
-                val unifiedId = currentSong.id.toLongOrNull()
-                    ?: currentSong.contentUriString
-                        .takeIf { it.isNotBlank() }
-                        ?.let { musicRepository.getSongIdByContentUri(it) }
-
-                val index = unifiedId?.let { sortedIds.indexOf(it) } ?: -1
-
-                if (index != -1) {
-                    _scrollToIndexEvent.emit(index)
-                } else {
-                    sendToast(context.getString(R.string.player_song_not_found_in_list))
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to locate current song")
-                sendToast(context.getString(R.string.player_could_not_locate_song))
-            }
-        }
-    }
 
     fun requestLocateCurrentFavoriteSong(sortOption: com.andymitch.dzr.data.model.SortOption, storageFilter: com.andymitch.dzr.data.model.StorageFilter) {
         val currentSong = stablePlayerState.value.currentSong ?: return
@@ -701,22 +594,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun showAndPlaySongFromLibrary(
-        song: Song,
-        queueName: String = "Library",
-        isVoluntaryPlay: Boolean = true
-    ) {
-        launchLatestFullQueuePlayback(
-            song = song,
-            queueName = queueName,
-            isVoluntaryPlay = isVoluntaryPlay,
-            failureMessage = "Failed to build full library queue for songId=%s"
-        ) {
-            val sortOption = playerUiState.value.currentSongSortOption
-            val storageFilter = playerUiState.value.currentStorageFilter
-            musicRepository.getSongIdsSorted(sortOption, storageFilter)
-        }
-    }
 
     fun showAndPlaySongFromFavorites(
         song: Song,
@@ -894,7 +771,6 @@ class PlayerViewModel @Inject constructor(
     // Connectivity is now managed by ConnectivityStateHolder
 
     private val _trackVolume = MutableStateFlow(1.0f)
-    val trackVolume: StateFlow<Float> = _trackVolume.asStateFlow()
 
 
     @Inject
@@ -1087,13 +963,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun setTrackVolume(volume: Float) {
-        mediaController?.let {
-            val clampedVolume = volume.coerceIn(0f, 1f)
-            it.volume = clampedVolume
-            _trackVolume.value = clampedVolume
-        }
-    }
 
     fun sendToast(message: String) {
         viewModelScope.launch {
@@ -1138,7 +1007,6 @@ class PlayerViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("PLAYLISTS", "LIKED", "ALBUMS", "ARTIST", "RECENT"))
 
     private val _loadedTabs = MutableStateFlow(emptySet<String>())
-    private var lastBlockedDirectories: Set<String>? = null
 
     private val _currentLibraryTabId = MutableStateFlow(LibraryTabId.PLAYLISTS)
     val currentLibraryTabId: StateFlow<LibraryTabId> = _currentLibraryTabId.asStateFlow()
@@ -1170,9 +1038,6 @@ class PlayerViewModel @Inject constructor(
 
     private val _isInitialDataLoaded = MutableStateFlow(false)
 
-    // Public read-only access to all songs (using _masterAllSongs declared at class level)
-    // Library State - delegated to LibraryStateHolder
-    val allSongsFlow: StateFlow<ImmutableList<Song>> = libraryStateHolder.allSongs
 
     // Genres StateFlow - delegated to LibraryStateHolder
     val genres: StateFlow<ImmutableList<Genre>> = libraryStateHolder.genres
@@ -1182,28 +1047,8 @@ class PlayerViewModel @Inject constructor(
             initialValue = persistentListOf()
         )
 
-    val paletteRegenerationTargets: StateFlow<List<Song>> = musicRepository.getDistinctAlbumArtSongs()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
 
-    val homeMixPreviewSongs: StateFlow<ImmutableList<Song>> = musicRepository.getHomeMixPreviewSongs(
-        limit = HOME_MIX_PREVIEW_LIMIT
-    ).map { it.toImmutableList() }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = persistentListOf()
-        )
 
-    val songCountFlow: StateFlow<Int> = musicRepository.getSongCountFlow()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
 
     val hasCloudSongsFlow: StateFlow<Boolean?> = musicRepository.getCloudSongCountFlow()
         .map<Int, Boolean?> { it > 0 }
@@ -1215,7 +1060,6 @@ class PlayerViewModel @Inject constructor(
         )
 
     val albumsFlow: StateFlow<ImmutableList<Album>> = libraryStateHolder.albums
-    val artistsFlow: StateFlow<ImmutableList<Artist>> = libraryStateHolder.artists
 
     var searchQuery by mutableStateOf("")
         private set
@@ -1526,14 +1370,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun playRandomSong() {
-        viewModelScope.launch {
-            val randomSongs = musicRepository.getRandomSongs(limit = 500)
-            if (randomSongs.isNotEmpty()) {
-                playSongsShuffled(randomSongs, "All Songs (Shuffled)", startAtZero = true)
-            }
-        }
-    }
 
     fun shuffleFavoriteSongs() {
         Timber.tag("ShuffleDebug").d("shuffleFavoriteSongs called.")
@@ -1606,12 +1442,6 @@ class PlayerViewModel @Inject constructor(
         dailyMixStateHolder.loadPersistedDailyMix()
     }
 
-    fun forceUpdateDailyMix() {
-        // Delegate to DailyMixStateHolder
-        dailyMixStateHolder.forceUpdate(
-            favoriteSongIdsFlow = favoriteSongIds
-        )
-    }
 
     private var transitionSchedulerJob: Job? = null
 
@@ -1655,32 +1485,6 @@ class PlayerViewModel @Inject constructor(
         val isSdCardAvailable: Boolean
     )
 
-    private fun resolveFolderSourceState(preferredSource: FolderSource): FolderSourceState {
-        val storages = StorageUtils.getAvailableStorages(context)
-        val internalPath = storages
-            .firstOrNull { it.storageType == StorageType.INTERNAL }
-            ?.path
-            ?.path
-            ?: android.os.Environment.getExternalStorageDirectory().path
-        val sdPath = StorageUtils.getSdCardStorage(context)
-            ?.path
-            ?.path
-
-        val effectiveSource = if (!ENABLE_FOLDERS_SOURCE_SWITCHING) {
-            FolderSource.INTERNAL
-        } else if (preferredSource == FolderSource.SD_CARD && sdPath == null) {
-            FolderSource.INTERNAL
-        } else {
-            preferredSource
-        }
-
-        val resolvedRootPath = if (effectiveSource == FolderSource.SD_CARD) sdPath!! else internalPath
-        return FolderSourceState(
-            source = effectiveSource,
-            rootPath = resolvedRootPath,
-            isSdCardAvailable = sdPath != null
-        )
-    }
 
     // Connectivity refresh delegated to ConnectivityStateHolder
     fun refreshLocalConnectionInfo(refreshBluetoothDevices: Boolean = false) {
@@ -1721,68 +1525,6 @@ class PlayerViewModel @Inject constructor(
                 }
                 userPreferencesRepository.clearFavoriteSongIds()
             }
-        }
-
-        viewModelScope.launch {
-            userPreferencesRepository.isFoldersPlaylistViewFlow.collect { isPlaylistView ->
-                folderNavigationStateHolder.setFoldersPlaylistViewState(
-                    isPlaylistView = isPlaylistView,
-                    updateUiState = { mutation -> _playerUiState.update(mutation) }
-                )
-            }
-        }
-
-        viewModelScope.launch {
-            userPreferencesRepository.foldersSourceFlow.collect { preferredSource ->
-                val resolved = resolveFolderSourceState(preferredSource)
-                if (resolved.source != preferredSource) {
-                    userPreferencesRepository.setFoldersSource(resolved.source)
-                }
-
-                _playerUiState.update { currentState ->
-                    val sourceChanged = currentState.folderSource != resolved.source ||
-                            currentState.folderSourceRootPath != resolved.rootPath
-                    currentState.copy(
-                        folderSource = resolved.source,
-                        folderSourceRootPath = resolved.rootPath,
-                        isSdCardAvailable = resolved.isSdCardAvailable,
-                        currentFolderPath = if (sourceChanged) null else currentState.currentFolderPath,
-                        currentFolder = if (sourceChanged) null else currentState.currentFolder
-                    )
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            combine(
-                userPreferencesRepository.folderBackGestureNavigationFlow,
-                userPreferencesRepository.isAlbumsListViewFlow,
-            ) { gestureNav, albumsList ->
-                Pair(gestureNav, albumsList)
-            }.collect { (gestureNav, albumsList) ->
-                _playerUiState.update {
-                    it.copy(
-                        folderBackGestureNavigationEnabled = gestureNav,
-                        isAlbumsListView = albumsList,
-                    )
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            userPreferencesRepository.blockedDirectoriesFlow
-                .distinctUntilChanged()
-                .collect { blocked ->
-                    if (lastBlockedDirectories == null) {
-                        lastBlockedDirectories = blocked
-                        return@collect
-                    }
-
-                    if (blocked != lastBlockedDirectories) {
-                        lastBlockedDirectories = blocked
-                        onBlockedDirectoriesChanged()
-                    }
-                }
         }
 
         viewModelScope.launch {
@@ -2943,10 +2685,6 @@ class PlayerViewModel @Inject constructor(
                                 playWhenReady = playerCtrl.playWhenReady
                             )
                         }
-                        val transitionPosition = syncPlaybackPositionFromPlayer(
-                            transitionedItem.mediaId,
-                            playerCtrl.currentPosition.coerceAtLeast(0L)
-                        )
 
                         song?.let { currentSongValue ->
                             launch {
@@ -3777,9 +3515,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun queueAndPlaySelectedAlbums(albums: List<Album>) {
-        playSelectedAlbums(albums)
-    }
 
     /**
      * Adds all selected songs to favorites.
@@ -3894,286 +3629,12 @@ class PlayerViewModel @Inject constructor(
      * Deletes all selected songs from device with confirmation.
      * Shows a single confirmation dialog for all songs.
      */
-    private var pendingBatchDeleteSongs: List<Song>? = null
-    private var pendingBatchDeleteSkippedCount: Int = 0
-    private var pendingBatchDeleteOnComplete: (() -> Unit)? = null
 
-    fun deleteSelectedFromDevice(activity: Activity, songs: List<Song>, onComplete: () -> Unit) {
-        viewModelScope.launch {
-            // Filter out currently playing song
-            val currentSongId = playbackStateHolder.stablePlayerState.value.currentSong?.id
-            val deletableSongs = songs.filter { it.id != currentSongId }
 
-            if (deletableSongs.isEmpty()) {
-                _toastEvents.emit(context.getString(R.string.player_cannot_delete_currently_playing))
-                return@launch
-            }
 
-            val skippedCount = songs.size - deletableSongs.size
 
-            // On Android 11+, use system batch delete dialog
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val deleteRequests = withContext(Dispatchers.IO) {
-                    deletableSongs.mapNotNull { song ->
-                        com.andymitch.dzr.utils.MediaStorePermissionHelper
-                            .resolveDeleteRequestUri(
-                                context = activity,
-                                songId = song.id.toLongOrNull(),
-                                contentUriString = song.contentUriString,
-                                filePath = song.path,
-                            )?.let { uri -> song to uri }
-                    }
-                }
-                if (deleteRequests.size == deletableSongs.size) {
-                    val uris = deleteRequests.map { it.second }.distinctBy { it.toString() }
-                    val deleteRequest = com.andymitch.dzr.utils.MediaStorePermissionHelper
-                        .createDeleteRequest(activity, uris)
-                    if (deleteRequest != null) {
-                        val acceptedUriStrings = deleteRequest.acceptedUris
-                            .mapTo(mutableSetOf()) { it.toString() }
-                        val acceptedSongs = deleteRequests
-                            .filter { (_, uri) -> uri.toString() in acceptedUriStrings }
-                            .map { it.first }
-                        val invalidRequestCount = deletableSongs.size - acceptedSongs.size
 
-                        pendingBatchDeleteSongs = acceptedSongs
-                        pendingBatchDeleteSkippedCount = skippedCount + invalidRequestCount
-                        pendingBatchDeleteOnComplete = onComplete
-                        _deletePermissionRequest.emit(deleteRequest.intentSender)
-                        return@launch
-                    }
-                }
-            }
 
-            // Fallback for older Android or non-MediaStore songs
-            val confirmed = showMultiDeleteConfirmation(activity, deletableSongs.size)
-            if (!confirmed) {
-                onComplete()
-                return@launch
-            }
-
-            var successCount = 0
-            deletableSongs.forEach { song ->
-                val success = metadataEditStateHolder.deleteSong(song)
-                if (success) {
-                    removeFromMediaControllerQueue(song.id)
-                    removeSong(song)
-                    successCount++
-                }
-            }
-
-            when {
-                successCount == deletableSongs.size && skippedCount == 0 ->
-                    _toastEvents.emit(
-                        context.resources.getQuantityString(R.plurals.n_files_deleted, successCount, successCount),
-                    )
-                successCount == deletableSongs.size && skippedCount > 0 ->
-                    _toastEvents.emit(
-                        context.getString(
-                            R.string.player_batch_delete_files_deleted_skipped_format,
-                            successCount,
-                            skippedCount,
-                        ),
-                    )
-                successCount > 0 ->
-                    _toastEvents.emit(
-                        context.getString(
-                            R.string.player_batch_delete_partial_format,
-                            successCount,
-                            deletableSongs.size,
-                        ),
-                    )
-                else ->
-                    _toastEvents.emit(context.getString(R.string.player_delete_files_failed))
-            }
-
-            multiSelectionStateHolder.clearSelection()
-            onComplete()
-        }
-    }
-
-    private suspend fun showMultiDeleteConfirmation(activity: Activity, count: Int): Boolean {
-        return withContext(Dispatchers.Main) {
-            try {
-                if (activity.isFinishing || activity.isDestroyed) {
-                    return@withContext false
-                }
-
-                val userChoice = CompletableDeferred<Boolean>()
-
-                val dialog = MaterialAlertDialogBuilder(activity)
-                    .setTitle(
-                        context.resources.getQuantityString(
-                            R.plurals.delete_songs_confirmation_title,
-                            count,
-                            count,
-                        ),
-                    )
-                    .setMessage(context.getString(R.string.delete_songs_permanent_message))
-                    .setPositiveButton(context.getString(R.string.delete_action)) { _, _ ->
-                        userChoice.complete(true)
-                    }
-                    .setNegativeButton(context.getString(R.string.cancel)) { _, _ ->
-                        userChoice.complete(false)
-                    }
-                    .setOnCancelListener {
-                        userChoice.complete(false)
-                    }
-                    .setCancelable(true)
-                    .create()
-
-                dialog.show()
-                userChoice.await()
-            } catch (e: Exception) {
-                false
-            }
-        }
-    }
-
-    fun deleteFromDevice(activity: Activity, song: Song, onResult: (Boolean) -> Unit = {}){
-        viewModelScope.launch {
-            // Failsafe: Prevent deleting the currently playing song
-            if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
-                _toastEvents.emit(context.getString(R.string.player_cannot_delete_currently_playing))
-                onResult(false)
-                return@launch
-            }
-
-            // On Android 11+, use the system delete confirmation dialog via MediaStore.createDeleteRequest()
-            // which both confirms AND handles deletion in one step (no MANAGE_EXTERNAL_STORAGE needed).
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val intentSender = withContext(Dispatchers.IO) {
-                    com.andymitch.dzr.utils.MediaStorePermissionHelper
-                        .resolveDeleteRequestUri(
-                            context = activity,
-                            songId = song.id.toLongOrNull(),
-                            contentUriString = song.contentUriString,
-                            filePath = song.path,
-                        )?.let { uri ->
-                            com.andymitch.dzr.utils.MediaStorePermissionHelper
-                                .createDeleteRequestIntentSender(activity, listOf(uri))
-                        }
-                }
-                if (intentSender != null) {
-                    pendingDeleteSong = song
-                    pendingDeleteCallback = onResult
-                    _deletePermissionRequest.emit(intentSender)
-                    return@launch
-                }
-            }
-
-            // Fallback for older Android or files not in MediaStore
-            val userConfirmed = songRemovalStateHolder.showDeleteConfirmation(activity, song)
-            if (!userConfirmed) {
-                onResult(false)
-                return@launch
-            }
-
-            val success = songRemovalStateHolder.deleteSongFile(song)
-            if (success) {
-                _toastEvents.emit(context.getString(R.string.player_file_deleted))
-                removeFromMediaControllerQueue(song.id)
-                removeSong(song)
-                onResult(true)
-            } else {
-                _toastEvents.emit(context.getString(R.string.player_delete_file_not_found))
-                onResult(false)
-            }
-        }
-    }
-
-    /** Called from the UI after the user approves or denies the MediaStore delete request. */
-    fun onDeletePermissionResult(granted: Boolean) {
-        // Handle batch delete
-        val batchSongs = pendingBatchDeleteSongs
-        if (batchSongs != null) {
-            val skippedCount = pendingBatchDeleteSkippedCount
-            val onComplete = pendingBatchDeleteOnComplete
-            pendingBatchDeleteSongs = null
-            pendingBatchDeleteSkippedCount = 0
-            pendingBatchDeleteOnComplete = null
-            viewModelScope.launch {
-                if (granted) {
-                    // System already deleted the files — clean up library
-                    batchSongs.forEach { song ->
-                        removeFromMediaControllerQueue(song.id)
-                        removeSong(song)
-                    }
-                    val count = batchSongs.size
-                    if (skippedCount > 0) {
-                        _toastEvents.emit(
-                            context.getString(
-                                R.string.player_batch_delete_files_deleted_skipped_format,
-                                count,
-                                skippedCount,
-                            ),
-                        )
-                    } else {
-                        _toastEvents.emit(
-                            context.resources.getQuantityString(R.plurals.n_files_deleted, count, count),
-                        )
-                    }
-                } else {
-                    _toastEvents.emit(context.getString(R.string.player_deletion_cancelled))
-                }
-                multiSelectionStateHolder.clearSelection()
-                onComplete?.invoke()
-            }
-            return
-        }
-
-        // Handle single delete
-        val song = pendingDeleteSong ?: return
-        val callback = pendingDeleteCallback
-        pendingDeleteSong = null
-        pendingDeleteCallback = null
-        viewModelScope.launch {
-            if (granted) {
-                // The system already deleted the file — just clean up the library
-                _toastEvents.emit(context.getString(R.string.player_file_deleted))
-                removeFromMediaControllerQueue(song.id)
-                removeSong(song)
-                callback?.invoke(true)
-            } else {
-                callback?.invoke(false)
-            }
-        }
-    }
-
-    suspend fun removeSong(song: Song) {
-        toggleFavoriteSpecificSong(song, true)
-        playbackStateHolder.setCurrentPosition(0L)
-        _playerUiState.update { currentState ->
-            currentState.copy(
-                currentPlaybackQueue = currentState.currentPlaybackQueue.removeSongById(song.id),
-                currentQueueSourceName = ""
-            )
-        }
-        _isSheetVisible.value = false
-        songRemovalStateHolder.removeSongFromLibrary(song)
-    }
-
-    private fun removeFromMediaControllerQueue(songId: String) {
-        val controller = mediaController ?: return
-
-        try {
-            // Get the current timeline and media item count
-            val timeline = controller.currentTimeline
-            val mediaItemCount = timeline.windowCount
-
-            // Find the media item to remove by iterating through windows
-            for (i in 0 until mediaItemCount) {
-                val window = timeline.getWindow(i, Timeline.Window())
-                if (window.mediaItem.mediaId == songId) {
-                    // Remove the media item by index
-                    controller.removeMediaItem(i)
-                    break
-                }
-            }
-        } catch (e: Exception) {
-            Timber.tag("MediaController").e("Error removing from queue: ${e.message}")
-        }
-    }
 
     /**
      * Signal from the player sheet whether the slider-bearing UI is currently
@@ -4281,15 +3742,6 @@ class PlayerViewModel @Inject constructor(
         libraryStateHolder.sortFolders(sortOption, persist)
     }
 
-    fun setFoldersPlaylistView(isPlaylistView: Boolean) {
-        viewModelScope.launch {
-            userPreferencesRepository.setFoldersPlaylistView(isPlaylistView)
-            folderNavigationStateHolder.setFoldersPlaylistViewState(
-                isPlaylistView = isPlaylistView,
-                updateUiState = { mutation -> _playerUiState.update(mutation) }
-            )
-        }
-    }
 
     fun setFoldersSource(source: FolderSource) {
         if (!ENABLE_FOLDERS_SOURCE_SWITCHING) return
@@ -4298,40 +3750,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun navigateToFolder(path: String) {
-        folderNavigationStateHolder.navigateToFolder(
-            path = path,
-            getUiState = { _playerUiState.value },
-            updateUiState = { mutation -> _playerUiState.update(mutation) },
-            onFolderChanged = { folderPath ->
-                folderNavigationStateHolder.hydrateCurrentFolderSongsIfNeeded(
-                    scope = viewModelScope,
-                    folderPath = folderPath,
-                    getUiState = { _playerUiState.value },
-                    updateUiState = { mutation -> _playerUiState.update(mutation) },
-                    requiresHydration = { song -> song.requiresHydration() },
-                    hydrateSongs = { songs -> hydrateSongsIfNeeded(songs) }
-                )
-            }
-        )
-    }
 
-    fun navigateBackFolder() {
-        folderNavigationStateHolder.navigateBackFolder(
-            getUiState = { _playerUiState.value },
-            updateUiState = { mutation -> _playerUiState.update(mutation) },
-            onFolderChanged = { folderPath ->
-                folderNavigationStateHolder.hydrateCurrentFolderSongsIfNeeded(
-                    scope = viewModelScope,
-                    folderPath = folderPath,
-                    getUiState = { _playerUiState.value },
-                    updateUiState = { mutation -> _playerUiState.update(mutation) },
-                    requiresHydration = { song -> song.requiresHydration() },
-                    hydrateSongs = { songs -> hydrateSongsIfNeeded(songs) }
-                )
-            }
-        )
-    }
 
     fun setAlbumsListView(isList: Boolean) {
         viewModelScope.launch {
@@ -4477,11 +3896,6 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
-    fun getSongUrisForGenre(genreId: String): Flow<List<String>> {
-        return musicRepository.getMusicByGenre(genreId).map { songs ->
-            songs.take(4).mapNotNull { it.albumArtUriString?.takeIf { uri -> uri.isNotBlank() } }
-        }
-    }
 
     fun saveLastLibraryTabIndex(tabIndex: Int) {
         viewModelScope.launch {
@@ -4543,507 +3957,18 @@ class PlayerViewModel @Inject constructor(
         lyricsStateHolder.loadLyricsForSong(currentSong, lyricsSourcePreference.value)
     }
 
-    fun saveBatchMetadata(
-        songs: List<Song>,
-        title: String?,
-        artist: String?,
-        album: String?,
-        albumArtist: String?,
-        composer: String?,
-        genre: String?,
-        lyrics: String?,
-        trackNumber: Int?,
-        discNumber: Int?,
-        replayGainTrackGainDb: String?,
-        replayGainAlbumGainDb: String?,
-        coverArtUpdate: CoverArtUpdate?
-    ) {
-        viewModelScope.launch {
-            // Check if we need MediaStore permission (Android 11+)
-            val localSongsNeedingPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                songs.mapNotNull { song ->
-                    song.id.toLongOrNull()?.takeIf { it > 0 }?.let { song to it }
-                }
-            } else {
-                emptyList()
-            }
 
-            // If we have local songs on Android 11+, request permission for batch edit
-            if (localSongsNeedingPermission.isNotEmpty()) {
-                val uris = localSongsNeedingPermission.mapNotNull { (_, songId) ->
-                    android.provider.MediaStore.Audio.Media.getContentUri(
-                        android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY,
-                        songId
-                    )
-                }
 
-                if (uris.isNotEmpty()) {
-                    val intentSender = com.andymitch.dzr.utils.MediaStorePermissionHelper
-                        .createWriteRequestIntentSender(context, uris)
 
-                    if (intentSender != null) {
-                        // Store pending batch edit
-                        pendingBatchMetadataEdit = PendingBatchMetadataEdit(
-                            songs = songs,
-                            title = title,
-                            artist = artist,
-                            album = album,
-                            albumArtist = albumArtist,
-                            composer = composer,
-                            genre = genre,
-                            lyrics = lyrics,
-                            trackNumber = trackNumber,
-                            discNumber = discNumber,
-                            replayGainTrackGainDb = replayGainTrackGainDb,
-                            replayGainAlbumGainDb = replayGainAlbumGainDb,
-                            coverArtUpdate = coverArtUpdate
-                        )
-                        _writePermissionRequest.emit(intentSender)
-                        return@launch
-                    }
-                }
-            }
 
-            performBatchMetadataEdit(
-                songs, title, artist, album, albumArtist, composer, genre, lyrics,
-                trackNumber, discNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate
-            )
-        }
-    }
 
-    private suspend fun performBatchMetadataEdit(
-        songs: List<Song>,
-        title: String?,
-        artist: String?,
-        album: String?,
-        albumArtist: String?,
-        composer: String?,
-        genre: String?,
-        lyrics: String?,
-        trackNumber: Int?,
-        discNumber: Int?,
-        replayGainTrackGainDb: String?,
-        replayGainAlbumGainDb: String?,
-        coverArtUpdate: CoverArtUpdate?
-    ) {
-        var successCount = 0
-        var failureCount = 0
-        val previousAlbumArts = mutableSetOf<String?>()
 
-        songs.forEach { song ->
-            previousAlbumArts.add(song.albumArtUriString)
-
-            val result = metadataEditStateHolder.saveMetadata(
-                song = song,
-                newTitle = title ?: song.title,
-                newArtist = artist ?: song.displayArtist,
-                newAlbum = album ?: song.album,
-                newAlbumArtist = albumArtist ?: (song.albumArtist ?: ""),
-                newComposer = composer ?: "",
-                newGenre = genre ?: (song.genre ?: ""),
-                newLyrics = lyrics ?: (song.lyrics ?: ""),
-                newTrackNumber = trackNumber ?: song.trackNumber,
-                newDiscNumber = discNumber ?: song.discNumber,
-                newReplayGainTrackGainDb = replayGainTrackGainDb,
-                newReplayGainAlbumGainDb = replayGainAlbumGainDb,
-                coverArtUpdate = coverArtUpdate
-            )
-
-            if (result.success && result.updatedSong != null) {
-                successCount++
-                val updatedSong = result.updatedSong
-                val refreshedAlbumArtUri = result.updatedAlbumArtUri
-
-                // Invalidate caches for this song
-                invalidateCoverArtCaches(song.albumArtUriString, refreshedAlbumArtUri)
-
-                // Update queue if this song is in it
-                _playerUiState.update { state ->
-                    val updatedQueue = state.currentPlaybackQueue.replaceSong(updatedSong)
-                    if (updatedQueue === state.currentPlaybackQueue) {
-                        state
-                    } else {
-                        state.copy(currentPlaybackQueue = updatedQueue)
-                    }
-                }
-
-                // Update library state
-                libraryStateHolder.updateSong(updatedSong)
-
-                // If this is the current playing song, update it
-                if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
-                    playbackStateHolder.updateStablePlayerState {
-                        it.copy(
-                            currentSong = updatedSong,
-                            lyrics = result.parsedLyrics
-                        )
-                    }
-
-                    // Update MediaItem for notification
-                    val controller = playbackStateHolder.mediaController
-                    if (controller != null) {
-                        val currentIndex = controller.currentMediaItemIndex
-                        if (currentIndex >= 0 && currentIndex < controller.mediaItemCount) {
-                            val currentPosition = controller.currentPosition
-                            val newMediaItem = MediaItemBuilder.build(updatedSong)
-                            controller.replaceMediaItem(currentIndex, newMediaItem)
-                            controller.seekTo(currentIndex, currentPosition)
-                        }
-                    }
-                }
-
-                // Update selected song for info sheet if needed
-                if (_selectedSongForInfo.value?.id == song.id) {
-                    _selectedSongForInfo.value = updatedSong
-                }
-            } else {
-                failureCount++
-            }
-        }
-
-        // Handle cover art theme updates if artwork was changed
-        if (coverArtUpdate != null) {
-            previousAlbumArts.forEach { previousArt ->
-                purgeAlbumArtThemes(previousArt, null)
-            }
-
-            // Regenerate theme for current song if it was edited
-            val currentSongId = playbackStateHolder.stablePlayerState.value.currentSong?.id
-            if (currentSongId != null && songs.any { it.id == currentSongId }) {
-                val currentSong = playbackStateHolder.stablePlayerState.value.currentSong
-                val paletteTargetUri = currentSong?.albumArtUriString
-                if (paletteTargetUri != null) {
-                    themeStateHolder.getAlbumColorSchemeFlow(paletteTargetUri)
-                    themeStateHolder.extractAndGenerateColorScheme(
-                        paletteTargetUri.toUri(),
-                        paletteTargetUri,
-                        isPreload = false
-                    )
-                } else {
-                    themeStateHolder.extractAndGenerateColorScheme(null, null, isPreload = false)
-                }
-            }
-        }
-
-        // Clear multi-selection
-        multiSelectionStateHolder.clearSelection()
-
-        // Show result toast
-        val message = when {
-            failureCount == 0 -> context.getString(R.string.batch_edit_success, successCount)
-            successCount == 0 -> context.getString(R.string.batch_edit_failed)
-            else -> context.getString(R.string.batch_edit_partial_success, successCount, songs.size)
-        }
-        _toastEvents.emit(message)
-    }
-
-    fun editSongMetadata(
-        song: Song,
-        newTitle: String,
-        newArtist: String,
-        newAlbum: String,
-        newAlbumArtist: String,
-        newComposer: String,
-        newGenre: String,
-        newLyrics: String,
-        newTrackNumber: Int,
-        newDiscNumber: Int?,
-        newReplayGainTrackGainDb: String? = null,
-        newReplayGainAlbumGainDb: String? = null,
-        coverArtUpdate: CoverArtUpdate?,
-    ) {
-        viewModelScope.launch {
-            Timber.tag("PlayerViewModel").e("METADATA_EDIT_VM: Starting editSongMetadata via Holder")
-
-            // On Android 11+, request MediaStore write permission for local songs
-            val songId = song.id.toLongOrNull()
-            if (songId != null && songId > 0 && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val intentSender = com.andymitch.dzr.utils.MediaStorePermissionHelper
-                    .createWriteRequestForSong(context, songId)
-                if (intentSender != null) {
-                    // Store pending edit and request permission from the UI
-                    pendingMetadataEdit = PendingMetadataEdit(
-                        song = song,
-                        title = newTitle,
-                        artist = newArtist,
-                        album = newAlbum,
-                        albumArtist = newAlbumArtist,
-                        composer = newComposer,
-                        genre = newGenre,
-                        lyrics = newLyrics,
-                        trackNumber = newTrackNumber,
-                        discNumber = newDiscNumber,
-                        replayGainTrackGainDb = newReplayGainTrackGainDb,
-                        replayGainAlbumGainDb = newReplayGainAlbumGainDb,
-                        coverArtUpdate = coverArtUpdate
-                    )
-                    _writePermissionRequest.emit(intentSender)
-                    return@launch
-                }
-            }
-
-            performMetadataEdit(song, newTitle, newArtist, newAlbum, newAlbumArtist, newComposer, newGenre, newLyrics,
-                newTrackNumber, newDiscNumber, newReplayGainTrackGainDb, newReplayGainAlbumGainDb, coverArtUpdate)
-        }
-    }
-
-    /** Called from the UI after the user approves or denies the MediaStore write permission. */
-    fun onWritePermissionResult(granted: Boolean) {
-        // Handle batch metadata edit
-        val batchMetadata = pendingBatchMetadataEdit
-        if (batchMetadata != null) {
-            pendingBatchMetadataEdit = null
-            if (!granted) {
-                viewModelScope.launch {
-                    _toastEvents.emit(context.getString(R.string.player_permission_denied_edit_files))
-                }
-                return
-            }
-            viewModelScope.launch {
-                performBatchMetadataEdit(
-                    batchMetadata.songs,
-                    batchMetadata.title,
-                    batchMetadata.artist,
-                    batchMetadata.album,
-                    batchMetadata.albumArtist,
-                    batchMetadata.composer,
-                    batchMetadata.genre,
-                    batchMetadata.lyrics,
-                    batchMetadata.trackNumber,
-                    batchMetadata.discNumber,
-                    batchMetadata.replayGainTrackGainDb,
-                    batchMetadata.replayGainAlbumGainDb,
-                    batchMetadata.coverArtUpdate
-                )
-            }
-            return
-        }
-
-        // Handle batch genre edit
-        val batchGenre = pendingBatchGenreEdit
-        if (batchGenre != null) {
-            pendingBatchGenreEdit = null
-            if (!granted) {
-                viewModelScope.launch {
-                    _toastEvents.emit(context.getString(R.string.player_permission_denied_edit_files))
-                }
-                return
-            }
-            viewModelScope.launch { performBatchEditGenre(batchGenre.first, batchGenre.second) }
-            return
-        }
-
-        // Handle lyrics save retry
-        val pendingLyrics = pendingLyricsSave
-        if (pendingLyrics != null) {
-            pendingLyricsSave = null
-            if (!granted) {
-                viewModelScope.launch {
-                    _toastEvents.emit(context.getString(R.string.player_permission_denied_save_lyrics))
-                }
-                return
-            }
-            performLyricsSave(pendingLyrics.song, pendingLyrics.lyrics, pendingLyrics.preferSynced)
-            return
-        }
-
-        // Handle single metadata edit
-        val pending = pendingMetadataEdit ?: return
-        pendingMetadataEdit = null
-        if (!granted) {
-            viewModelScope.launch {
-                _toastEvents.emit(context.getString(R.string.player_permission_denied_edit_this_file))
-            }
-            return
-        }
-        viewModelScope.launch {
-            performMetadataEdit(
-                pending.song, pending.title, pending.artist, pending.album,
-                pending.albumArtist, pending.composer, pending.genre, pending.lyrics,
-                pending.trackNumber, pending.discNumber,
-                pending.replayGainTrackGainDb, pending.replayGainAlbumGainDb, pending.coverArtUpdate
-            )
-        }
-    }
-
-    fun saveLyricsToFile(song: Song, lyrics: Lyrics, preferSynced: Boolean) {
-        val lrcContent = LyricsUtils.toLrcString(lyrics, preferSynced)
-        if (lrcContent.isEmpty()) {
-            viewModelScope.launch { _toastEvents.emit(context.getString(R.string.no_lyrics_to_save)) }
-            return
-        }
-
-        val songFile = java.io.File(song.path)
-        val lrcFile = java.io.File(songFile.parentFile, "${songFile.nameWithoutExtension}.lrc")
-
-        // Android 11+ check: if file exists and we might not have permission
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && lrcFile.exists() && !lrcFile.canWrite()) {
-            val uri = com.andymitch.dzr.utils.MediaStorePermissionHelper.getMediaStoreUri(context, lrcFile.absolutePath)
-            if (uri != null) {
-                val intentSender = com.andymitch.dzr.utils.MediaStorePermissionHelper.createWriteRequestIntentSender(context, listOf(uri))
-                if (intentSender != null) {
-                    pendingLyricsSave = PendingLyricsSave(song, lyrics, preferSynced)
-                    viewModelScope.launch { _writePermissionRequest.emit(intentSender) }
-                    return
-                }
-            }
-        }
-
-        performLyricsSave(song, lyrics, preferSynced)
-    }
-
-    private fun performLyricsSave(song: Song, lyrics: Lyrics, preferSynced: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val songFile = java.io.File(song.path)
-                val lrcFile = java.io.File(songFile.parentFile, "${songFile.nameWithoutExtension}.lrc")
-                val lrcContent = LyricsUtils.toLrcString(lyrics, preferSynced)
-
-                lrcFile.writeText(lrcContent, Charsets.UTF_8)
-                _toastEvents.emit(context.getString(R.string.lyrics_saved_successfully))
-                
-                // If it was the current song, we might want to refresh the lyrics in state if it migrated from remote to local
-                if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
-                    loadLyricsForCurrentSong()
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to save lyrics to file")
-                _toastEvents.emit(context.getString(R.string.lyrics_save_failed))
-            }
-        }
-    }
-
-    private suspend fun performMetadataEdit(
-        song: Song,
-        newTitle: String,
-        newArtist: String,
-        newAlbum: String,
-        newAlbumArtist: String,
-        newComposer: String,
-        newGenre: String,
-        newLyrics: String,
-        newTrackNumber: Int,
-        newDiscNumber: Int?,
-        newReplayGainTrackGainDb: String?,
-        newReplayGainAlbumGainDb: String?,
-        coverArtUpdate: CoverArtUpdate?,
-    ) {
-        val previousAlbumArt = song.albumArtUriString
-
-        val result = metadataEditStateHolder.saveMetadata(
-            song = song,
-            newTitle = newTitle,
-            newArtist = newArtist,
-            newAlbum = newAlbum,
-            newAlbumArtist = newAlbumArtist,
-            newComposer = newComposer,
-            newGenre = newGenre,
-            newLyrics = newLyrics,
-            newTrackNumber = newTrackNumber,
-            newDiscNumber = newDiscNumber,
-            newReplayGainTrackGainDb = newReplayGainTrackGainDb,
-            newReplayGainAlbumGainDb = newReplayGainAlbumGainDb,
-            coverArtUpdate = coverArtUpdate
-        )
-
-        Timber.tag("PlayerViewModel").e("METADATA_EDIT_VM: Result success=${result.success}")
-
-        if (result.success && result.updatedSong != null) {
-            val updatedSong = result.updatedSong
-            val refreshedAlbumArtUri = result.updatedAlbumArtUri
-
-            invalidateCoverArtCaches(previousAlbumArt, refreshedAlbumArtUri)
-
-            _playerUiState.update { state ->
-                val updatedQueue = state.currentPlaybackQueue.replaceSong(updatedSong)
-                if (updatedQueue === state.currentPlaybackQueue) {
-                    state
-                } else {
-                    state.copy(currentPlaybackQueue = updatedQueue)
-                }
-            }
-
-            // libraryStateHolder.updateSong() below handles the SSOT update
-
-            // Update the LibraryStateHolder which drives the UI
-            libraryStateHolder.updateSong(updatedSong)
-
-            if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
-                playbackStateHolder.updateStablePlayerState {
-                    it.copy(
-                        currentSong = updatedSong,
-                        lyrics = result.parsedLyrics
-                    )
-                }
-
-                // Update the player's current MediaItem to refresh notification artwork
-                // This is efficient: only replaces metadata, not the media stream
-                val controller = playbackStateHolder.mediaController
-                if (controller != null) {
-                    val currentIndex = controller.currentMediaItemIndex
-                    if (currentIndex >= 0 && currentIndex < controller.mediaItemCount) {
-                        val currentPosition = controller.currentPosition
-                        val newMediaItem = MediaItemBuilder.build(updatedSong)
-                        controller.replaceMediaItem(currentIndex, newMediaItem)
-                        // Restore position since replaceMediaItem may reset it
-                        controller.seekTo(currentIndex, currentPosition)
-                    }
-                }
-            }
-
-            if (_selectedSongForInfo.value?.id == song.id) {
-                _selectedSongForInfo.value = updatedSong
-            }
-
-            if (coverArtUpdate != null) {
-                purgeAlbumArtThemes(previousAlbumArt, updatedSong.albumArtUriString)
-                val paletteTargetUri = updatedSong.albumArtUriString
-                if (paletteTargetUri != null) {
-                    themeStateHolder.getAlbumColorSchemeFlow(paletteTargetUri)
-                    val currentUri = playbackStateHolder.stablePlayerState.value.currentSong?.albumArtUriString
-                    themeStateHolder.extractAndGenerateColorScheme(paletteTargetUri.toUri(), currentUri, isPreload = false)
-                } else {
-                    val currentUri = playbackStateHolder.stablePlayerState.value.currentSong?.albumArtUriString
-                    themeStateHolder.extractAndGenerateColorScheme(null, currentUri, isPreload = false)
-                }
-            }
-
-            // No need for full library sync - file, MediaStore, and local DB are already updated
-            // syncManager.sync() was removed to avoid unnecessary wait time
-            _toastEvents.emit(context.getString(R.string.metadata_updated_successfully))
-        } else {
-            val errorMessage = result.getUserFriendlyErrorMessage()
-            Timber.tag("PlayerViewModel").e("METADATA_EDIT_VM: Failed - ${result.error}: $errorMessage")
-            _toastEvents.emit(errorMessage)
-        }
-    }
 
     private fun invalidateCoverArtCaches(vararg uriStrings: String?) {
         imageCacheManager.invalidateCoverArtCaches(*uriStrings)
     }
 
-    private suspend fun purgeAlbumArtThemes(vararg uriStrings: String?) {
-        val uris = uriStrings.mapNotNull { it?.takeIf(String::isNotBlank) }.distinct()
-        if (uris.isEmpty()) return
 
-
-        uris.forEach { uri ->
-            // Cache invalidation delegated to ThemeStateHolder (if implemented) or relied on re-generation
-            // individualAlbumColorSchemes was removed.
-        }
-    }
-
-    suspend fun forceRegenerateAlbumPaletteForSong(song: Song): Boolean {
-        val albumArtUri = song.albumArtUriString?.takeIf { it.isNotBlank() } ?: return false
-        return runCatching {
-            // Full reset: clear all cached variants for this URI and recreate every style from scratch.
-            themeStateHolder.forceRegenerateColorScheme(
-                uriString = albumArtUri,
-                regenerateAllStyles = true
-            )
-            true
-        }.getOrDefault(false)
-    }
 
 
 
@@ -5072,51 +3997,11 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Fetches the lyrics for the current song from the remote service.
-     */
-    /**
-     * Fetches the lyrics for the current song from the remote service.
-     */
-    fun fetchLyricsForCurrentSong(forcePickResults: Boolean = false) {
-        val currentSong = stablePlayerState.value.currentSong ?: return
-        lyricsStateHolder.fetchLyricsForSong(currentSong, forcePickResults, lyricsSourcePreference.value) { resId ->
-            context.getString(resId)
-        }
-    }
 
-    /**
-     * Manual search lyrics using query provided by user (title and artist)
-     */
-    fun searchLyricsManually(title: String, artist: String? = null) {
-        lyricsStateHolder.searchLyricsManually(title, artist)
-    }
 
-    fun acceptLyricsSearchResultForCurrentSong(result: LyricsSearchResult) {
-        val currentSong = stablePlayerState.value.currentSong ?: return
-        lyricsStateHolder.acceptLyricsSearchResult(result, currentSong)
-    }
 
-    fun resetLyricsForCurrentSong() {
-        val songId = stablePlayerState.value.currentSong?.id?.toLongOrNull() ?: return
-        lyricsStateHolder.resetLyrics(songId)
-        playbackStateHolder.updateStablePlayerState { state -> state.copy(lyrics = null) }
-    }
 
-    fun resetAllLyrics() {
-        lyricsStateHolder.resetAllLyrics()
-        playbackStateHolder.updateStablePlayerState { state -> state.copy(lyrics = null) }
-    }
 
-    /**
-     * Processes the lyrics imported from a file, saves them, and updates the UI.
-     * @param songId The ID of the song the lyrics are being imported for.
-     * @param lyricsContent The lyrics content as a String.
-     */
-    fun importLyricsFromFile(songId: Long, validatedImport: ValidatedLyricsImport) {
-        val currentSong = stablePlayerState.value.currentSong
-        lyricsStateHolder.importLyricsFromFile(songId, validatedImport, currentSong)
-    }
 
 
 
@@ -5127,12 +4012,6 @@ class PlayerViewModel @Inject constructor(
         lyricsStateHolder.resetSearchState()
     }
 
-    private fun onBlockedDirectoriesChanged() {
-        viewModelScope.launch {
-            musicRepository.invalidateCachesDependentOnAllowedDirectories()
-            resetAndLoadInitialData("Blocked directories changed")
-        }
-    }
 
     fun playSong(song: Song) {
         viewModelScope.launch {
@@ -5148,146 +4027,13 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun prepareBenchmarkPlayerFromLibrary() {
-        viewModelScope.launch {
-            repeat(90) { attempt ->
-                val controllerReady = mediaController != null
-                val songs = withContext(Dispatchers.IO) {
-                    musicRepository.getAllSongsOnce()
-                }
-                Timber.tag("DzrBenchmark").i(
-                    "prepare player attempt=$attempt controllerReady=$controllerReady songs=${songs.size}"
-                )
-                if (controllerReady && songs.isNotEmpty()) {
-                    playSongs(songs, songs.first(), "Benchmark Player")
-                    delay(700L)
-                    collapsePlayerSheet()
-                    Timber.tag("DzrBenchmark").i("Benchmark player prepared with ${songs.first().title}")
-                    return@launch
-                }
-                delay(500L)
-            }
-            Timber.tag("DzrBenchmark").w("Unable to prepare benchmark player from library")
-        }
-    }
 
-    private var pendingBatchGenreEdit: Pair<List<Song>, String>? = null
 
-    fun batchEditGenre(songs: List<Song>, newGenre: String) {
-        if (songs.isEmpty()) return
 
-        viewModelScope.launch {
-            // On Android 11+, request write permission for all local songs upfront
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val uris = songs.mapNotNull { song ->
-                    song.id.toLongOrNull()?.takeIf { it > 0 }?.let { id ->
-                        com.andymitch.dzr.utils.MediaStorePermissionHelper.getMediaStoreUri(context, id)
-                    }
-                }
-                if (uris.isNotEmpty()) {
-                    val intentSender = com.andymitch.dzr.utils.MediaStorePermissionHelper
-                        .createWriteRequestIntentSender(context, uris)
-                    if (intentSender != null) {
-                        pendingBatchGenreEdit = songs to newGenre
-                        _writePermissionRequest.emit(intentSender)
-                        return@launch
-                    }
-                }
-            }
 
-            performBatchEditGenre(songs, newGenre)
-        }
-    }
 
-    private suspend fun performBatchEditGenre(songs: List<Song>, newGenre: String) {
-            Timber.tag("PlayerViewModel").d("Starting batch genre update for ${songs.size} songs to '$newGenre'")
-            _toastEvents.emit(context.getString(R.string.player_updating_n_songs, songs.size))
 
-            var successCount = 0
-            var failCount = 0
 
-            songs.forEach { song ->
-                val sourceSong = if (song.lyrics != null) {
-                    song
-                } else {
-                    withContext(Dispatchers.IO) {
-                        musicRepository.getSong(song.id).first()
-                    } ?: song
-                }
-
-                val result = metadataEditStateHolder.saveMetadata(
-                    song = sourceSong,
-                    newTitle = sourceSong.title,
-                    newArtist = sourceSong.artist,
-                    newAlbum = sourceSong.album,
-                    newAlbumArtist = sourceSong.albumArtist ?: "",
-                    newComposer = "",
-                    newGenre = newGenre,
-                    newLyrics = sourceSong.lyrics ?: "",
-                    newTrackNumber = sourceSong.trackNumber,
-                    newDiscNumber =  sourceSong.discNumber,
-                    coverArtUpdate = null
-                )
-
-                if (result.success && result.updatedSong != null) {
-                    successCount++
-                    val updatedSong = result.updatedSong
-
-                    // Optimistic update of UI flows
-                    // libraryStateHolder.updateSong() below handles the SSOT update
-                    libraryStateHolder.updateSong(updatedSong)
-
-                    if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
-                        playbackStateHolder.updateStablePlayerState { it.copy(currentSong = updatedSong) }
-                        val controller = playbackStateHolder.mediaController
-                        if (controller != null) {
-                            val idx = controller.currentMediaItemIndex
-                            if (idx != C.INDEX_UNSET) {
-                                controller.replaceMediaItem(idx, MediaItemBuilder.build(updatedSong))
-                            }
-                        }
-                    }
-                } else {
-                    failCount++
-                }
-            }
-
-            if (failCount == 0) {
-                _toastEvents.emit(context.getString(R.string.player_batch_genre_updated_all, successCount))
-            } else {
-                _toastEvents.emit(
-                    context.getString(R.string.player_batch_genre_updated_partial, successCount, failCount),
-                )
-            }
-    }
-
-    // Custom Genres Names
-    val customGenres: StateFlow<Set<String>> = userPreferencesRepository.customGenresFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptySet()
-        )
-
-    val customGenreIcons: StateFlow<Map<String, Int>> = userPreferencesRepository.customGenreIconsFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyMap()
-        )
-
-    val isGenreGridView: StateFlow<Boolean> = userPreferencesRepository.isGenreGridViewFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
-
-    fun toggleGenreViewMode() {
-        viewModelScope.launch {
-            userPreferencesRepository.setGenreGridView(!isGenreGridView.value)
-        }
-    }
 
     fun addCustomGenre(genre: String, iconResId: Int? = null) {
         viewModelScope.launch {

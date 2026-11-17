@@ -1,5 +1,18 @@
 package com.andymitch.dzr.data.service
 
+import com.andymitch.dzr.data.model.PlayerInfo
+import com.andymitch.dzr.data.model.PlaybackQueueItemSnapshot
+import com.andymitch.dzr.data.model.PlaybackQueueSnapshot
+import com.andymitch.dzr.data.preferences.EqualizerPreferencesRepository
+import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.service.player.TransitionController
+import com.andymitch.dzr.data.model.WidgetThemeColors
+import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemeProcessor
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
+import com.andymitch.dzr.presentation.viewmodel.ListeningStatsTracker
+
 import android.app.AlarmManager
 import android.app.BackgroundServiceStartNotAllowedException
 import android.app.ForegroundServiceStartNotAllowedException
@@ -42,15 +55,8 @@ import com.google.common.util.concurrent.SettableFuture
 import com.andymitch.dzr.DzrApplication
 import com.andymitch.dzr.MainActivity
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.PlayerInfo
-import com.andymitch.dzr.data.model.PlaybackQueueItemSnapshot
-import com.andymitch.dzr.data.model.PlaybackQueueSnapshot
-import com.andymitch.dzr.data.preferences.EqualizerPreferencesRepository
-import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.service.player.DualPlayerEngine
-import com.andymitch.dzr.data.service.player.TransitionController
 import com.andymitch.dzr.ui.glancewidget.ControlWidget4x2
 import com.andymitch.dzr.ui.glancewidget.DzrGlanceWidget
 import com.andymitch.dzr.ui.glancewidget.PlayerActions
@@ -68,22 +74,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import com.andymitch.dzr.data.equalizer.EqualizerManager
-import com.andymitch.dzr.data.model.WidgetThemeColors
 import com.andymitch.dzr.data.preferences.AlbumArtColorAccuracy
-import com.andymitch.dzr.data.preferences.AlbumArtPaletteStyle
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemeProcessor
 import androidx.compose.ui.graphics.toArgb
 import com.andymitch.dzr.ui.glancewidget.BarWidget4x1
 import com.andymitch.dzr.ui.glancewidget.GridWidget2x2
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import com.andymitch.dzr.data.preferences.ThemePreference
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
 import com.andymitch.dzr.utils.ArtworkTransportSanitizer
 import com.andymitch.dzr.utils.MediaItemBuilder
 
 import com.andymitch.dzr.di.AppScope
-import com.andymitch.dzr.presentation.viewmodel.ListeningStatsTracker
 import kotlin.math.abs
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
@@ -231,11 +232,9 @@ class MusicService : MediaLibraryService() {
         private const val PLAYBACK_SNAPSHOT_DEBOUNCE_MS = 1500L
         private const val FORCED_WIDGET_STATE_DEBOUNCE_MS = 250L
         private const val MEDIA_SESSION_BUTTON_DEBOUNCE_MS = 250L
-        private const val DEFERRED_SERVICE_STARTUP_WORK_DELAY_MS = 1_000L
         private const val PAUSED_RESTORE_PREPARE_QUEUE_LIMIT = 50
         private val pendingMediaButtonForegroundStarts = AtomicInteger(0)
 
-        private const val APP_PACKAGE_PREFIX = "com.andymitch.dzr"
         private const val LOCAL_LIBRARY_ROOT_ID = "dzr_root"
         private const val DEFAULT_STREAM_BUFFER_SIZE = 8 * 1024
         private const val WIDGET_ART_FAILURE_RETRY_MS = 30_000L
@@ -1808,14 +1807,6 @@ class MusicService : MediaLibraryService() {
         }
     }
 
-    private fun requestWidgetRefreshWithFollowUp() {
-        requestWidgetFullUpdate(force = true)
-        followUpWidgetUpdateJob?.cancel()
-        followUpWidgetUpdateJob = serviceScope.launch {
-            delay(250L)
-            requestWidgetFullUpdate(force = true)
-        }
-    }
 
     private var lastWidgetPlayerInfo: PlayerInfo? = null
 
@@ -2013,13 +2004,6 @@ class MusicService : MediaLibraryService() {
     private var cachedWidgetArtLoadFailureKey: String? = null
     private var cachedWidgetArtLoadFailureAtMs: Long = 0L
 
-    private fun invalidateCachedWidgetArtwork() {
-        cachedWidgetArtSourceKey = null
-        cachedWidgetArtResolvedUri = null
-        cachedWidgetArtBytes = null
-        cachedWidgetArtLoadFailureKey = null
-        cachedWidgetArtLoadFailureAtMs = 0L
-    }
 
     private suspend fun getAlbumArtForWidget(
         mediaId: String?,

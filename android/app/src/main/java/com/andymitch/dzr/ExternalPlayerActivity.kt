@@ -1,5 +1,7 @@
 package com.andymitch.dzr
 
+import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -19,7 +21,6 @@ import com.andymitch.dzr.ui.theme.DzrTheme
 import android.content.Intent.EXTRA_STREAM
 import androidx.media3.common.util.UnstableApi
 import com.andymitch.dzr.data.preferences.AppThemeMode
-import com.andymitch.dzr.data.preferences.ThemePreferencesRepository
 import javax.inject.Inject
 
 @androidx.annotation.OptIn(UnstableApi::class)

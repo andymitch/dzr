@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.components.scoped.SheetMotionController
+import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
+
 import android.widget.Toast
 import com.andymitch.dzr.presentation.components.ExpressiveOfflineDialog
 import androidx.activity.compose.BackHandler
@@ -61,14 +65,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 import com.andymitch.dzr.data.preferences.sanitizeNavBarCornerRadius
 import com.andymitch.dzr.presentation.components.scoped.PlayerAlbumNavigationEffect
 import com.andymitch.dzr.presentation.components.scoped.PlayerArtistNavigationEffect
 import com.andymitch.dzr.presentation.components.scoped.PlayerSheetPredictiveBackHandler
 import com.andymitch.dzr.presentation.components.scoped.QueueSheetRuntimeEffects
-import com.andymitch.dzr.presentation.components.scoped.SheetMotionController
 import com.andymitch.dzr.presentation.components.scoped.miniPlayerDismissHorizontalGesture
 import com.andymitch.dzr.presentation.components.scoped.playerSheetVerticalDragGesture
 import com.andymitch.dzr.presentation.components.scoped.rememberFullPlayerCompositionPolicy
@@ -85,7 +87,6 @@ import com.andymitch.dzr.presentation.components.scoped.rememberSheetThemeState
 import com.andymitch.dzr.presentation.components.scoped.rememberSheetVisualState
 import com.andymitch.dzr.presentation.viewmodel.PlayerSheetState
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.StablePlayerState
 import com.andymitch.dzr.ui.theme.LocalDzrDarkTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -121,20 +122,6 @@ fun UnifiedPlayerSheetV2(
     val latestContext by rememberUpdatedState(context)
     var showNoInternetDialog by remember { mutableStateOf(false) }
 
-    // MediaStore write-permission launcher (for metadata editing without MANAGE_EXTERNAL_STORAGE)
-    val writePermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        playerViewModel.onWritePermissionResult(result.resultCode == android.app.Activity.RESULT_OK)
-    }
-
-    // MediaStore delete-permission launcher (system delete confirmation dialog)
-    val deletePermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        playerViewModel.onDeletePermissionResult(result.resultCode == android.app.Activity.RESULT_OK)
-    }
-
     LaunchedEffect(playerViewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             launch {
@@ -145,20 +132,6 @@ fun UnifiedPlayerSheetV2(
             launch {
                 playerViewModel.showNoInternetDialog.collect {
                     showNoInternetDialog = true
-                }
-            }
-            launch {
-                playerViewModel.writePermissionRequest.collect { intentSender ->
-                    writePermissionLauncher.launch(
-                        androidx.activity.result.IntentSenderRequest.Builder(intentSender).build()
-                    )
-                }
-            }
-            launch {
-                playerViewModel.deletePermissionRequest.collect { intentSender ->
-                    deletePermissionLauncher.launch(
-                        androidx.activity.result.IntentSenderRequest.Builder(intentSender).build()
-                    )
                 }
             }
         }
@@ -822,7 +795,6 @@ fun UnifiedPlayerSheetV2(
                 onLaunchSaveQueueOverlay = sheetActionHandlers.onLaunchSaveQueueOverlay,
                 onNavigateToAlbum = sheetActionHandlers.onNavigateToAlbum,
                 onNavigateToArtist = sheetActionHandlers.onNavigateToArtist,
-                onNavigateToGenre = sheetActionHandlers.onNavigateToGenre,
                 queuePredictiveBackProgress = queuePredictiveBackProgress,
                 queuePredictiveBackSwipeEdge = queuePredictiveBackSwipeEdgeState
             )

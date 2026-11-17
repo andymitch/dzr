@@ -1,5 +1,11 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.preferences.CollagePattern
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.model.SettingsCategory
+import com.andymitch.dzr.presentation.viewmodel.LyricsRefreshProgress
+import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
+
 import com.andymitch.dzr.presentation.navigation.navigateSafely
 
 import java.text.SimpleDateFormat
@@ -147,23 +153,17 @@ import kotlinx.coroutines.launch
 import com.andymitch.dzr.R
 
 import com.andymitch.dzr.data.preferences.AppThemeMode
-import com.andymitch.dzr.data.preferences.CollagePattern
 import com.andymitch.dzr.data.preferences.CarouselStyle
 import com.andymitch.dzr.data.preferences.LaunchTab
 import com.andymitch.dzr.data.preferences.LibraryNavigationMode
 import com.andymitch.dzr.data.preferences.NavBarStyle
 import com.andymitch.dzr.data.preferences.ThemePreference
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.LyricsSourcePreference
 import com.andymitch.dzr.presentation.components.CollapsibleCommonTopBar
 import com.andymitch.dzr.presentation.components.ExpressiveTopBarContent
-import com.andymitch.dzr.presentation.components.FileExplorerDialog
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
-import com.andymitch.dzr.presentation.model.SettingsCategory
 import com.andymitch.dzr.presentation.navigation.Screen
-import com.andymitch.dzr.presentation.viewmodel.LyricsRefreshProgress
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
 import com.andymitch.dzr.ui.theme.RoundedSans
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -178,69 +178,20 @@ fun SettingsCategoryScreen(
     onBackClick: () -> Unit
 ) {
     val category = SettingsCategory.fromId(categoryId) ?: return
-    val context = LocalContext.current
     
     // State Collection (Duplicated from SettingsScreen for now to ensure functionality)
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val playbackSpeed by settingsViewModel.playbackSpeed.collectAsStateWithLifecycle()
-    val currentPath by settingsViewModel.currentPath.collectAsStateWithLifecycle()
-    val directoryChildren by settingsViewModel.currentDirectoryChildren.collectAsStateWithLifecycle()
-    val availableStorages by settingsViewModel.availableStorages.collectAsStateWithLifecycle()
-    val selectedStorageIndex by settingsViewModel.selectedStorageIndex.collectAsStateWithLifecycle()
-    val isLoadingDirectories by settingsViewModel.isLoadingDirectories.collectAsStateWithLifecycle()
-    val isExplorerPriming by settingsViewModel.isExplorerPriming.collectAsStateWithLifecycle()
-    val isExplorerReady by settingsViewModel.isExplorerReady.collectAsStateWithLifecycle()
-    val isCurrentDirectoryResolved by settingsViewModel.isCurrentDirectoryResolved.collectAsStateWithLifecycle()
 
-    val paletteRegenerateTargets by playerViewModel.paletteRegenerationTargets.collectAsStateWithLifecycle()
-    val explorerRoot = settingsViewModel.explorerRoot()
 
     // Local State
-    var showExplorerSheet by remember { mutableStateOf(false) }
-    var refreshRequested by remember { mutableStateOf(false) }
-    var syncRequestObservedRunning by remember { mutableStateOf(false) }
-    var syncIndicatorLabel by remember { mutableStateOf<String?>(null) }
-    var showClearLyricsDialog by remember { mutableStateOf(false) }
-    var showRebuildDatabaseWarning by remember { mutableStateOf(false) }
-    var showRegenerateDailyMixDialog by remember { mutableStateOf(false) }
-    var showRegenerateStatsDialog by remember { mutableStateOf(false) }
-    var showRegenerateAllPalettesDialog by remember { mutableStateOf(false) }
-
-    var minSongDurationDraft by remember(uiState.minSongDuration) {
-        mutableStateOf(uiState.minSongDuration.toFloat())
-    }
-    var minTracksPerAlbumDraft by remember(uiState.minTracksPerAlbum) {
-        mutableStateOf(uiState.minTracksPerAlbum.toFloat())
-    }
-    var albumArtCacheLimitDraft by remember(uiState.albumArtCacheLimitMb) {
-        mutableStateOf(uiState.albumArtCacheLimitMb.toFloat())
-    }
 
 
 
 
 
 
-    var showPaletteRegenerateSheet by remember { mutableStateOf(false) }
-    var isPaletteRegenerateRunning by remember { mutableStateOf(false) }
-    var isPaletteBulkRegenerateRunning by remember { mutableStateOf(false) }
-    var paletteBulkCompletedCount by remember { mutableStateOf(0) }
-    var paletteBulkTotalCount by remember { mutableStateOf(0) }
-    var paletteSongSearchQuery by remember { mutableStateOf("") }
-    val paletteRegenerateSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isAnyPaletteRegenerateRunning = isPaletteRegenerateRunning || isPaletteBulkRegenerateRunning
-    val filteredPaletteSongs = remember(paletteRegenerateTargets, paletteSongSearchQuery) {
-        val query = paletteSongSearchQuery.trim()
-        if (query.isBlank()) {
-            paletteRegenerateTargets
-        } else {
-            paletteRegenerateTargets.filter { song ->
-                song.title.contains(query, ignoreCase = true) ||
-                    song.displayArtist.contains(query, ignoreCase = true) ||
-                    song.album.contains(query, ignoreCase = true)
-            }
-        }
-    }
+
 
     // TopBar Animations (identical to SettingsScreen)
     // TopBar Animations (identical to SettingsScreen)
@@ -339,135 +290,6 @@ fun SettingsCategoryScreen(
                     modifier = Modifier.background(Color.Transparent)
                ) {
                     when (category) {
-                        SettingsCategory.LIBRARY -> {
-                            SettingsSubsection(title = stringResource(R.string.setcat_library_structure)) {
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_excluded_directories_title),
-                                    subtitle = stringResource(R.string.setcat_excluded_directories_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = {
-                                        showExplorerSheet = true
-                                        settingsViewModel.openExplorer()
-                                    }
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_artists_title),
-                                    subtitle = stringResource(R.string.setcat_artists_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.Person, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { navController.navigateSafely(Screen.ArtistSettings.route) }
-                                )
-                            }
-
-                            SettingsSubsection(title = stringResource(R.string.setcat_filtering)) {
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_min_song_duration),
-                                    value = minSongDurationDraft,
-                                    valueRange = 0f..120000f,
-                                    steps = 23, // 0, 5, 10, 15, ... 120 seconds (24 positions, 23 steps)
-                                    onValueChange = { minSongDurationDraft = it },
-                                    onValueChangeFinished = {
-                                        val selectedDuration = minSongDurationDraft.toInt()
-                                        if (selectedDuration != uiState.minSongDuration) {
-                                            settingsViewModel.setMinSongDuration(selectedDuration)
-                                        }
-                                    },
-                                    valueText = { value -> "${(value / 1000).toInt()}s" }
-                                )
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_min_tracks_per_album),
-                                    value = minTracksPerAlbumDraft,
-                                    valueRange = 1f..5f,
-                                    steps = 3, // 1, 2, 3, 4, 5
-                                    onValueChange = { minTracksPerAlbumDraft = it },
-                                    onValueChangeFinished = {
-                                        val selectedTracks = minTracksPerAlbumDraft.toInt()
-                                        if (selectedTracks != uiState.minTracksPerAlbum) {
-                                            settingsViewModel.setMinTracksPerAlbum(selectedTracks)
-                                        }
-                                    },
-                                    valueText = { value -> "${value.toInt()}" }
-                                )
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_album_art_cache_limit),
-                                    value = albumArtCacheLimitDraft,
-                                    valueRange = 50f..1500f,
-                                    steps = 28, // 50, 100, 150, ... 1500 (30 stops)
-                                    onValueChange = { albumArtCacheLimitDraft = it },
-                                    onValueChangeFinished = {
-                                        val selectedLimit = albumArtCacheLimitDraft.toInt()
-                                        if (selectedLimit != uiState.albumArtCacheLimitMb) {
-                                            settingsViewModel.setAlbumArtCacheLimitMb(selectedLimit)
-                                        }
-                                    },
-                                    valueText = { value -> "${value.toInt()} MB" }
-                                )
-                            }
-
-                            SettingsSubsection(title = stringResource(R.string.setcat_sync_scanning)) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_auto_scan_lrc_title),
-                                    subtitle = stringResource(R.string.setcat_auto_scan_lrc_subtitle),
-                                    checked = uiState.autoScanLrcFiles,
-                                    onCheckedChange = { settingsViewModel.setAutoScanLrcFiles(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) }
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_find_duplicates_title),
-                                    subtitle = stringResource(R.string.setcat_find_duplicates_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { navController.navigateSafely(Screen.Duplicates.route) }
-                                )
-                            }
-
-                            SettingsSubsection(title = stringResource(R.string.setcat_online_services)) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_external_lyrics_title),
-                                    subtitle = stringResource(R.string.setcat_external_lyrics_subtitle),
-                                    checked = uiState.externalLyricsEnabled,
-                                    onCheckedChange = { settingsViewModel.setExternalLyricsEnabled(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_lyrics_24), null, tint = MaterialTheme.colorScheme.secondary) }
-                                )
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_external_artist_images_title),
-                                    subtitle = stringResource(R.string.setcat_external_artist_images_subtitle),
-                                    checked = uiState.externalArtistImagesEnabled,
-                                    onCheckedChange = { settingsViewModel.setExternalArtistImagesEnabled(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_artist_24), null, tint = MaterialTheme.colorScheme.secondary) }
-                                )
-                            }
-
-                            SettingsSubsection(
-                                title = stringResource(R.string.setcat_lyrics_management),
-                                addBottomSpace = false
-                            ) {
-                                ThemeSelectorItem(
-                                    label = stringResource(R.string.setcat_lyrics_source_priority_label),
-                                    description = stringResource(R.string.setcat_lyrics_source_priority_desc),
-                                    options = mapOf(
-                                        LyricsSourcePreference.EMBEDDED_FIRST.name to stringResource(R.string.setcat_lyrics_embedded_first),
-                                        LyricsSourcePreference.API_FIRST.name to stringResource(R.string.setcat_lyrics_online_first),
-                                        LyricsSourcePreference.LOCAL_FIRST.name to stringResource(R.string.setcat_lyrics_local_first)
-                                    ),
-                                    selectedKey = uiState.lyricsSourcePreference.name,
-                                    onSelectionChanged = { key ->
-                                        settingsViewModel.setLyricsSourcePreference(
-                                            LyricsSourcePreference.fromName(key)
-                                        )
-                                    },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_lyrics_24), null, tint = MaterialTheme.colorScheme.secondary) }
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_reset_imported_lyrics_title),
-                                    subtitle = stringResource(R.string.setcat_reset_imported_lyrics_subtitle),
-                                    leadingIcon = { Icon(Icons.Outlined.ClearAll, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    onClick = { showClearLyricsDialog = true }
-                                )
-                            }
-
-                        }
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
                             val appColor by settingsViewModel.appColor.collectAsStateWithLifecycle()
@@ -873,414 +695,17 @@ fun SettingsCategoryScreen(
 
 
     // Dialogs
-    FileExplorerDialog(
-        visible = showExplorerSheet,
-        currentPath = currentPath,
-        directoryChildren = directoryChildren,
-        availableStorages = availableStorages,
-        selectedStorageIndex = selectedStorageIndex,
-        isLoading = isLoadingDirectories,
-        isPriming = isExplorerPriming,
-        isReady = isExplorerReady,
-        isCurrentDirectoryResolved = isCurrentDirectoryResolved,
-        isAtRoot = settingsViewModel.isAtRoot(),
-        rootDirectory = explorerRoot,
-        onNavigateTo = settingsViewModel::loadDirectory,
-        onNavigateUp = settingsViewModel::navigateUp,
-        onNavigateHome = { settingsViewModel.loadDirectory(explorerRoot) },
-        onToggleAllowed = settingsViewModel::toggleDirectoryAllowed,
-        onRefresh = settingsViewModel::refreshExplorer,
-        onStorageSelected = settingsViewModel::selectStorage,
-        onDone = {
-            settingsViewModel.applyPendingDirectoryRuleChanges()
-            showExplorerSheet = false
-        },
-        onDismiss = {
-            settingsViewModel.applyPendingDirectoryRuleChanges()
-            showExplorerSheet = false
-        }
-    )
 
-    if (showPaletteRegenerateSheet) {
-        ModalBottomSheet(
-            onDismissRequest = {
-                if (!isAnyPaletteRegenerateRunning) {
-                    showPaletteRegenerateSheet = false
-                    paletteSongSearchQuery = ""
-                }
-            },
-            sheetState = paletteRegenerateSheetState
-        ) {
-            PaletteRegenerateSongSheetContent(
-                songs = filteredPaletteSongs,
-                isRunning = isPaletteRegenerateRunning,
-                searchQuery = paletteSongSearchQuery,
-                onSearchQueryChange = { paletteSongSearchQuery = it },
-                onClearSearch = { paletteSongSearchQuery = "" },
-                onSongClick = { song ->
-                    if (isAnyPaletteRegenerateRunning) return@PaletteRegenerateSongSheetContent
-                    isPaletteRegenerateRunning = true
-                    coroutineScope.launch {
-                        val success = playerViewModel.forceRegenerateAlbumPaletteForSong(song)
-                        isPaletteRegenerateRunning = false
-                        if (success) {
-                            showPaletteRegenerateSheet = false
-                            paletteSongSearchQuery = ""
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.dialog_palette_regenerated, song.title),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.dialog_palette_regenerate_failed, song.title),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
-            )
-        }
-    }
 
-    if (showRegenerateAllPalettesDialog) {
-        AlertDialog(
-            icon = {
-                Icon(
-                    Icons.Outlined.Style,
-                    null,
-                    tint = if (isPaletteBulkRegenerateRunning) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.secondary
-                    }
-                )
-            },
-            title = {
-                Text(
-                    if (isPaletteBulkRegenerateRunning) {
-                        stringResource(R.string.dialog_regenerating_palettes_title)
-                    } else {
-                        stringResource(R.string.dialog_regenerate_palettes_title)
-                    }
-                )
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = if (isPaletteBulkRegenerateRunning) {
-                            stringResource(R.string.dialog_regenerate_palettes_progress_body, paletteBulkTotalCount)
-                        } else {
-                            stringResource(R.string.dialog_regenerate_palettes_confirm_body, paletteRegenerateTargets.size)
-                        }
-                    )
-
-                    if (isPaletteBulkRegenerateRunning) {
-                        val progress = if (paletteBulkTotalCount > 0) {
-                            paletteBulkCompletedCount.toFloat() / paletteBulkTotalCount.toFloat()
-                        } else {
-                            0f
-                        }
-
-                        LinearWavyProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(50)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                        )
-
-                        Text(
-                            text = stringResource(R.string.dialog_palette_progress_format, paletteBulkCompletedCount, paletteBulkTotalCount),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            },
-            onDismissRequest = {
-                if (!isPaletteBulkRegenerateRunning) {
-                    showRegenerateAllPalettesDialog = false
-                }
-            },
-            confirmButton = {
-                if (isPaletteBulkRegenerateRunning) {
-                    TextButton(
-                        onClick = {},
-                        enabled = false
-                    ) {
-                        Text(stringResource(R.string.working_ellipsis), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                } else {
-                    TextButton(
-                        onClick = {
-                            isPaletteBulkRegenerateRunning = true
-                            paletteBulkCompletedCount = 0
-                            paletteBulkTotalCount = paletteRegenerateTargets.size
-
-                            coroutineScope.launch {
-                                var successCount = 0
-                                paletteRegenerateTargets.forEachIndexed { index, song ->
-                                    if (playerViewModel.forceRegenerateAlbumPaletteForSong(song)) {
-                                        successCount++
-                                    }
-                                    paletteBulkCompletedCount = index + 1
-                                }
-
-                                isPaletteBulkRegenerateRunning = false
-                                showRegenerateAllPalettesDialog = false
-
-                                val totalCount = paletteRegenerateTargets.size
-                                Toast.makeText(
-                                    context,
-                                    if (successCount == totalCount) {
-                                        context.getString(R.string.toast_regenerated_palettes_all, successCount)
-                                    } else {
-                                        context.getString(R.string.toast_regenerated_palettes_partial, successCount, totalCount)
-                                    },
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    ) {
-                        Text(stringResource(R.string.dialog_regenerate))
-                    }
-                }
-            },
-            dismissButton = {
-                if (!isPaletteBulkRegenerateRunning) {
-                    TextButton(
-                        onClick = { showRegenerateAllPalettesDialog = false }
-                    ) {
-                        Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        )
-    }
     
      // Dialogs logic (copied)
-    if (showClearLyricsDialog) {
-        AlertDialog(
-            icon = { Icon(Icons.Outlined.Warning, null) },
-            title = { Text(stringResource(R.string.dialog_reset_lyrics_title)) },
-            text = { Text(stringResource(R.string.dialog_cannot_undo)) },
-            onDismissRequest = { showClearLyricsDialog = false },
-            confirmButton = { TextButton(onClick = { showClearLyricsDialog = false; playerViewModel.resetAllLyrics() }) { Text(stringResource(R.string.confirm), maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-            dismissButton = { TextButton(onClick = { showClearLyricsDialog = false }) { Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis) } }
-        )
-    }
 
     
-    if (showRebuildDatabaseWarning) {
-        AlertDialog(
-            icon = { Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text(stringResource(R.string.dialog_rebuild_database_title)) },
-            text = { Text(stringResource(R.string.dialog_rebuild_database_message)) },
-            onDismissRequest = { showRebuildDatabaseWarning = false },
-            confirmButton = { 
-                TextButton(
-                    onClick = { 
-                        showRebuildDatabaseWarning = false
-                        refreshRequested = true
-                        syncRequestObservedRunning = false
-                        syncIndicatorLabel = context.getString(R.string.sync_indicator_rebuilding)
-                        Toast.makeText(context, context.getString(R.string.toast_rebuilding_database), Toast.LENGTH_SHORT).show()
-                        settingsViewModel.rebuildDatabase() 
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { 
-                    Text(stringResource(R.string.rebuild)) 
-                } 
-            },
-            dismissButton = { TextButton(onClick = { showRebuildDatabaseWarning = false }) { Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis) } }
-        )
-    }
 
-    if (showRegenerateDailyMixDialog) {
-        AlertDialog(
-            icon = { Icon(painterResource(R.drawable.rounded_instant_mix_24), null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text(stringResource(R.string.dialog_regenerate_daily_mix_title)) },
-            text = { Text(stringResource(R.string.dialog_regenerate_daily_mix_body)) },
-            onDismissRequest = { showRegenerateDailyMixDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRegenerateDailyMixDialog = false
-                        playerViewModel.forceUpdateDailyMix()
-                        Toast.makeText(context, context.getString(R.string.toast_daily_mix_regeneration_started), Toast.LENGTH_SHORT).show()
-                    }
-                ) {
-                    Text(stringResource(R.string.dialog_regenerate), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showRegenerateDailyMixDialog = false }) { Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis) } }
-        )
-    }
 
-    if (showRegenerateStatsDialog) {
-        AlertDialog(
-            icon = { Icon(painterResource(R.drawable.rounded_monitoring_24), null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text(stringResource(R.string.dialog_regenerate_stats_title)) },
-            text = { Text(stringResource(R.string.dialog_regenerate_stats_body)) },
-            onDismissRequest = { showRegenerateStatsDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRegenerateStatsDialog = false
-                        statsViewModel.forceRegenerateStats()
-                        Toast.makeText(context, context.getString(R.string.toast_stats_regeneration_started), Toast.LENGTH_SHORT).show()
-                    }
-                ) {
-                    Text(stringResource(R.string.dialog_regenerate), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showRegenerateStatsDialog = false }) { Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis) } }
-        )
-    }
 
 }
 
-@Composable
-private fun PaletteRegenerateSongSheetContent(
-    songs: List<Song>,
-    isRunning: Boolean,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
-    onSongClick: (Song) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.palette_force_regenerate_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = stringResource(R.string.palette_force_regenerate_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            enabled = !isRunning,
-            placeholder = { Text(stringResource(R.string.search_songs_by_title_artist_album)) },
-            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-            trailingIcon = {
-                if (searchQuery.isNotBlank()) {
-                    IconButton(
-                        onClick = onClearSearch,
-                        enabled = !isRunning
-                    ) {
-                        Icon(Icons.Outlined.ClearAll, contentDescription = stringResource(R.string.cd_clear_search))
-                    }
-                }
-            },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        )
-
-        if (isRunning) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp
-                )
-                Text(
-                    text = stringResource(R.string.palette_regenerating_progress),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 120.dp, max = 460.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (songs.isEmpty()) {
-                item {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = stringResource(R.string.search_no_songs_match),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
-            } else {
-                items(songs, key = { it.id }) { song ->
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable(enabled = !isRunning) { onSongClick(song) }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = song.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = song.displayArtist,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (song.album.isNotBlank()) {
-                                Text(
-                                    text = song.album,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun SettingsSubsectionHeader(title: String) {

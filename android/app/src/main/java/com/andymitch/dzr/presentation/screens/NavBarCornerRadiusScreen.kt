@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
+
 import com.andymitch.dzr.presentation.navigation.navigateBack
 
 import androidx.compose.foundation.background
@@ -68,7 +70,6 @@ import androidx.navigation.NavController
 import com.andymitch.dzr.R
 import com.andymitch.dzr.data.preferences.MAX_NAV_BAR_CORNER_RADIUS
 import com.andymitch.dzr.data.preferences.MIN_NAV_BAR_CORNER_RADIUS
-import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import com.andymitch.dzr.data.preferences.NavBarStyle
 import com.andymitch.dzr.presentation.components.resolveNavBarSurfaceHeight

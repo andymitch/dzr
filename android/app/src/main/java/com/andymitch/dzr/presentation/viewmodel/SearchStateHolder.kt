@@ -1,7 +1,13 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import com.andymitch.dzr.data.model.SearchFilterType
 import com.andymitch.dzr.data.model.SearchHistoryItem
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Playlist
+import com.andymitch.dzr.data.repository.DeezerRepository
+
+import com.andymitch.dzr.data.model.SearchFilterType
 import com.andymitch.dzr.data.model.SearchResultItem
 import com.andymitch.dzr.data.repository.MusicRepository
 import kotlinx.collections.immutable.ImmutableList
@@ -36,12 +42,7 @@ import kotlinx.coroutines.FlowPreview
  */
 import com.andymitch.dzr.data.network.deezer.DeezerApiService
 import kotlinx.coroutines.async
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.model.Album
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.Playlist
 
-import com.andymitch.dzr.data.repository.DeezerRepository
 
 @Singleton
 class SearchStateHolder @Inject constructor(

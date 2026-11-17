@@ -1,11 +1,12 @@
 package com.andymitch.dzr.presentation.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.stats.PlaybackStatsRepository
 import com.andymitch.dzr.data.stats.PlaybackStatsRepository.PlaybackStatsSummary
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.stats.StatsTimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -38,7 +39,6 @@ class StatsViewModel @Inject constructor(
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
 
     private val _weeklyOverview = MutableStateFlow<PlaybackStatsSummary?>(null)
-    val weeklyOverview: StateFlow<PlaybackStatsSummary?> = _weeklyOverview.asStateFlow()
 
     private val _homeOverview = MutableStateFlow<PlaybackStatsSummary?>(null)
     val homeOverview: StateFlow<PlaybackStatsSummary?> = _homeOverview.asStateFlow()
@@ -162,10 +162,6 @@ class StatsViewModel @Inject constructor(
         playbackStatsRepository.requestRefresh()
     }
 
-    fun forceRegenerateStats() {
-        cachedSongs = null
-        playbackStatsRepository.requestRefresh()
-    }
 
     private suspend fun loadSongs(): List<Song> {
         cachedSongs?.let { existing ->

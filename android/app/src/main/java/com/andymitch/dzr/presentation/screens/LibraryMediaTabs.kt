@@ -6,6 +6,14 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.Album
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.LibraryTabId
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.model.SortOption
+import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
+import com.andymitch.dzr.presentation.viewmodel.PlaylistUiState
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,20 +61,13 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import coil.size.Size
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Album
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.LibraryTabId
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.data.model.SortOption
 import com.andymitch.dzr.data.model.StorageFilter
 import com.andymitch.dzr.presentation.components.ExpressiveScrollBar
 import com.andymitch.dzr.presentation.components.MiniPlayerHeight
 import com.andymitch.dzr.presentation.components.PlaylistContainer
 import com.andymitch.dzr.presentation.components.albumFastScrollLabel
 import com.andymitch.dzr.presentation.components.artistFastScrollLabel
-import com.andymitch.dzr.presentation.viewmodel.ColorSchemePair
 import com.andymitch.dzr.presentation.viewmodel.PlayerViewModel
-import com.andymitch.dzr.presentation.viewmodel.PlaylistUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce

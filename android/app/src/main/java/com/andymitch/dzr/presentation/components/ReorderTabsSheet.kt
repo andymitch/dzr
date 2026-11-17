@@ -2,6 +2,8 @@
 
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.presentation.library.LibraryTabId
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import android.view.HapticFeedbackConstants
 import com.andymitch.dzr.R
-import com.andymitch.dzr.presentation.library.LibraryTabId
 import com.andymitch.dzr.presentation.utils.LocalAppHapticsConfig
 import com.andymitch.dzr.presentation.utils.performAppCompatHapticFeedback
 import com.andymitch.dzr.ui.theme.RoundedSans

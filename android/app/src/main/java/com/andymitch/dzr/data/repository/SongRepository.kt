@@ -1,17 +1,14 @@
 package com.andymitch.dzr.data.repository
 
-import androidx.paging.PagingData
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.Album
 import com.andymitch.dzr.data.model.Artist
+
+import androidx.paging.PagingData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 
 interface SongRepository {
-    fun getSongs(): Flow<List<Song>>
-    fun getSongsByAlbum(albumId: Long): Flow<List<Song>>
-    fun getSongsByArtist(artistId: Long): Flow<List<Song>>
-    suspend fun searchSongs(query: String): List<Song>
     fun getSongById(songId: Long): Flow<Song?>
     fun getArtistById(artistId: Long): Flow<Artist?>
     suspend fun getArtistIdByName(name: String): Long?
@@ -21,7 +18,6 @@ interface SongRepository {
     ): Flow<PagingData<Artist>>
     fun getPaginatedSongs(sortOption: com.andymitch.dzr.data.model.SortOption, storageFilter: com.andymitch.dzr.data.model.StorageFilter): Flow<PagingData<Song>>
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun getPaginatedSongs(): Flow<PagingData<Song>>
     fun getPaginatedFavoriteSongs(
         sortOption: com.andymitch.dzr.data.model.SortOption,
         storageFilter: com.andymitch.dzr.data.model.StorageFilter

@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.Song
+
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
@@ -10,7 +12,6 @@ import com.andymitch.dzr.data.media.guessImageMimeType
 import com.andymitch.dzr.data.media.imageExtensionFromMimeType
 import com.andymitch.dzr.data.media.isValidImageData
 import com.andymitch.dzr.data.media.resolveAudioFileExtension
-import com.andymitch.dzr.data.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

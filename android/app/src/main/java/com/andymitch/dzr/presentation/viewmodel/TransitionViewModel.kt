@@ -1,12 +1,13 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.TransitionRule
+import com.andymitch.dzr.data.model.TransitionSettings
+
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andymitch.dzr.data.model.Curve
 import com.andymitch.dzr.data.model.TransitionMode
-import com.andymitch.dzr.data.model.TransitionRule
-import com.andymitch.dzr.data.model.TransitionSettings
 import com.andymitch.dzr.data.repository.TransitionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

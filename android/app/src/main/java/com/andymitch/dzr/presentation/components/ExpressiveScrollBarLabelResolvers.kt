@@ -6,6 +6,7 @@ import com.andymitch.dzr.data.model.Playlist
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.SortOption
 
+
 internal fun songFastScrollLabel(song: Song?, sortOption: SortOption): String? =
     when (sortOption) {
         SortOption.SongTitleAZ,

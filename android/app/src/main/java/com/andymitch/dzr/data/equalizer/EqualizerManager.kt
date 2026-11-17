@@ -52,7 +52,6 @@ class EqualizerManager @Inject constructor() {
     val isEnabled: StateFlow<Boolean> = _isEnabled.asStateFlow()
     
     private val _currentPresetName = MutableStateFlow("flat")
-    val currentPresetName: StateFlow<String> = _currentPresetName.asStateFlow()
     
     private val _bassBoostEnabled = MutableStateFlow(false)
     val bassBoostEnabled: StateFlow<Boolean> = _bassBoostEnabled.asStateFlow()
@@ -559,15 +558,6 @@ class EqualizerManager @Inject constructor() {
         }
     }
     
-    /**
-     * Gets the center frequencies for all bands.
-     */
-    fun getBandFrequencies(): List<Int> {
-        val eq = equalizer ?: return listOf(31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
-        return (0 until eq.numberOfBands).map { band ->
-            eq.getCenterFreq(band.toShort()) / 1000 // Convert milliHz to Hz
-        }
-    }
     
     /**
      * Checks if bass boost is supported on this device.

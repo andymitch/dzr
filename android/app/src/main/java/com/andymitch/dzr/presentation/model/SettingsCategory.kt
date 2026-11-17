@@ -19,12 +19,6 @@ enum class SettingsCategory(
     val icon: ImageVector? = null,
     val iconRes: Int? = null
 ) {
-    LIBRARY(
-        id = "library",
-        titleRes = R.string.settings_category_library_title,
-        subtitleRes = R.string.settings_category_library_subtitle,
-        icon = Icons.Rounded.LibraryMusic
-    ),
     APPEARANCE(
         id = "appearance",
         titleRes = R.string.settings_category_appearance_title,

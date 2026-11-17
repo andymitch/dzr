@@ -231,9 +231,6 @@ fun AboutScreen(
             item(key = "hero_card") {
                 AboutHeroCard(
                     versionName = versionName,
-                    onVersionLongPress = {
-                        navController.navigateSafely(Screen.EasterEgg.route)
-                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -268,7 +265,6 @@ fun AboutScreen(
 @Composable
 private fun AboutHeroCard(
     versionName: String,
-    onVersionLongPress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val heroShape = AbsoluteSmoothCornerShape(30.dp, 60)
@@ -332,15 +328,7 @@ private fun AboutHeroCard(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.tertiaryContainer)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onVersionLongPress()
-                                },
-                            )
-                        },
+                        .background(MaterialTheme.colorScheme.tertiaryContainer),
                 ) {
                     Text(
                         text = stringResource(R.string.about_version_format, versionName),

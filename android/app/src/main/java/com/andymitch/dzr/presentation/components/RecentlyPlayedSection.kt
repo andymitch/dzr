@@ -1,5 +1,9 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.presentation.model.RecentlyPlayedSongUiModel
+import com.andymitch.dzr.presentation.viewmodel.ThemeStateHolder
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -46,9 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Song
-import com.andymitch.dzr.presentation.model.RecentlyPlayedSongUiModel
-import com.andymitch.dzr.presentation.viewmodel.ThemeStateHolder
 
 private val HomeRecentlyPlayedPillHeight = 58.dp
 private val HomeRecentlyPlayedPillSpacing = 8.dp

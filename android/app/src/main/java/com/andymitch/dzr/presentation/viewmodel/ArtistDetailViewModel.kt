@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.model.Artist
+import com.andymitch.dzr.data.model.Song
+
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Immutable
@@ -7,8 +10,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.model.Artist
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.repository.ArtistImageRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

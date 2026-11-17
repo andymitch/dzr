@@ -1,5 +1,7 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.utils.CrashLogData
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -37,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.andymitch.dzr.utils.CrashLogData
 import androidx.compose.ui.res.stringResource
 import com.andymitch.dzr.R
 

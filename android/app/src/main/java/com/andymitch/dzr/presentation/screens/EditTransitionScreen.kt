@@ -1,5 +1,8 @@
 package com.andymitch.dzr.presentation.screens
 
+import com.andymitch.dzr.data.model.TransitionSettings
+import com.andymitch.dzr.presentation.viewmodel.TransitionViewModel
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -80,8 +83,6 @@ import androidx.navigation.NavController
 import com.andymitch.dzr.R
 import com.andymitch.dzr.data.model.Curve
 import com.andymitch.dzr.data.model.TransitionMode
-import com.andymitch.dzr.data.model.TransitionSettings
-import com.andymitch.dzr.presentation.viewmodel.TransitionViewModel
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import java.util.concurrent.TimeUnit
 import androidx.compose.ui.res.stringResource

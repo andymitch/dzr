@@ -1,5 +1,7 @@
 package com.andymitch.dzr.utils
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -9,7 +11,6 @@ import androidx.core.graphics.drawable.IconCompat
 import com.andymitch.dzr.MainActivity
 import com.andymitch.dzr.MainActivityIntentContract
 import com.andymitch.dzr.R
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,13 +67,4 @@ class AppShortcutManager @Inject constructor(
         ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
     }
 
-    /**
-     * Removes the last playlist shortcut if it exists.
-     */
-    fun removeLastPlaylistShortcut() {
-        scope.launch {
-            userPreferencesRepository.clearLastPlaylist()
-        }
-        ShortcutManagerCompat.removeDynamicShortcuts(context, listOf(SHORTCUT_ID_LAST_PLAYLIST))
-    }
 }

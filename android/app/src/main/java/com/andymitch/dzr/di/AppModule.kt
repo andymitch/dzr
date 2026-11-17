@@ -1,5 +1,12 @@
 package com.andymitch.dzr.di
 
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
+import com.andymitch.dzr.data.repository.DeezerRepository
+import com.andymitch.dzr.data.repository.LyricsRepositoryImpl
+import com.andymitch.dzr.data.repository.MediaStoreSongRepository
+import com.andymitch.dzr.data.repository.TransitionRepositoryImpl
+
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.datastore.core.DataStore
@@ -28,24 +35,15 @@ import com.andymitch.dzr.data.database.MusicDao
 import com.andymitch.dzr.data.database.DzrDatabase
 import com.andymitch.dzr.data.database.SearchHistoryDao
 import com.andymitch.dzr.data.database.TransitionDao
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
-import com.andymitch.dzr.data.preferences.PlaylistPreferencesRepository
 import com.andymitch.dzr.data.preferences.dataStore
-import com.andymitch.dzr.data.media.SongMetadataEditor
 import com.andymitch.dzr.data.network.deezer.DeezerAuthApi
 import com.andymitch.dzr.data.network.deezer.DeezerApiService
-import com.andymitch.dzr.data.repository.DeezerRepository
-import com.andymitch.dzr.data.network.lyrics.LrcLibApiService
 import com.andymitch.dzr.data.repository.ArtistImageRepository
 import com.andymitch.dzr.data.repository.LyricsRepository
-import com.andymitch.dzr.data.repository.LyricsRepositoryImpl
-import com.andymitch.dzr.data.repository.MediaStoreSongRepository
 import com.andymitch.dzr.data.repository.MusicRepository
 import com.andymitch.dzr.data.repository.MusicRepositoryImpl
 import com.andymitch.dzr.data.repository.SongRepository
 import com.andymitch.dzr.data.repository.TransitionRepository
-import com.andymitch.dzr.data.repository.TransitionRepositoryImpl
-import com.andymitch.dzr.data.repository.FolderTreeBuilder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -234,34 +232,20 @@ object AppModule {
     @Singleton
     fun provideSongRepository(
         @ApplicationContext context: Context,
-        mediaStoreObserver: com.andymitch.dzr.data.observer.MediaStoreObserver,
         favoritesDao: FavoritesDao,
         userPreferencesRepository: UserPreferencesRepository,
         musicDao: MusicDao
     ): SongRepository {
         return MediaStoreSongRepository(
             context = context,
-            mediaStoreObserver = mediaStoreObserver,
             favoritesDao = favoritesDao,
             userPreferencesRepository = userPreferencesRepository,
             musicDao = musicDao
         )
     }
 
-    @Provides
-    @Singleton
-    fun provideFolderTreeBuilder(): FolderTreeBuilder {
-        return FolderTreeBuilder()
-    }
 
 
-    @Singleton
-    @Provides
-    fun provideSongMetadataEditor(
-        @ApplicationContext context: Context
-    ): SongMetadataEditor {
-        return SongMetadataEditor(context)
-    }
 
     /**
      * Provides a singleton OkHttpClient instance with logging and a User-Agent interceptor.
@@ -391,14 +375,6 @@ object AppModule {
             .build()
     }
 
-    /**
-     * Provides a singleton instance of the LRCLIB API service.
-     */
-    @Provides
-    @Singleton
-    fun provideLrcLibApiService(retrofit: Retrofit): LrcLibApiService {
-        return retrofit.create(LrcLibApiService::class.java)
-    }
 
     @Provides
     @Singleton

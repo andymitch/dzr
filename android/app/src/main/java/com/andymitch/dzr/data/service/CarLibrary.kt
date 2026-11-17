@@ -1,16 +1,17 @@
 package com.andymitch.dzr.data.service
 
+import com.andymitch.dzr.data.model.Song
+import com.andymitch.dzr.data.preferences.UserPreferencesRepository
+import com.andymitch.dzr.data.repository.DeezerRepository
+
 import android.content.Context
 import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaConstants
-import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.network.deezer.DeezerTrack
 import com.andymitch.dzr.data.network.deezer.DeezerTrackAttributes
-import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.provider.SharedArtworkContentProvider
-import com.andymitch.dzr.data.repository.DeezerRepository
 import com.andymitch.dzr.presentation.screens.mapDeezerTrackToSong
 import com.andymitch.dzr.utils.MediaItemBuilder
 import dagger.hilt.android.qualifiers.ApplicationContext
