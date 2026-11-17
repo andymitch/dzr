@@ -122,4 +122,15 @@ private func ids(_ items: some Sequence<Item>) -> [String] { items.map(\.id) }
         #expect(items[3].subtitle == "Me · 3 tracks")
         #expect(items[3].creatorId == 9)
     }
+
+    @Test func readsArtistIdsSentAsStrings() throws {
+        let json = """
+        {"data": {"type": "artist", "id": "27", "included": [
+          {"type": "album", "id": "1", "attributes": {"name": "Homework", "artist": {"id": "27", "name": "Daft Punk"}, "release_date": "1997-01-20T00:00:00+00:00"}}
+        ]}}
+        """
+        let items = try JSONDecoder().decode(One.self, from: Data(json.utf8)).data.included!.map(\.item)
+        #expect(items.first?.title == "Homework")
+        #expect(items.first?.subtitle == "Daft Punk · 1997")
+    }
 }

@@ -81,7 +81,18 @@ struct Attributes: Decodable {
     var artist: Named?
     var creator: Named?
 
-    struct Named: Decodable { var id: Int64?; var name: String? }
+    struct Named: Decodable {
+        var id: Int64?
+        var name: String?
+
+        private enum CodingKeys: String, CodingKey { case id, name }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            name = try c.decodeIfPresent(String.self, forKey: .name)
+            id = (try? c.decodeIfPresent(Int64.self, forKey: .id)) ?? (try? c.decodeIfPresent(String.self, forKey: .id)).flatMap { Int64($0) }
+        }
+    }
 }
 
 struct Resource: Decodable {
