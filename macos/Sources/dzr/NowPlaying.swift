@@ -1,4 +1,5 @@
 import AppKit
+import AVKit
 import SwiftUI
 
 struct Scrubber: View {
@@ -175,6 +176,7 @@ struct NowPlayingBar: View {
 
             HStack(spacing: 12) {
                 SleepIndicator()
+                AirPlayButton().frame(width: 20, height: 20)
                 QualityMenu()
                 if model.lyrics?.isEmpty == false {
                     Button { model.showLyrics.toggle() } label: { Image(systemName: "quote.bubble") }
@@ -458,5 +460,22 @@ struct SongInfoView: View {
         }
         .padding(20)
         .frame(width: 400)
+    }
+}
+
+struct AirPlayButton: NSViewRepresentable {
+    @Environment(Player.self) private var player
+
+    func makeNSView(context: Context) -> AVRoutePickerView {
+        let picker = AVRoutePickerView()
+        picker.isRoutePickerButtonBordered = false
+        picker.toolTip = "AirPlay"
+        return picker
+    }
+
+    func updateNSView(_ picker: AVRoutePickerView, context: Context) {
+        player.attach(picker)
+        picker.setRoutePickerButtonColor(.secondaryLabelColor, for: .normal)
+        picker.setRoutePickerButtonColor(NSColor(Color.accent), for: .active)
     }
 }

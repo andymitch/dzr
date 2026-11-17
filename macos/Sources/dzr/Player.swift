@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import AppKit
 import MediaPlayer
 import Observation
@@ -136,6 +137,10 @@ final class Player {
         av.seek(to: CMTime(seconds: max(0, t), preferredTimescale: 600))
         position = t
         updateNowPlaying()
+    }
+
+    func attach(_ picker: AVRoutePickerView) {
+        picker.player = av
     }
 
     func remove(_ track: Item) {
