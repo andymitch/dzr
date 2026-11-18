@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 struct Version: Comparable {
     let parts: [Int]
@@ -24,9 +25,11 @@ struct Version: Comparable {
     }
 }
 
-@MainActor
-enum Updates {
-    private struct Release: Decodable {
+@MainActor @Observable
+final class Updates {
+    static let shared = Updates()
+
+    struct Release: Decodable {
         let tag_name: String
         let html_url: URL
         let body: String?
@@ -38,15 +41,17 @@ enum Updates {
             let name: String
             let browser_download_url: URL
         }
+
+        var name: String { tag_name.hasPrefix("macos-") ? String(tag_name.dropFirst(6)) : tag_name }
     }
+
+    private(set) var available: Release?
+    private(set) var installing = false
+    private var dismissed: String?
 
     private static var checking = false
     private static var lastCheck = Date.distantPast
     private static var wakeObserver: NSObjectProtocol?
-
-    private static func name(_ release: Release) -> String {
-        release.tag_name.hasPrefix("macos-") ? String(release.tag_name.dropFirst(6)) : release.tag_name
-    }
 
     static func startDailyChecks() {
         Task { await check(manual: false) }
@@ -75,7 +80,7 @@ enum Updates {
             let (data, _) = try await URLSession.shared.data(from: url)
             let newest = try JSONDecoder().decode([Release].self, from: data)
                 .filter { !$0.draft && (current.beta != nil || !$0.prerelease) }
-                .compactMap { r in Version(name(r)).map { (r, $0) } }
+                .compactMap { r in Version(r.name).map { (r, $0) } }
                 .max { $0.1 < $1.1 }
             guard let (release, latest) = newest, current < latest else {
                 guard manual else { return }
@@ -84,27 +89,35 @@ enum Updates {
                 alert.runModal()
                 return
             }
-            alert.messageText = "dzr \(name(release)) is available"
-            alert.informativeText = "You have v\(text).\n\n\(release.body ?? "")"
-            alert.addButton(withTitle: "Install and Relaunch")
-            alert.addButton(withTitle: "Later")
-            NSApp.activate()
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
-            do {
-                try await install(release)
-            } catch {
-                let failed = NSAlert()
-                failed.messageText = "Couldn't install the update"
-                failed.informativeText = "\(error.localizedDescription)\n\nYou can download it from the release page instead."
-                failed.addButton(withTitle: "Open Release Page")
-                failed.addButton(withTitle: "Cancel")
-                if failed.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(release.html_url) }
-            }
+            if manual { shared.dismissed = nil }
+            guard release.tag_name != shared.dismissed else { return }
+            withAnimation(.snappy) { shared.available = release }
         } catch {
             guard manual else { return }
             alert.messageText = "Couldn't check for updates"
             alert.informativeText = error.localizedDescription
             alert.runModal()
+        }
+    }
+
+    func dismiss() {
+        dismissed = available?.tag_name
+        withAnimation(.snappy) { available = nil }
+    }
+
+    func install() async {
+        guard let release = available, !installing else { return }
+        installing = true
+        defer { installing = false }
+        do {
+            try await Self.install(release)
+        } catch {
+            let failed = NSAlert()
+            failed.messageText = "Couldn't install the update"
+            failed.informativeText = "\(error.localizedDescription)\n\nYou can download it from the release page instead."
+            failed.addButton(withTitle: "Open Release Page")
+            failed.addButton(withTitle: "Cancel")
+            if failed.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(release.html_url) }
         }
     }
 

@@ -45,6 +45,13 @@ struct MainView: View {
                 }
             }
             .animation(.smooth(duration: 0.25), value: model.showLyrics)
+            .toolbar {
+                if let release = Updates.shared.available {
+                    ToolbarItem { UpdatePill(release: release) }
+                        .sharedBackgroundVisibility(.hidden)
+                    ToolbarSpacer(.fixed)
+                }
+            }
         }
         .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums")
         .searchFocused($searchFocused)
@@ -94,6 +101,31 @@ struct MainView: View {
         case .artists: GridPage(title: "Artists") { try await $0.artists() }
         case .downloads: DownloadsPage()
         }
+    }
+}
+
+struct UpdatePill: View {
+    let release: Updates.Release
+    @State private var hover = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button { Task { await Updates.shared.install() } } label: {
+                Label(Updates.shared.installing ? "Installing…" : "Update to \(release.name)", systemImage: "arrow.down.circle.fill")
+                    .labelStyle(.titleAndIcon)
+            }
+            .disabled(Updates.shared.installing)
+            .help("Install dzr \(release.name) and relaunch")
+            Button { Updates.shared.dismiss() } label: { Image(systemName: "xmark").font(.caption.weight(.bold)) }
+                .help("Dismiss")
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(hover ? AnyShapeStyle(.white) : AnyShapeStyle(.tint))
+        .padding(.horizontal, 14)
+        .frame(height: 36)
+        .background(hover ? AnyShapeStyle(.tint) : AnyShapeStyle(.clear), in: .capsule)
+        .glassEffect(in: .capsule)
+        .onHover { h in withAnimation(.snappy(duration: 0.15)) { hover = h } }
     }
 }
 
