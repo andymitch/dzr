@@ -122,6 +122,16 @@ final class AppModel {
         }
     }
 
+    func play(_ item: Item) {
+        Task {
+            if case .success(let opened) = await run({ try await deezer.open(item) }),
+               let tracks = opened.first(where: { $0.items.first?.kind == .track })?.items, !tracks.isEmpty {
+                player.shuffle = false
+                player.play(tracks, at: 0, from: item)
+            }
+        }
+    }
+
     func refreshLiked() async {
         if let ids = try? await deezer.likedIds() { liked = ids }
     }

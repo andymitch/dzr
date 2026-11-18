@@ -8,16 +8,11 @@ if [ -z "${VERSION:-}" ]; then
   VERSION="${TAG#v}-dev"
 fi
 APP=build/dzr.app
-rm -rf "$APP" build/icon.iconset
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build/icon.iconset
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/dzr "$APP/Contents/MacOS/dzr"
-
-qlmanage -t -s 1024 -o build ../assets/icon.svg >/dev/null
-for s in 16 32 128 256 512; do
-  sips -z $s $s build/icon.svg.png --out build/icon.iconset/icon_${s}x${s}.png >/dev/null
-  sips -z $((s * 2)) $((s * 2)) build/icon.svg.png --out build/icon.iconset/icon_${s}x${s}@2x.png >/dev/null
-done
-iconutil -c icns build/icon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
+xcrun actool AppIcon.icon --compile "$APP/Contents/Resources" --app-icon AppIcon --platform macosx \
+  --minimum-deployment-target 26.0 --target-device mac --output-partial-info-plist build/icon.plist >/dev/null
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -29,6 +24,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>com.andymitch.dzr</string>
   <key>CFBundleExecutable</key><string>dzr</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>

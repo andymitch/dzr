@@ -165,21 +165,13 @@ struct Loader<T, Content: View>: View {
 
 struct ShelvesPage: View {
     @Environment(AppModel.self) private var model
-    @Environment(Player.self) private var player
     let title: String
     var surprise = false
     let load: (Deezer) async throws -> [Shelf]
 
     private func surpriseMe(_ shelves: [Shelf]) {
         let picks = shelves.filter { $0.title != "Recently played" }.flatMap(\.items).filter { [.flow, .mix, .playlist, .album].contains($0.kind) }
-        guard let pick = picks.randomElement() else { return }
-        Task {
-            if case .success(let opened) = await model.run({ try await model.deezer.open(pick) }),
-               let tracks = opened.first(where: { $0.items.first?.kind == .track })?.items, !tracks.isEmpty {
-                player.shuffle = false
-                player.play(tracks, at: 0, from: pick)
-            }
-        }
+        if let pick = picks.randomElement() { model.play(pick) }
     }
 
     var body: some View {
@@ -304,6 +296,7 @@ struct ShelfRow: View {
 }
 
 struct Card: View {
+    @Environment(AppModel.self) private var model
     let item: Item
     @State private var hover = false
 
@@ -332,6 +325,20 @@ struct Card: View {
                     }
                 }
                     .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        if hover && item.kind != .track {
+                            Button { model.play(item) } label: {
+                                Image(systemName: "play.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(.white)
+                                    .frame(width: 52, height: 52)
+                                    .glassEffect(.clear.interactive(), in: .circle)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Play \(item.title)")
+                            .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        }
+                    }
                     .shadow(color: .black.opacity(hover ? 0.35 : 0.15), radius: hover ? 14 : 6, y: hover ? 8 : 3)
                     .scaleEffect(hover ? 1.03 : 1)
                 VStack(alignment: item.kind == .artist ? .center : .leading, spacing: 2) {
