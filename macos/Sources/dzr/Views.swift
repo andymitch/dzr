@@ -109,15 +109,13 @@ extension View {
 }
 
 struct HeaderFade: View {
-    @Environment(\.pageInsets) private var insets
-
     var body: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial)
                 .mask(LinearGradient(stops: [.init(color: .black.opacity(0.85), location: 0), .init(color: .black.opacity(0.5), location: 0.5), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
             LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.3), .clear], startPoint: .top, endPoint: .bottom)
         }
-        .frame(height: max(insets.top, 40) + 14)
+        .frame(height: 14)
         .ignoresSafeArea(edges: [.top, .leading])
         .allowsHitTesting(false)
     }
@@ -129,8 +127,7 @@ struct UnderSidebar: ViewModifier {
     func body(content: Content) -> some View {
         content
             .contentMargins(.leading, insets.leading, for: .scrollContent)
-            .contentMargins(.top, insets.top, for: .scrollContent)
-            .ignoresSafeArea(.container, edges: [.leading, .top])
+            .ignoresSafeArea(.container, edges: .leading)
     }
 }
 
@@ -322,6 +319,16 @@ struct Card: View {
                         .clipShape(.rect(cornerRadius: 14))
                     } else {
                         Artwork(url: item.artwork, round: item.kind == .artist, radius: 14)
+                            .overlay(alignment: .topLeading) {
+                                if item.kind == .mix {
+                                    Text(item.title)
+                                        .font(.system(size: 17, weight: .heavy))
+                                        .foregroundStyle(.black.opacity(0.85))
+                                        .lineLimit(3)
+                                        .minimumScaleFactor(0.7)
+                                        .padding(12)
+                                }
+                            }
                     }
                 }
                     .aspectRatio(1, contentMode: .fit)
@@ -392,7 +399,7 @@ struct DetailPage: View {
                 }
                 .padding(.bottom, 20)
             }
-            .contentMargins(.top, 0, for: .scrollContent)
+            .ignoresSafeArea(.container, edges: .top)
         }
     }
 }
