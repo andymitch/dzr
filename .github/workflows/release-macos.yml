@@ -79,10 +79,7 @@ jobs:
           PREV: ${{ needs.prepare.outputs.prev }}
           HEAD: ${{ github.sha }}
           PATHS: macos
-          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
         run: |
           node scripts/release-notes.mjs > notes.md
           cat notes.md
-          LATEST=true
-          if [ "$PRERELEASE" = "true" ]; then LATEST=false; fi
-          gh release edit "$TAG" --repo "$REPO" --notes-file notes.md --draft=false --latest="$LATEST"
+          gh release edit "$TAG" --repo "$REPO" --notes-file notes.md --draft=false --latest=false
