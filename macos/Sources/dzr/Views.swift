@@ -299,6 +299,7 @@ struct Card: View {
     @Environment(AppModel.self) private var model
     let item: Item
     @State private var hover = false
+    @State private var playHover = false
 
     var body: some View {
         NavigationLink(value: item) {
@@ -332,9 +333,12 @@ struct Card: View {
                                     .font(.title2)
                                     .foregroundStyle(.white)
                                     .frame(width: 52, height: 52)
-                                    .glassEffect(.clear.interactive(), in: .circle)
+                                    .background(.ultraThinMaterial.opacity(playHover ? 0 : 0.8), in: .circle)
+                                    .glassEffect(playHover ? .clear.interactive() : .identity, in: .circle)
+                                    .scaleEffect(playHover ? 1.1 : 1)
                             }
                             .buttonStyle(.plain)
+                            .onHover { h in withAnimation(.snappy(duration: 0.2)) { playHover = h } }
                             .help("Play \(item.title)")
                             .transition(.scale(scale: 0.8).combined(with: .opacity))
                         }
@@ -349,7 +353,7 @@ struct Card: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .onHover { h in withAnimation(.snappy(duration: 0.2)) { hover = h } }
+        .onHover { h in withAnimation(.snappy(duration: 0.2)) { hover = h; if !h { playHover = false } } }
     }
 }
 
