@@ -364,28 +364,28 @@ fun HomeScreen(
                         isShuffleEnabled = isShuffleEnabled,
                         onPlayShuffled = {
                             val discoverySongs = yourDiscovery?.included?.filter { it.type == "track" }?.map { mapDeezerTrackToSong(it) }.orEmpty()
-                            val choices = buildList<Pair<String, suspend () -> List<Song>>> {
-                                songMixSeeds.forEach { seed -> add("${seed.title} Mix" to { libraryViewModel.trackMix(seed) }) }
-                                if (discoverySongs.isNotEmpty()) add("Your Discovery" to { discoverySongs })
-                                listOfNotNull(myTop, newReleasesMix).forEach { mix -> add(mix.title to { mix.songs }) }
+                            val choices = buildList<Triple<String, String?, suspend () -> List<Song>>> {
+                                songMixSeeds.forEach { seed -> add(Triple("${seed.title} Mix", null) { libraryViewModel.trackMix(seed) }) }
+                                if (discoverySongs.isNotEmpty()) add(Triple("Your Discovery", null) { discoverySongs })
+                                listOfNotNull(myTop, newReleasesMix).forEach { mix -> add(Triple(mix.title, null) { mix.songs }) }
                                 flowConfigs.forEach { config ->
                                     val url = config.links?.self ?: return@forEach
-                                    add((config.attributes?.title ?: "Flow") to {
+                                    add(Triple(config.attributes?.title ?: "Flow", url) {
                                         libraryViewModel.getMultiFlowTracks(url)?.data?.included.orEmpty()
                                             .filter { it.type == "track" }.map { mapDeezerTrackToSong(it) }
                                     })
                                 }
                                 recommendedPlaylists.forEach { playlist ->
-                                    add((playlist.attributes?.title ?: playlist.attributes?.name ?: "Playlist") to { libraryViewModel.playlistSongs(playlist.id) })
+                                    add(Triple(playlist.attributes?.title ?: playlist.attributes?.name ?: "Playlist", null) { libraryViewModel.playlistSongs(playlist.id) })
                                 }
                                 recentlyPlayed.filter { it.first == "playlist" }.forEach { (_, playlist) ->
-                                    add((playlist.attributes?.title ?: playlist.attributes?.name ?: "Playlist") to { libraryViewModel.playlistSongs(playlist.id) })
+                                    add(Triple(playlist.attributes?.title ?: playlist.attributes?.name ?: "Playlist", null) { libraryViewModel.playlistSongs(playlist.id) })
                                 }
                             }
-                            choices.randomOrNull()?.let { (name, load) ->
+                            choices.randomOrNull()?.let { (name, flowUrl, load) ->
                                 coroutineScope.launch {
                                     val songs = load()
-                                    songs.firstOrNull()?.let { playerViewModel.playSongs(songs, it, queueName = name) }
+                                    songs.firstOrNull()?.let { playerViewModel.playSongs(songs, it, queueName = name, flowUrl = flowUrl) }
                                 }
                             }
                         }
