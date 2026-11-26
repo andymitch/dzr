@@ -1,7 +1,6 @@
 package com.andymitch.dzr.data.service
 
 object MusicNotificationProvider {
-    const val CUSTOM_COMMAND_CLOSE_PLAYER = "com.andymitch.dzr.CLOSE_PLAYER"
     const val CUSTOM_COMMAND_TOGGLE_SHUFFLE = "com.andymitch.dzr.TOGGLE_SHUFFLE"
     const val CUSTOM_COMMAND_SHUFFLE_ON = "com.andymitch.dzr.SHUFFLE_ON"
     const val CUSTOM_COMMAND_SHUFFLE_OFF = "com.andymitch.dzr.SHUFFLE_OFF"

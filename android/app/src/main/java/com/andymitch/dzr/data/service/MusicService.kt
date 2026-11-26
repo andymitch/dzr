@@ -212,9 +212,7 @@ class MusicService : MediaLibraryService() {
     }
     private var endOfTrackTimerSongId: String? = null
     private var playbackSnapshotPersistJob: Job? = null
-    private var playbackSnapshotUnloadWriteJob: Job? = null
     private var isRestoringPlaybackSnapshot = false
-    private var isPlaybackUnloadInProgress = false
     private val audioManager by lazy {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
@@ -545,7 +543,6 @@ class MusicService : MediaLibraryService() {
                 )
                 val defaultResult = super.onConnect(session, controller)
                 val customCommands = listOf(
-                    MusicNotificationProvider.CUSTOM_COMMAND_CLOSE_PLAYER,
                     MusicNotificationProvider.CUSTOM_COMMAND_LIKE,
                     MusicNotificationProvider.CUSTOM_COMMAND_SET_FAVORITE_STATE,
                     MusicNotificationProvider.CUSTOM_COMMAND_TOGGLE_SHUFFLE,
@@ -582,9 +579,6 @@ class MusicService : MediaLibraryService() {
                 Timber.tag("MusicService")
                     .d("onCustomCommand received: ${customCommand.customAction}")
                 when (customCommand.customAction) {
-                    MusicNotificationProvider.CUSTOM_COMMAND_CLOSE_PLAYER -> {
-                        closeNotificationPlayer()
-                    }
                     MusicNotificationProvider.CUSTOM_COMMAND_COUNTED_PLAY -> {
                         val count = args.getInt("count", 1)
                         startCountedPlay(count)
@@ -1557,9 +1551,6 @@ class MusicService : MediaLibraryService() {
     }
 
     private fun schedulePlaybackSnapshotPersist(immediate: Boolean = false) {
-        if (isPlaybackUnloadInProgress) {
-            return
-        }
         playbackSnapshotPersistJob?.cancel()
         playbackSnapshotPersistJob = serviceScope.launch {
             if (!immediate) {
@@ -2382,74 +2373,6 @@ class MusicService : MediaLibraryService() {
         }
     }
 
-    private fun closeNotificationPlayer() {
-        stopPlaybackAndUnload(
-            reason = "notification_close_button",
-            preservePlaybackSnapshot = false
-        )
-    }
-
-    private fun stopPlaybackAndUnload(
-        reason: String,
-        preservePlaybackSnapshot: Boolean = true,
-    ) {
-        Timber.tag(TAG).d(
-            "Stopping playback and unloading service. reason=%s",
-            reason
-        )
-        isPlaybackUnloadInProgress = true
-        followUpMediaSessionUiRefreshJob?.cancel()
-        mediaSessionButtonRefreshJob?.cancel()
-        followUpWidgetUpdateJob?.cancel()
-        debouncedWidgetUpdateJob?.cancel()
-        playbackSnapshotPersistJob?.cancel()
-
-        val sessionToRelease = mediaSession
-        val player = sessionToRelease?.player ?: engine.masterPlayer
-
-        clearHeadsetReconnectResume()
-        cancelDurationSleepTimerInternal()
-        stopCountedPlay()
-        endOfTrackTimerSongId = null
-
-        if (preservePlaybackSnapshot) {
-            persistPlaybackSnapshotOnUnload()
-        } else {
-            clearPlaybackSnapshotOnUnload()
-        }
-
-        listeningStatsTracker.finalizeCurrentSession(forceSynchronousPersistence = true)
-
-        player.playWhenReady = false
-        player.stop()
-        player.clearMediaItems()
-
-        requestWidgetFullUpdate(force = true)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-
-        stopSelf()
-    }
-
-    private fun persistPlaybackSnapshotOnUnload() {
-        val snapshot = capturePlaybackSnapshotFromPlayer(playWhenReadyOverride = false)
-        writePlaybackSnapshotOnUnload(snapshot)
-    }
-
-    private fun clearPlaybackSnapshotOnUnload() {
-        writePlaybackSnapshotOnUnload(null)
-    }
-
-    private fun writePlaybackSnapshotOnUnload(snapshot: PlaybackQueueSnapshot?) {
-        playbackSnapshotUnloadWriteJob?.cancel()
-        playbackSnapshotUnloadWriteJob = appScope.launch {
-            runCatching {
-                userPreferencesRepository.setPlaybackQueueSnapshot(snapshot)
-            }.onFailure { e ->
-                Timber.tag(TAG).w(e, "Failed to persist playback snapshot during unload")
-            }
-        }
-    }
-
     private fun refreshMediaSessionUiWithFollowUp(
         session: MediaSession,
         delayMs: Long = 250L
@@ -2699,19 +2622,12 @@ class MusicService : MediaLibraryService() {
             .setSlots(CommandButton.SLOT_OVERFLOW)
             .build()
 
-        val closeButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-            .setCustomIconResId(R.drawable.rounded_close_24)
-            .setDisplayName(getString(R.string.close_notification_player))
-            .setSessionCommand(SessionCommand(MusicNotificationProvider.CUSTOM_COMMAND_CLOSE_PLAYER, Bundle.EMPTY))
-            .setSlots(CommandButton.SLOT_OVERFLOW)
-            .build()
-
         // Let Media3 provide the primary previous/play-next transport buttons from player
         // commands instead of advertising custom back/forward slots here. When custom
         // SLOT_BACK/SLOT_FORWARD buttons are present, Media3 strips the legacy
         // ACTION_SKIP_TO_PREVIOUS/NEXT flags from PlaybackStateCompat, which causes some
         // OEM compact system players (including ColorOS Control Center) to gray out skip.
-        return listOf(likeButton, closeButton, shuffleButton, repeatButton)
+        return listOf(likeButton, shuffleButton, repeatButton)
     }
 
     // ------------------------
