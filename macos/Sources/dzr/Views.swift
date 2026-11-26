@@ -378,7 +378,7 @@ struct Card: View {
                     .shadow(color: .black.opacity(hover ? 0.35 : 0.15), radius: hover ? 14 : 6, y: hover ? 8 : 3)
                     .scaleEffect(hover ? 1.03 : 1)
                 VStack(alignment: item.kind == .artist ? .center : .leading, spacing: 2) {
-                    Text(item.title).font(.callout.weight(.medium)).lineLimit(1)
+                    Marquee(text: item.title).font(.callout.weight(.medium))
                     Text(item.kind == .flow ? "Flow" : item.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
@@ -469,7 +469,7 @@ struct Hero: View {
                 .shadow(color: .black.opacity(0.35), radius: 20, y: 10)
             VStack(alignment: .leading, spacing: 8) {
                 Text(item.kind.label.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(item.title).font(.system(size: 34, weight: .bold)).lineLimit(2)
+                Marquee(text: item.title).font(.system(size: 34, weight: .bold))
                 if item.kind != .flow && item.kind != .mix {
                     Text(item.subtitle).foregroundStyle(.secondary)
                 }
@@ -552,7 +552,7 @@ struct TrackRow: View {
             .frame(width: 22)
             if number == nil { Artwork(url: track.artwork, radius: 6).frame(width: 40, height: 40) }
             VStack(alignment: .leading, spacing: 2) {
-                Text(track.title).fontWeight(playing ? .semibold : .regular).foregroundStyle(playing ? Color.accent : .primary).lineLimit(1)
+                Marquee(text: track.title).fontWeight(playing ? .semibold : .regular).foregroundStyle(playing ? Color.accent : .primary)
                 Text(track.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
@@ -578,6 +578,40 @@ struct TrackRow: View {
             Button("Play") { player.play(tracks, at: index, from: source) }
             TrackMenu(track: track)
         }
+    }
+}
+
+struct Marquee: View {
+    let text: String
+    @State private var shown: CGFloat = 0
+    @State private var full: CGFloat = 0
+    @State private var offset: CGFloat = 0
+
+    var body: some View {
+        Text(text).lineLimit(1).hidden()
+            .overlay(alignment: .leading) {
+                Text(text).lineLimit(1).fixedSize()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { full = $0 }
+                    .offset(x: offset)
+            }
+            .clipped()
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { shown = $0 }
+            .task(id: full - shown) {
+                offset = 0
+                let distance = full - shown
+                guard distance > 1 else { return }
+                let duration = distance / 30
+                do {
+                    for _ in 0..<3 {
+                        try await Task.sleep(for: .seconds(2))
+                        withAnimation(.linear(duration: duration)) { offset = -distance }
+                        try await Task.sleep(for: .seconds(duration + 2))
+                        withAnimation(.easeInOut(duration: 0.4)) { offset = 0 }
+                    }
+                } catch {
+                    offset = 0
+                }
+            }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.screens
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.viewmodel.LibraryViewModel
 
@@ -89,7 +90,7 @@ fun SmartTrackListScreen(
                     Text(
                         text = title,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier.basicMarquee()
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

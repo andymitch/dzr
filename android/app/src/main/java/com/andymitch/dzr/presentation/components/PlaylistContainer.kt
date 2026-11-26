@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.components
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Playlist
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.model.SortOption
@@ -453,8 +454,7 @@ fun PlaylistItem(
                         style = MaterialTheme.typography.titleMedium.copy(fontFamily = RoundedSans),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f, fill = false).basicMarquee()
                     )
                     if (playlist.source == "NAVIDROME") {
                         Spacer(modifier = Modifier.width(8.dp))

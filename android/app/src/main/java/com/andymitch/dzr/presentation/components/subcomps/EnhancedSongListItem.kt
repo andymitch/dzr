@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.components.subcomps
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Song
 
 import androidx.compose.animation.core.animateFloat
@@ -387,8 +388,7 @@ fun EnhancedSongListItem(
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 color = contentColor,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
+                                modifier = Modifier.weight(1f, fill = false).basicMarquee()
                             )
                             if (song.isExplicit) {
                                 Spacer(modifier = Modifier.width(4.dp))

@@ -2,6 +2,7 @@
 
 package com.andymitch.dzr.presentation.screens
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Artist
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.viewmodel.ArtistDetailViewModel
@@ -534,7 +535,7 @@ fun ArtistDetailScreen(
                                                 text = album.title,
                                                 style = MaterialTheme.typography.titleMedium,
                                                 maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                modifier = Modifier.basicMarquee()
                                             )
                                             Text(
                                                 text = "${album.year} • ${album.songCount} tracks",
@@ -586,7 +587,7 @@ fun ArtistDetailScreen(
                                                 text = similarArtist.name,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                modifier = Modifier.basicMarquee()
                                             )
                                         }
                                     }
@@ -838,7 +839,7 @@ private fun CollapsibleAlbumSectionHeader(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

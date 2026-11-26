@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.components
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.model.RecentlyPlayedSongUiModel
 import com.andymitch.dzr.presentation.viewmodel.ThemeStateHolder
@@ -318,7 +319,7 @@ private fun RecentlyPlayedPill(
                     text = item.song.title,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.basicMarquee(),
                     color = titleColor
                 )
                 Text(

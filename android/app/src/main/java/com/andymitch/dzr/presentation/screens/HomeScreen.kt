@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.screens
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.data.preferences.CollagePattern
 import com.andymitch.dzr.presentation.viewmodel.SettingsViewModel
@@ -689,9 +690,8 @@ fun DeezerHomeFlowConfigItem(config: com.andymitch.dzr.data.network.deezer.Deeze
             text = config.attributes?.title ?: "Flow",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            maxLines = 1,
+            modifier = Modifier.align(Alignment.CenterHorizontally).basicMarquee()
         )
     }
 }
@@ -740,9 +740,8 @@ fun DeezerHomePlaylistItem(playlist: DeezerPlaylist, artOverlay: String? = null,
             text = playlist.attributes?.title ?: playlist.attributes?.name ?: "Unknown",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            minLines = 2,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            maxLines = 1,
+            modifier = Modifier.basicMarquee()
         )
     }
 }
@@ -774,7 +773,7 @@ private fun SongMixRow(song: Song, onClick: () -> Unit) {
             modifier = Modifier.size(64.dp)
         )
         Column(modifier = Modifier.padding(horizontal = 14.dp)) {
-            Text(song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
             Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
@@ -785,7 +784,7 @@ private fun HomeCard(title: String? = null, subtitle: String?, size: Dp = 160.dp
     Column(modifier = Modifier.width(size).clickable(onClick = onClick)) {
         Box(modifier = Modifier.size(size).clip(RoundedCornerShape(16.dp))) { art() }
         Spacer(modifier = Modifier.height(8.dp))
-        title?.let { Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+        title?.let { Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee()) }
         subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
     }
 }

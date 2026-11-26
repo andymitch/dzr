@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.components
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -152,7 +153,7 @@ fun ExpressiveTopBarContent(
                         // Removed scaleX/scaleY scaling from graphicsLayer to allow proper ellipsis during layout.
                         // Scaling font size directly ensures Text component is measured with correct constraints.
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) // Scale from left center
-                    }
+                    }.then(if (maxLines == 1) Modifier.basicMarquee() else Modifier)
                 )
                 if (!subtitle.isNullOrEmpty()) {
                     Text(

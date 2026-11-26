@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.screens
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel
 import com.andymitch.dzr.presentation.viewmodel.PlaylistViewModel.Companion.FOLDER_PLAYLIST_PREFIX
@@ -297,10 +298,9 @@ fun PlaylistDetailScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false),
+                            modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false).basicMarquee(),
                             text = currentPlaylist?.name ?: fallbackPlaylistName,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            maxLines = 1
                         )
                         if (currentPlaylist?.isPublic != null) {
                             Spacer(modifier = Modifier.width(8.dp))

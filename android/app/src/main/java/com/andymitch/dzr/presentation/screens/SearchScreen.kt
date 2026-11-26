@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.screens
 
+import androidx.compose.foundation.basicMarquee
 import com.andymitch.dzr.data.model.Album
 import com.andymitch.dzr.data.model.Artist
 import com.andymitch.dzr.data.model.Playlist
@@ -1058,7 +1059,7 @@ fun SearchResultAlbumItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
                 Text(
                     text = album.artist,
@@ -1144,7 +1145,7 @@ fun SearchResultArtistItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
                 Text(
                     text = if (artist.fanCount > 0) {
@@ -1224,7 +1225,7 @@ fun SearchResultPlaylistItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
                 Text(
                     text = if (playlist.nbTracks != null) {

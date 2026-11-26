@@ -2210,7 +2210,7 @@ fun AlbumGridItemRedesigned(
                             fontWeight = FontWeight.Bold,
                             color = onGradientColor,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            modifier = Modifier.basicMarquee()
                         )
                         Text(album.artist, style = MaterialTheme.typography.bodySmall, color = onGradientColor.copy(alpha = 0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(formatSongCount(album.songCount), style = MaterialTheme.typography.bodySmall, color = onGradientColor.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -2497,7 +2497,7 @@ fun AlbumListItem(
                                 style = variableTextStyle.copy(fontSize = 22.sp),
                                 color = onGradientColor,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                modifier = Modifier.basicMarquee()
                             )
                             Spacer(
                                 modifier = Modifier.height(4.dp)

@@ -88,7 +88,7 @@ struct QueueList: View {
                     HStack(spacing: 8) {
                         Artwork(url: t.artwork, radius: 4).frame(width: 28, height: 28)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(t.title).lineLimit(1)
+                            Marquee(text: t.title)
                             Text(t.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
@@ -158,7 +158,7 @@ struct NowPlayingBar: View {
             HStack(spacing: 12) {
                 Artwork(url: player.current?.artwork, radius: 10).frame(width: 46, height: 46)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(player.current?.title ?? "Not Playing").font(.callout.weight(.semibold)).lineLimit(1)
+                    Marquee(text: player.current?.title ?? "Not Playing").font(.callout.weight(.semibold))
                     Text(player.error ?? player.current?.subtitle ?? "Pick something to play")
                         .font(.caption).lineLimit(1)
                         .foregroundStyle(player.error == nil ? Color.secondary : Color.red)
@@ -226,7 +226,7 @@ struct MiniPlayer: View {
                     .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(t.title).font(.headline).lineLimit(1)
+                        Marquee(text: t.title).font(.headline)
                         Text(player.error ?? t.subtitle).font(.subheadline).foregroundStyle(player.error == nil ? Color.secondary : Color.red).lineLimit(1)
                     }
                     Spacer()
@@ -438,7 +438,7 @@ struct SongInfoView: View {
             HStack(spacing: 16) {
                 Artwork(url: track.artwork, radius: 12).frame(width: 96, height: 96)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(track.title).font(.title3.bold()).lineLimit(2)
+                    Marquee(text: track.title).font(.title3.bold())
                     Text(parts.first ?? "").foregroundStyle(.secondary)
                 }
                 Spacer()
