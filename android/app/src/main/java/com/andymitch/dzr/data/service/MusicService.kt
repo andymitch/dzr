@@ -1193,6 +1193,11 @@ class MusicService : MediaLibraryService() {
             if (playbackState == Player.STATE_ENDED) {
                 listeningStatsTracker.finalizeCurrentSession()
                 endOfTrackTimerSongId = null
+                val player = mediaSession?.player ?: engine.masterPlayer
+                if (player.mediaItemCount > 0) {
+                    player.playWhenReady = false
+                    player.seekTo(player.currentTimeline.getFirstWindowIndex(player.shuffleModeEnabled), 0L)
+                }
             } else {
                 syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer)
             }

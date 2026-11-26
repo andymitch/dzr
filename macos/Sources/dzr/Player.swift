@@ -187,7 +187,7 @@ final class Player {
         av.actionAtItemEnd = .advance
         isPlaying = false
         av.removeAllItems()
-        if let n = queue.nextIndex(auto: true) { queue.index = n }
+        queue.index = queue.nextIndex(auto: true) ?? 0
         position = 0
         duration = current?.duration ?? 0
         updateNowPlaying()
@@ -320,6 +320,9 @@ final class Player {
         } else if av.currentItem == nil, isPlaying {
             guard let n = queue.nextIndex(auto: true) else {
                 isPlaying = false
+                queue.index = 0
+                position = 0
+                duration = current?.duration ?? 0
                 updateNowPlaying()
                 save()
                 return
