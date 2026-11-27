@@ -28,28 +28,43 @@ struct Transport: View {
     var large = false
 
     var body: some View {
-        HStack(spacing: large ? 22 : 16) {
-            Button(action: player.toggleShuffle) { Image(systemName: "shuffle") }
-                .foregroundStyle(player.shuffle ? Color.accent : .secondary)
-                .help("Shuffle")
-            Button(action: player.previous) { Image(systemName: "backward.fill") }
-                .help("Previous")
-            Button(action: player.toggle) {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: large ? 26 : 20))
-                    .frame(width: large ? 34 : 26)
+        Group {
+            if player.isEpisode {
+                PodcastControls(large: large)
+            } else {
+                HStack(spacing: large ? 22 : 16) {
+                    Button(action: player.toggleShuffle) { Image(systemName: "shuffle") }
+                        .foregroundStyle(player.shuffle ? Color.accent : .secondary)
+                        .help("Shuffle")
+                    Button(action: player.previous) { Image(systemName: "backward.fill") }
+                        .help("Previous")
+                    PlayPauseButton(large: large)
+                    Button(action: player.next) { Image(systemName: "forward.fill") }
+                        .help("Next")
+                    Button(action: player.cycleRepeat) { Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat") }
+                        .foregroundStyle(player.repeatMode == .off ? .secondary : Color.accent)
+                        .help("Repeat")
+                }
             }
-            .help(player.isPlaying ? "Pause" : "Play")
-            Button(action: player.next) { Image(systemName: "forward.fill") }
-                .help("Next")
-            Button(action: player.cycleRepeat) { Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat") }
-                .foregroundStyle(player.repeatMode == .off ? .secondary : Color.accent)
-                .help("Repeat")
         }
         .buttonStyle(.borderless)
         .font(.system(size: large ? 16 : 14, weight: .semibold))
         .disabled(player.current == nil)
+    }
+}
+
+struct PlayPauseButton: View {
+    @Environment(Player.self) private var player
+    var large = false
+
+    var body: some View {
+        Button(action: player.toggle) {
+            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                .contentTransition(.symbolEffect(.replace))
+                .font(.system(size: large ? 26 : 20))
+                .frame(width: large ? 34 : 26)
+        }
+        .help(player.isPlaying ? "Pause" : "Play")
     }
 }
 
@@ -163,7 +178,7 @@ struct NowPlayingBar: View {
                         .font(.caption).lineLimit(1)
                         .foregroundStyle(player.error == nil ? Color.secondary : Color.red)
                 }
-                if let t = player.current { LikeButton(track: t) }
+                if let t = player.current, !player.isEpisode { LikeButton(track: t) }
             }
             .frame(minWidth: 200, maxWidth: 280, alignment: .leading)
             .help(player.queue.source.map { "Playing from \($0.title)" } ?? "")
@@ -177,14 +192,14 @@ struct NowPlayingBar: View {
             HStack(spacing: 12) {
                 SleepIndicator()
                 AirPlayButton().frame(width: 20, height: 20)
-                QualityMenu()
+                if !player.isEpisode { QualityMenu() }
                 if model.lyrics?.isEmpty == false {
                     Button { model.showLyrics.toggle() } label: { Image(systemName: "quote.bubble") }
                         .buttonStyle(.borderless)
                         .foregroundStyle(model.showLyrics ? Color.accent : .secondary)
                         .help("Lyrics")
                 }
-                if let t = player.current {
+                if let t = player.current, !player.isEpisode {
                     Menu { TrackMenu(track: t, showQueueActions: false) } label: { Image(systemName: "ellipsis") }
                         .menuStyle(.button)
                         .menuIndicator(.hidden)
@@ -230,7 +245,7 @@ struct MiniPlayer: View {
                         Text(player.error ?? t.subtitle).font(.subheadline).foregroundStyle(player.error == nil ? Color.secondary : Color.red).lineLimit(1)
                     }
                     Spacer()
-                    LikeButton(track: t).font(.title3)
+                    if !player.isEpisode { LikeButton(track: t).font(.title3) }
                 }
                 Scrubber()
                 Transport(large: true)

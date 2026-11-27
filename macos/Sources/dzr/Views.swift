@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum Destination: Hashable {
-    case home, search, liked, recent, playlists, albums, artists, downloads
+    case home, search, liked, recent, playlists, albums, artists, podcasts, downloads
 }
 
 struct MainView: View {
@@ -25,6 +25,7 @@ struct MainView: View {
                     Label("Playlists", systemImage: "music.note.list").tag(Destination.playlists)
                     Label("Albums", systemImage: "square.stack").tag(Destination.albums)
                     Label("Artists", systemImage: "music.microphone").tag(Destination.artists)
+                    Label("Podcasts", systemImage: "antenna.radiowaves.left.and.right").tag(Destination.podcasts)
                     Label("Downloads", systemImage: "arrow.down.circle").tag(Destination.downloads)
                 }
             }
@@ -53,7 +54,7 @@ struct MainView: View {
                 }
             }
         }
-        .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums")
+        .searchable(text: $query, placement: .toolbar, prompt: "Artists, songs, albums, podcasts")
         .searchFocused($searchFocused)
         .background { Button("Find") { searchFocused = true }.keyboardShortcut("f").opacity(0) }
         .onSubmit(of: .search) {
@@ -81,13 +82,17 @@ struct MainView: View {
 
     @ViewBuilder private var root: some View {
         switch selection ?? .home {
-        case .home: ShelvesPage(title: "Home", surprise: true) { try await $0.home() }
+        case .home:
+            ShelvesPage(title: "Home", surprise: true) { [model] deezer in
+                let home = try await deezer.home()
+                return Array(home.prefix(2)) + (await model.newEpisodesShelf()) + home.dropFirst(2)
+            }
         case .search:
             if submitted.isEmpty {
-                ContentUnavailableView("Search Deezer", systemImage: "magnifyingglass", description: Text("Find tracks, artists, albums and playlists."))
+                ContentUnavailableView("Search", systemImage: "magnifyingglass", description: Text("Find tracks, artists, albums, playlists and podcasts."))
                     .navigationTitle("Search")
             } else {
-                ShelvesPage(title: submitted) { [submitted] in try await $0.search(submitted) }
+                ShelvesPage(title: submitted) { [submitted, model] in try await $0.search(submitted) + model.podcastsShelf(submitted) }
                     .environment(\.playSource, Item(kind: .mix, id: "search", title: "Search: \(submitted)", subtitle: ""))
                     .id(submitted)
             }
@@ -99,6 +104,7 @@ struct MainView: View {
                 .toolbar { Button { model.newPlaylistTracks = [] } label: { Label("New Playlist", systemImage: "plus") } }
         case .albums: GridPage(title: "Albums") { try await $0.albums() }
         case .artists: GridPage(title: "Artists") { try await $0.artists() }
+        case .podcasts: PodcastsPage()
         case .downloads: DownloadsPage()
         }
     }
@@ -213,6 +219,8 @@ struct ShelvesPage: View {
                     ForEach(shelves.filter { !$0.items.isEmpty }) { shelf in
                         if shelf.items.first?.kind == .track {
                             TrackList(title: shelf.title, tracks: Array(shelf.items.prefix(8)), numbered: false)
+                        } else if shelf.items.first?.kind == .episode {
+                            EpisodeList(title: shelf.title, episodes: Array(shelf.items.prefix(6)), showName: true)
                         } else {
                             ShelfRow(shelf: shelf)
                         }
@@ -359,7 +367,7 @@ struct Card: View {
                 }
                     .aspectRatio(1, contentMode: .fit)
                     .overlay {
-                        if hover && item.kind != .track {
+                        if hover && item.kind != .track && item.kind != .podcast {
                             Button { model.play(item) } label: {
                                 Image(systemName: "play.fill")
                                     .font(.title2)
@@ -402,6 +410,14 @@ struct DetailPage: View {
     private var owned: Bool { item.kind == .playlist && model.myPlaylists.contains { $0.id == item.id } }
 
     var body: some View {
+        if item.kind == .podcast {
+            PodcastPage(item: item)
+        } else {
+            deezerPage
+        }
+    }
+
+    private var deezerPage: some View {
         content
             .id(item.kind == .playlist ? model.playlistsVersion : 0)
             .environment(\.playSource, item)
@@ -502,6 +518,8 @@ extension Kind {
         case .artist: "Artist"
         case .flow: "Flow"
         case .mix: "Mix"
+        case .podcast: "Podcast"
+        case .episode: "Episode"
         }
     }
 }

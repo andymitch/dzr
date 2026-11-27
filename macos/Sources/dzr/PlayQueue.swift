@@ -16,7 +16,7 @@ struct PlayQueue: Codable, Equatable {
 
     @discardableResult
     mutating func play(_ list: [Item], at i: Int, from source: Item?) -> Bool {
-        let playable = list.filter { $0.kind == .track && $0.readable }
+        let playable = list.filter { [.track, .episode].contains($0.kind) && $0.readable }
         guard list.indices.contains(i), let start = playable.firstIndex(where: { $0.id == list[i].id }) else { return false }
         original = playable
         tracks = playable

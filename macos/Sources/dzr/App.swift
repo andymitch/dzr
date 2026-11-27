@@ -79,6 +79,7 @@ final class AppModel {
     let downloads: Downloads
     let cache: SongCache
     let player: Player
+    let podcasts = Podcasts()
     var signedIn: Bool
     var liked: Set<String> = []
     var showLyrics = false
@@ -93,7 +94,7 @@ final class AppModel {
     init() {
         downloads = Downloads(deezer: deezer)
         cache = SongCache(deezer: deezer)
-        player = Player(deezer: deezer, downloads: downloads, cache: cache)
+        player = Player(deezer: deezer, downloads: downloads, cache: cache, podcasts: podcasts)
         signedIn = deezer.session != nil
         player.onUnauthorized = { [weak self] in self?.signOut() }
     }
@@ -151,7 +152,7 @@ final class AppModel {
         guard let id, id != lyricsFor else { return }
         lyricsFor = id
         lyrics = nil
-        let lines = (try? await deezer.lyrics(id)) ?? []
+        let lines = player.isEpisode ? [] : (try? await deezer.lyrics(id)) ?? []
         guard lyricsFor == id else { return }
         lyrics = lines
         if lines.isEmpty { showLyrics = false }

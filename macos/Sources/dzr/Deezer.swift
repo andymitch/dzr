@@ -35,7 +35,7 @@ enum DeezerError: LocalizedError {
     }
 }
 
-enum Kind: String, Codable { case track, album, playlist, artist, flow, mix }
+enum Kind: String, Codable { case track, album, playlist, artist, flow, mix, podcast, episode }
 
 struct Item: Identifiable, Hashable, Codable {
     var kind: Kind
@@ -49,6 +49,8 @@ struct Item: Identifiable, Hashable, Codable {
     var readable = true
     var creatorId: Int64 = 0
     var covers: [URL]?
+    var url: URL?
+    var published: Date?
 }
 
 struct Shelf: Identifiable {
@@ -385,7 +387,7 @@ final class Deezer {
 
     func open(_ it: Item) async throws -> [Shelf] {
         switch it.kind {
-        case .track: return []
+        case .track, .podcast, .episode: return []
         case .playlist:
             if it.id == (await lovedPlaylistId()) { return try await [Shelf(title: "Tracks", items: lovedTracks())] }
             return try await [Shelf(title: "Tracks", items: items(one("platform/generic/playlist/\(it.id)").included))]

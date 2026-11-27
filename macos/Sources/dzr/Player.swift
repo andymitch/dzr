@@ -9,13 +9,15 @@ final class Player {
     private let deezer: Deezer
     private let downloads: Downloads
     private let cache: SongCache
+    let podcasts: Podcasts
+    private var silent = false
     private let av = AVQueuePlayer()
     private var timeObserver: Any?
     private var itemObserver: NSKeyValueObservation?
     private var terminateObserver: NSObjectProtocol?
     private var loadTask: Task<Void, Never>?
     private var prepareTask: Task<Void, Never>?
-    private var prepared: (index: Int, item: AVPlayerItem, quality: Quality)?
+    private var prepared: (index: Int, item: AVPlayerItem, quality: Quality?)?
     private var fetchingMore = false
     private var flacFailed = false
     private var lastSave = Date.distantPast
@@ -44,10 +46,13 @@ final class Player {
 
     private var streamQuality: Quality { flacFailed && quality == .flac ? .high : quality }
 
-    init(deezer: Deezer, downloads: Downloads, cache: SongCache) {
+    var isEpisode: Bool { current?.kind == .episode }
+
+    init(deezer: Deezer, downloads: Downloads, cache: SongCache, podcasts: Podcasts) {
         self.deezer = deezer
         self.downloads = downloads
         self.cache = cache
+        self.podcasts = podcasts
         av.actionAtItemEnd = .advance
         restore()
         timeObserver = av.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] t in
@@ -121,12 +126,14 @@ final class Player {
     }
 
     func next() {
+        if isEpisode { return seek(to: min(position + 30, duration)) }
         guard let n = queue.nextIndex(auto: false) else { return }
         queue.index = n
         load()
     }
 
     func previous() {
+        if isEpisode { return seek(to: position - 15) }
         if position > 3 { return seek(to: 0) }
         guard let n = queue.previousIndex() else { return }
         queue.index = n
@@ -138,6 +145,38 @@ final class Player {
         position = t
         updateNowPlaying()
     }
+
+    func setSpeed(_ speed: Double) {
+        podcasts.speed = speed
+        applyRate()
+    }
+
+    func toggleCutSilence() {
+        podcasts.cutSilence.toggle()
+        applyRate()
+    }
+
+    private func applyRate() {
+        let rate = isEpisode ? podcasts.speed * (podcasts.cutSilence && silent ? Self.silenceRate : 1) : 1
+        av.defaultRate = Float(rate)
+        if isPlaying, av.currentItem != nil { av.rate = Float(rate) }
+        updateNowPlaying()
+    }
+
+    private func configured(_ item: AVPlayerItem, for track: Item) -> AVPlayerItem {
+        guard track.kind == .episode else { return item }
+        item.audioTimePitchAlgorithm = .timeDomain
+        Task {
+            await SilenceDetector.attach(to: item) { [weak self, weak item] isSilent in
+                guard let self, let item, self.av.currentItem === item else { return }
+                self.silent = isSilent
+                if self.podcasts.cutSilence { self.applyRate() }
+            }
+        }
+        return item
+    }
+
+    private static let silenceRate = 3.0
 
     func attach(_ picker: AVRoutePickerView) {
         picker.player = av
@@ -182,6 +221,7 @@ final class Player {
     }
 
     private func songEnded() {
+        if let t = current, t.kind == .episode { podcasts.markPlayed(t.id) }
         guard sleepAtEndOfSong else { return }
         sleepAtEndOfSong = false
         av.actionAtItemEnd = .advance
@@ -195,6 +235,7 @@ final class Player {
     }
 
     func save() {
+        if let t = current, t.kind == .episode { podcasts.savePosition(t.id, position, duration: duration) }
         let saved = Saved(queue: queue, position: position, quality: quality)
         guard let data = try? JSONEncoder().encode(saved) else { return }
         try? FileManager.default.createDirectory(at: Self.savedURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -223,8 +264,10 @@ final class Player {
         if av.currentItem != nil { prepareNext() }
     }
 
-    private func load(startAt: TimeInterval = 0) {
+    private func load(startAt requested: TimeInterval = 0) {
         guard let t = current else { return }
+        let startAt = requested == 0 && t.kind == .episode ? podcasts.position(t.id) : requested
+        silent = false
         loadTask?.cancel()
         dropPrepared()
         error = nil
@@ -236,13 +279,14 @@ final class Player {
             do {
                 let (url, q) = try await source(for: t)
                 guard !Task.isCancelled else { return }
-                let item = AVPlayerItem(url: url)
+                let item = configured(AVPlayerItem(url: url), for: t)
                 av.removeAllItems()
                 av.insert(item, after: nil)
                 if startAt > 0 { await av.seek(to: CMTime(seconds: startAt, preferredTimescale: 600)) }
                 guard !Task.isCancelled else { return }
                 av.play()
                 isPlaying = true
+                applyRate()
                 playingQuality = q
                 updateNowPlaying()
                 prepareNext()
@@ -260,7 +304,8 @@ final class Player {
         }
     }
 
-    private func source(for track: Item) async throws -> (URL, Quality) {
+    private func source(for track: Item) async throws -> (URL, Quality?) {
+        if let url = track.url { return (url, nil) }
         if let local = downloads.localURL(track.id) ?? cache.localURL(track.id) { return local }
         return try await deezer.streamURL(track.id, quality: streamQuality)
     }
@@ -288,7 +333,7 @@ final class Player {
             guard let (url, q) = try? await source(for: t), !Task.isCancelled,
                   queue.tracks.indices.contains(n), queue.tracks[n].id == t.id,
                   let cur = av.currentItem, av.items().count == 1 else { return }
-            let item = AVPlayerItem(url: url)
+            let item = configured(AVPlayerItem(url: url), for: t)
             av.insert(item, after: cur)
             prepared = (n, item, q)
         }
@@ -314,6 +359,8 @@ final class Player {
             position = 0
             duration = queue.tracks[p.index].duration
             playingQuality = p.quality
+            silent = false
+            applyRate()
             updateNowPlaying()
             save()
             prepareNext()
@@ -352,6 +399,10 @@ final class Player {
         c.pauseCommand.addTarget { [weak self] _ in if self?.isPlaying == true { self?.toggle() }; return .success }
         c.nextTrackCommand.addTarget { [weak self] _ in self?.next(); return .success }
         c.previousTrackCommand.addTarget { [weak self] _ in self?.previous(); return .success }
+        c.skipForwardCommand.preferredIntervals = [30]
+        c.skipBackwardCommand.preferredIntervals = [15]
+        c.skipForwardCommand.addTarget { [weak self] _ in self?.next(); return .success }
+        c.skipBackwardCommand.addTarget { [weak self] _ in self?.previous(); return .success }
         c.changePlaybackPositionCommand.addTarget { [weak self] e in
             self?.seek(to: (e as? MPChangePlaybackPositionCommandEvent)?.positionTime ?? 0)
             return .success
@@ -362,6 +413,9 @@ final class Player {
 
     private func updateNowPlaying() {
         let center = MPNowPlayingInfoCenter.default()
+        let remote = MPRemoteCommandCenter.shared()
+        remote.skipForwardCommand.isEnabled = isEpisode
+        remote.skipBackwardCommand.isEnabled = isEpisode
         guard let t = current else {
             center.nowPlayingInfo = nil
             center.playbackState = .stopped
@@ -374,7 +428,7 @@ final class Player {
             MPMediaItemPropertyAlbumTitle: parts.dropFirst().first ?? "",
             MPMediaItemPropertyPlaybackDuration: duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: position,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? Double(av.defaultRate) : 0.0,
         ]
         if let a = artwork, a.0 == t.artwork { info[MPMediaItemPropertyArtwork] = a.1 }
         center.nowPlayingInfo = info
