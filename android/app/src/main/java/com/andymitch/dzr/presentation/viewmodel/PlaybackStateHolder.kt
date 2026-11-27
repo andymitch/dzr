@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.viewmodel
 
+import com.andymitch.dzr.data.podcast.isEpisodeId
 import com.andymitch.dzr.data.preferences.UserPreferencesRepository
 import com.andymitch.dzr.data.model.Song
 
@@ -400,7 +401,9 @@ class PlaybackStateHolder @Inject constructor(
 
     fun previousSong() {
         val controller = activeLocalPlayer()
-        if (controller.currentPosition > 10000) {
+        if (isEpisodeId(controller.currentMediaItem?.mediaId)) {
+            controller.seekBack()
+        } else if (controller.currentPosition > 10000) {
             controller.seekTo(0)
         } else {
             controller.seekToPrevious()
@@ -408,7 +411,8 @@ class PlaybackStateHolder @Inject constructor(
     }
 
     fun nextSong() {
-        activeLocalPlayer().seekToNext()
+        val controller = activeLocalPlayer()
+        if (isEpisodeId(controller.currentMediaItem?.mediaId)) controller.seekForward() else controller.seekToNext()
     }
 
     fun cycleRepeatMode() {

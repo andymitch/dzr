@@ -986,7 +986,7 @@ class PlayerViewModel @Inject constructor(
 
     val libraryTabsFlow: StateFlow<List<String>> = userPreferencesRepository.libraryTabsOrderFlow
         .map { orderJson ->
-            val defaultOrder = listOf("PLAYLISTS", "LIKED", "ALBUMS", "ARTIST", "RECENT")
+            val defaultOrder = listOf("PLAYLISTS", "LIKED", "ALBUMS", "ARTIST", "PODCASTS", "RECENT")
             val order = if (orderJson != null) {
                 try {
                     kotlinx.serialization.json.Json.decodeFromString<List<String>>(orderJson).toMutableList()
@@ -998,14 +998,15 @@ class PlayerViewModel @Inject constructor(
             }
             order.remove("SONGS")
             order.remove("FOLDERS")
-            val podcasts = order.indexOf("PODCASTS")
-            if (podcasts >= 0) order[podcasts] = "RECENT"
             if (!order.contains("RECENT")) {
                 order.add("RECENT")
             }
+            if (!order.contains("PODCASTS")) {
+                order.add(order.indexOf("RECENT"), "PODCASTS")
+            }
             order.toList()
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("PLAYLISTS", "LIKED", "ALBUMS", "ARTIST", "RECENT"))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("PLAYLISTS", "LIKED", "ALBUMS", "ARTIST", "PODCASTS", "RECENT"))
 
     private val _loadedTabs = MutableStateFlow(emptySet<String>())
 
@@ -1021,6 +1022,7 @@ class PlayerViewModel @Inject constructor(
             try {
                 when (tabId) {
                     LibraryTabId.RECENT -> SortOption.PODCASTS
+                    LibraryTabId.PODCASTS -> emptyList()
                     LibraryTabId.ALBUMS -> SortOption.ALBUMS
                     LibraryTabId.ARTISTS -> SortOption.ARTISTS
                     LibraryTabId.PLAYLISTS -> SortOption.PLAYLISTS

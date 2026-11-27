@@ -40,7 +40,8 @@ private fun libraryEmptySpec(
     storageFilter: StorageFilter
 ): LibraryEmptySpec {
     return when (tabId) {
-        LibraryTabId.RECENT -> LibraryEmptySpec(
+        LibraryTabId.RECENT,
+        LibraryTabId.PODCASTS -> LibraryEmptySpec(
             iconRes = R.drawable.rounded_music_off_24,
             titleRes = R.string.lib_empty_podcasts_title,
             subtitleRes = R.string.lib_empty_podcasts_subtitle

@@ -468,7 +468,8 @@ fun LibraryScreen(
                 LibraryTabId.ALBUMS -> isAlbumSelectionMode
                 LibraryTabId.RECENT,
                 LibraryTabId.LIKED -> isSelectionMode
-                LibraryTabId.ARTISTS -> false
+                LibraryTabId.ARTISTS,
+                LibraryTabId.PODCASTS -> false
             }
         }
     }
@@ -494,7 +495,8 @@ fun LibraryScreen(
                         showMultiSelectionSheet = false
                     }
 
-                    LibraryTabId.ARTISTS -> Unit
+                    LibraryTabId.ARTISTS,
+                    LibraryTabId.PODCASTS -> Unit
                 }
             }
 
@@ -785,7 +787,8 @@ fun LibraryScreen(
                         }.collectAsStateWithLifecycle(initialValue = false)
 
                         val currentSelectedSortOption: SortOption? = when (currentTabId) {
-                            LibraryTabId.RECENT -> null
+                            LibraryTabId.RECENT,
+                            LibraryTabId.PODCASTS -> null
                             LibraryTabId.ALBUMS -> playerUiState.currentAlbumSortOption
                             LibraryTabId.ARTISTS -> playerUiState.currentArtistSortOption
                             LibraryTabId.PLAYLISTS -> playlistUiState.currentPlaylistSortOption
@@ -806,7 +809,8 @@ fun LibraryScreen(
                         val onSortOptionChanged: (SortOption) -> Unit = remember(playerViewModel, playlistViewModel, currentTabId) {
                             { option ->
                                 when (currentTabId) {
-                                    LibraryTabId.RECENT -> {}
+                                    LibraryTabId.RECENT,
+                                    LibraryTabId.PODCASTS -> {}
                                     LibraryTabId.ALBUMS -> playerViewModel.sortAlbums(option)
                                     LibraryTabId.ARTISTS -> playerViewModel.sortArtists(option)
                                     LibraryTabId.PLAYLISTS -> playlistViewModel.sortPlaylists(option)
@@ -918,7 +922,7 @@ fun LibraryScreen(
                                     customMainActionIcon = if (isRandomButton) Icons.Rounded.PlayArrow else null,
                                     customMainActionText = if (isRandomButton) "Random" else null,
                                     iconRotation = iconRotation,
-                                    showSortButton = sanitizedSortOptions.isNotEmpty(),
+                                    showSortButton = sanitizedSortOptions.isNotEmpty() && currentTabId != LibraryTabId.PODCASTS,
                                     showLocateButton = showLocateButton,
                                     onSortClick = { playerViewModel.showSortingSheet() },
                                     onLocateClick = { locateAction?.invoke() },
@@ -1080,6 +1084,13 @@ fun LibraryScreen(
                                         playerViewModel = playerViewModel,
                                         bottomBarHeight = bottomBarHeightDp,
                                         onMoreOptionsClick = stableOnMoreOptionsClick
+                                    )
+                                }
+
+                                LibraryTabId.PODCASTS -> {
+                                    LibraryPodcastsTab(
+                                        navController = navController,
+                                        bottomBarHeight = bottomBarHeightDp
                                     )
                                 }
 
@@ -2005,6 +2016,7 @@ private fun targetPageForTabIndex(
 
 private fun LibraryTabId.iconRes(): Int = when (this) {
     LibraryTabId.RECENT -> R.drawable.rounded_schedule_24
+    LibraryTabId.PODCASTS -> R.drawable.rounded_podcasts_24
     LibraryTabId.ALBUMS -> R.drawable.rounded_album_24
     LibraryTabId.ARTISTS -> R.drawable.rounded_artist_24
     LibraryTabId.PLAYLISTS -> R.drawable.rounded_playlist_play_24

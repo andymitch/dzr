@@ -139,6 +139,7 @@ fun HomeScreen(
     playerViewModel: PlayerViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     libraryViewModel: com.andymitch.dzr.presentation.viewmodel.LibraryViewModel = hiltViewModel(androidx.compose.ui.platform.LocalContext.current as androidx.activity.ComponentActivity),
+    podcastViewModel: com.andymitch.dzr.presentation.viewmodel.PodcastViewModel = hiltViewModel(),
     onOpenSidebar: () -> Unit
 ) {
     val context = LocalContext.current
@@ -158,6 +159,7 @@ fun HomeScreen(
     val yourDiscovery by libraryViewModel.yourDiscovery.collectAsState()
     val recentlyPlayed by libraryViewModel.recentlyPlayed.collectAsState()
     val songMixSeeds by libraryViewModel.songMixSeeds.collectAsState()
+    val newEpisodes by podcastViewModel.newEpisodes.collectAsStateWithLifecycle()
     val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { libraryViewModel.refreshRecentlyPlayed() }
     
@@ -390,6 +392,33 @@ fun HomeScreen(
                             }
                         }
                     )
+                }
+                if (newEpisodes.isNotEmpty()) {
+                    item(key = "new_episodes_header", contentType = "deezer_playlists_header") {
+                        HomeSectionTitle("New episodes")
+                    }
+                    item(key = "new_episodes", contentType = "deezer_playlists_list") {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(newEpisodes, key = { "episode_${it.second.id}" }) { (show, episode) ->
+                                HomeCard(
+                                    title = episode.title,
+                                    subtitle = show.title,
+                                    size = 140.dp,
+                                    onClick = { podcastViewModel.play(playerViewModel, show, episode) }
+                                ) {
+                                    AsyncImage(
+                                        model = episode.artwork ?: show.artwork,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 if (songMixSeeds.isNotEmpty()) {
                     item(key = "song_mixes_header", contentType = "deezer_playlists_header") {

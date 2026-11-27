@@ -440,6 +440,7 @@ fun SearchScreen(
                             SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
                             SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
                             SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
+                            SearchFilterChip(SearchFilterType.PODCASTS, currentFilter, playerViewModel)
                         }
                         val listState = if (searchUiState.isSearching) {
                             SearchListState.LOADING
@@ -669,6 +670,7 @@ fun SearchResultsList(
                 is SearchResultItem.AlbumItem -> SearchFilterType.ALBUMS
                 is SearchResultItem.ArtistItem -> SearchFilterType.ARTISTS
                 is SearchResultItem.PlaylistItem -> SearchFilterType.PLAYLISTS
+                is SearchResultItem.PodcastItem -> SearchFilterType.PODCASTS
             }
         }
     }
@@ -703,7 +705,8 @@ fun SearchResultsList(
         SearchFilterType.SONGS,
         SearchFilterType.ALBUMS,
         SearchFilterType.ARTISTS,
-        SearchFilterType.PLAYLISTS
+        SearchFilterType.PLAYLISTS,
+        SearchFilterType.PODCASTS
     )
 
     val imePadding = WindowInsets.ime.getBottom(localDensity).dp
@@ -756,6 +759,7 @@ fun SearchResultsList(
                             SearchFilterType.ALBUMS -> "Albums"
                             SearchFilterType.ARTISTS -> "Artists"
                             SearchFilterType.PLAYLISTS -> "Playlists"
+                            SearchFilterType.PODCASTS -> "Podcasts"
                             else -> "Results"
                         }
                     )
@@ -770,6 +774,7 @@ fun SearchResultsList(
                             is SearchResultItem.AlbumItem -> "album_${item.album.id}"
                             is SearchResultItem.ArtistItem -> "artist_${item.artist.id}"
                             is SearchResultItem.PlaylistItem -> "playlist_${item.playlist.id}_${index}"
+                            is SearchResultItem.PodcastItem -> "podcast_${item.podcast.feedUrl}"
                         }
                     },
                     contentType = { index ->
@@ -778,6 +783,7 @@ fun SearchResultsList(
                             is SearchResultItem.AlbumItem -> "search_album"
                             is SearchResultItem.ArtistItem -> "search_artist"
                             is SearchResultItem.PlaylistItem -> "search_playlist"
+                            is SearchResultItem.PodcastItem -> "search_podcast"
                         }
                     }
                 ) { index ->
@@ -856,6 +862,14 @@ fun SearchResultsList(
                                 )
                             }
 
+                            is SearchResultItem.PodcastItem -> PodcastShowRow(item.podcast, onClick = {
+
+                                navController.navigateSafely(Screen.PodcastDetail.createRoute(item.podcast.feedUrl))
+
+                                onItemSelected()
+
+                            })
+
                             is SearchResultItem.PlaylistItem -> {
                                 val playlistSongs by remember(item.playlist.songIds, playerViewModel) {
                                     playerViewModel.observeSongs(item.playlist.songIds)
@@ -926,6 +940,7 @@ fun LazyListScope.renderBestResults(
                 is SearchResultItem.AlbumItem -> "best_album_${item.album.id}"
                 is SearchResultItem.ArtistItem -> "best_artist_${item.artist.id}"
                 is SearchResultItem.PlaylistItem -> "best_playlist_${item.playlist.id}_$index"
+                is SearchResultItem.PodcastItem -> "best_podcast_${item.podcast.feedUrl}"
             }
         },
         contentType = { index ->
@@ -934,6 +949,7 @@ fun LazyListScope.renderBestResults(
                 is SearchResultItem.AlbumItem -> "best_search_album"
                 is SearchResultItem.ArtistItem -> "best_search_artist"
                 is SearchResultItem.PlaylistItem -> "best_search_playlist"
+                is SearchResultItem.PodcastItem -> "best_search_podcast"
             }
         }
     ) { index ->
@@ -982,6 +998,10 @@ fun LazyListScope.renderBestResults(
                         }
                     )
                 }
+                is SearchResultItem.PodcastItem -> PodcastShowRow(item.podcast, onClick = {
+                    navController.navigateSafely(Screen.PodcastDetail.createRoute(item.podcast.feedUrl))
+                    onItemSelected()
+                })
                 is SearchResultItem.PlaylistItem -> {
                     val playlistSongs by remember(item.playlist.songIds, playerViewModel) {
                         playerViewModel.observeSongs(item.playlist.songIds)
@@ -1361,6 +1381,7 @@ fun RecentlySearchedList(
                     is SearchResultItem.AlbumItem -> "recent_album_${item.album.id}"
                     is SearchResultItem.ArtistItem -> "recent_artist_${item.artist.id}"
                     is SearchResultItem.PlaylistItem -> "recent_playlist_${item.playlist.id}_${index}"
+                    is SearchResultItem.PodcastItem -> "recent_podcast_${item.podcast.feedUrl}"
                 }
             },
             contentType = { index ->
@@ -1369,6 +1390,7 @@ fun RecentlySearchedList(
                     is SearchResultItem.AlbumItem -> "search_album"
                     is SearchResultItem.ArtistItem -> "search_artist"
                     is SearchResultItem.PlaylistItem -> "search_playlist"
+                    is SearchResultItem.PodcastItem -> "search_podcast"
                 }
             }
         ) { index ->
@@ -1434,6 +1456,10 @@ fun RecentlySearchedList(
                             onOpenClick = onOpenClick
                         )
                     }
+                    is SearchResultItem.PodcastItem -> PodcastShowRow(item.podcast, onClick = {
+                        navController.navigateSafely(Screen.PodcastDetail.createRoute(item.podcast.feedUrl))
+                        onItemSelected()
+                    })
                     is SearchResultItem.PlaylistItem -> {
                         val playlistSongs by remember(item.playlist.songIds, playerViewModel) {
                             playerViewModel.observeSongs(item.playlist.songIds)

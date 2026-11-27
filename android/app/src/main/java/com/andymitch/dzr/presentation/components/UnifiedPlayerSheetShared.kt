@@ -2,6 +2,8 @@
 
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.podcast.isEpisode
+import com.andymitch.dzr.presentation.components.player.SkipSecondsIcon
 import com.andymitch.dzr.data.model.Song
 
 import androidx.compose.foundation.background
@@ -163,12 +165,16 @@ internal fun MiniPlayerContentInternal(
                 },
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipPrevious,
-                contentDescription = stringResource(R.string.previous_track),
-                tint = LocalMaterialTheme.current.primary,
-                modifier = Modifier.size(22.dp)
-            )
+            if (song.isEpisode) {
+                SkipSecondsIcon(forward = false, tint = LocalMaterialTheme.current.primary, size = 24.dp)
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.SkipPrevious,
+                    contentDescription = stringResource(R.string.previous_track),
+                    tint = LocalMaterialTheme.current.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -210,12 +216,16 @@ internal fun MiniPlayerContentInternal(
                 ) { onNext() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipNext,
-                contentDescription = stringResource(R.string.next_track),
-                tint = LocalMaterialTheme.current.primary,
-                modifier = Modifier.size(22.dp)
-            )
+            if (song.isEpisode) {
+                SkipSecondsIcon(forward = true, tint = LocalMaterialTheme.current.primary, size = 24.dp)
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.SkipNext,
+                    contentDescription = stringResource(R.string.next_track),
+                    tint = LocalMaterialTheme.current.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }

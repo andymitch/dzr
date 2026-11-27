@@ -1,5 +1,10 @@
 package com.andymitch.dzr.presentation.components.player
 
+import com.andymitch.dzr.data.podcast.isEpisode
+import com.andymitch.dzr.presentation.viewmodel.PodcastViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.ContentCut
 import com.andymitch.dzr.data.model.Lyrics
 import com.andymitch.dzr.data.model.Artist
 import com.andymitch.dzr.data.model.Song
@@ -440,9 +445,10 @@ fun FullPlayerContent(
             placeholderColor = placeholderColor,
             placeholderOnColor = placeholderOnColor,
             isPlayingProvider = isPlayingProvider,
-            onPrevious = onPreviousWithOptimisticCarousel,
+            onPrevious = if (song.isEpisode) onPrevious else onPreviousWithOptimisticCarousel,
             onPlayPause = onPlayPause,
-            onNext = onNextWithOptimisticCarousel,
+            onNext = if (song.isEpisode) onNext else onNextWithOptimisticCarousel,
+            isEpisode = song.isEpisode,
             transportPlayPauseColors = transportPlayPauseColors,
             transportSkipColors = transportSkipButtonColors,
             isShuffleEnabledProvider = isShuffleEnabledProvider,
@@ -960,6 +966,7 @@ private fun FullPlayerControlsSection(
     onPrevious: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    isEpisode: Boolean,
     transportPlayPauseColors: TransportButtonColors,
     transportSkipColors: TransportButtonColors,
     isShuffleEnabledProvider: () -> Boolean,
@@ -1014,7 +1021,8 @@ private fun FullPlayerControlsSection(
                 colorPreviousButton = transportSkipColors.container,
                 colorNextButton = transportSkipColors.container,
                 tintPreviousIcon = transportSkipColors.content,
-                tintNextIcon = transportSkipColors.content
+                tintNextIcon = transportSkipColors.content,
+                skipSeconds = isEpisode
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -1031,7 +1039,8 @@ private fun FullPlayerControlsSection(
                 isFavoriteProvider = isFavoriteProvider,
                 onShuffleToggle = onShuffleToggle,
                 onRepeatToggle = onRepeatToggle,
-                onFavoriteToggle = onFavoriteToggle
+                onFavoriteToggle = onFavoriteToggle,
+                isEpisode = isEpisode
             )
         }
     }
@@ -2389,7 +2398,8 @@ private fun BottomToggleRow(
     isFavoriteProvider: () -> Boolean,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    isEpisode: Boolean = false
 ) {
     val isFavorite = isFavoriteProvider()
     val rowCorners = 60.dp
@@ -2433,6 +2443,11 @@ private fun BottomToggleRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val commonModifier = Modifier.weight(1f)
+
+            if (isEpisode) {
+                PodcastToggles(commonModifier, rowCorners, inactiveBg, inactiveContentColor)
+                return@Row
+            }
 
             ToggleSegmentButton(
                 modifier = commonModifier,
@@ -2479,4 +2494,40 @@ private fun BottomToggleRow(
             )
         }
     }
+}
+
+@Composable
+private fun PodcastToggles(
+    modifier: Modifier,
+    corners: Dp,
+    inactiveBg: Color,
+    inactiveContentColor: Color,
+    podcastViewModel: PodcastViewModel = hiltViewModel()
+) {
+    val speed by podcastViewModel.speed.collectAsStateWithLifecycle()
+    val cutSilence by podcastViewModel.cutSilence.collectAsStateWithLifecycle()
+    ToggleSegmentButton(
+        modifier = modifier,
+        active = speed != 1f,
+        activeColor = LocalMaterialTheme.current.primaryFixed,
+        activeCornerRadius = corners,
+        activeContentColor = LocalMaterialTheme.current.onPrimaryFixed,
+        inactiveColor = inactiveBg,
+        inactiveContentColor = inactiveContentColor,
+        onClick = podcastViewModel::cycleSpeed,
+        text = "${speed.toString().removeSuffix(".0")}×",
+        imageVector = Icons.Rounded.Speed
+    )
+    ToggleSegmentButton(
+        modifier = modifier,
+        active = cutSilence,
+        activeColor = LocalMaterialTheme.current.secondaryFixed,
+        activeCornerRadius = corners,
+        activeContentColor = LocalMaterialTheme.current.onSecondaryFixed,
+        inactiveColor = inactiveBg,
+        inactiveContentColor = inactiveContentColor,
+        onClick = podcastViewModel::toggleCutSilence,
+        text = "Cut silence",
+        imageVector = Icons.Rounded.ContentCut
+    )
 }

@@ -22,6 +22,12 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Icon
@@ -76,6 +82,7 @@ fun AnimatedPlaybackControls(
     tintNextIcon: Color = tintOtherIcons,
     playPauseIconSize: Dp = 36.dp,
     iconSize: Dp = 32.dp,
+    skipSeconds: Boolean = false,
 ) {
     val isPlaying = isPlayingProvider()
     var lastClicked by remember { mutableStateOf<PlaybackButtonType?>(null) }
@@ -163,12 +170,16 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.SkipPrevious,
-                    contentDescription = stringResource(R.string.previous_track),
-                    tint = tintPreviousIcon,
-                    modifier = Modifier.size(iconSize)
-                )
+                if (skipSeconds) {
+                    SkipSecondsIcon(forward = false, tint = tintPreviousIcon, size = iconSize)
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.SkipPrevious,
+                        contentDescription = stringResource(R.string.previous_track),
+                        tint = tintPreviousIcon,
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
             }
 
             val playWeight by animateFloatAsState(
@@ -239,12 +250,16 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.SkipNext,
-                    contentDescription = stringResource(R.string.next_track),
-                    tint = tintNextIcon,
-                    modifier = Modifier.size(iconSize)
-                )
+                if (skipSeconds) {
+                    SkipSecondsIcon(forward = true, tint = tintNextIcon, size = iconSize)
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.SkipNext,
+                        contentDescription = stringResource(R.string.next_track),
+                        tint = tintNextIcon,
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
             }
         }
     }
@@ -266,6 +281,25 @@ private fun MorphingPlayPauseIcon(
             contentDescription = if (playing) stringResource(R.string.cd_pause) else stringResource(R.string.cd_play),
             tint = tint,
             modifier = Modifier.size(size)
+        )
+    }
+}
+
+@Composable
+fun SkipSecondsIcon(forward: Boolean, tint: Color, size: Dp) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size)) {
+        Icon(
+            imageVector = Icons.Rounded.Replay,
+            contentDescription = if (forward) "Forward 30 seconds" else "Back 15 seconds",
+            tint = tint,
+            modifier = Modifier.fillMaxSize().graphicsLayer { if (forward) scaleX = -1f }
+        )
+        Text(
+            text = if (forward) "30" else "15",
+            color = tint,
+            fontSize = (size.value * 0.27f).sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = size * 0.08f)
         )
     }
 }

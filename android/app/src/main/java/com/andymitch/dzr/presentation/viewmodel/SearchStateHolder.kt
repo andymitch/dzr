@@ -47,7 +47,8 @@ import kotlinx.coroutines.async
 @Singleton
 class SearchStateHolder @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val deezerRepository: DeezerRepository
+    private val deezerRepository: DeezerRepository,
+    private val podcastRepository: com.andymitch.dzr.data.podcast.PodcastRepository
 ) {
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 300L
@@ -187,18 +188,26 @@ class SearchStateHolder @Inject constructor(
                             } else emptyList()
                         }
                         
+                        val podcastsDeferred = scope?.async {
+                            if (currentFilter == SearchFilterType.ALL || currentFilter == SearchFilterType.PODCASTS) {
+                                podcastRepository.search(normalizedQuery).map { SearchResultItem.PodcastItem(it) }
+                            } else emptyList()
+                        }
+
                         val parsedBestResults = bestResultDeferred?.await() ?: emptyList()
                         val tracks = tracksDeferred?.await() ?: emptyList()
                         val albums = albumsDeferred?.await() ?: emptyList()
                         val artists = artistsDeferred?.await() ?: emptyList()
                         val playlists = playlistsDeferred?.await() ?: emptyList()
+                        val podcasts = podcastsDeferred?.await() ?: emptyList()
                         
-                        val combinedResults = (tracks + albums + artists + playlists).distinctBy { item ->
+                        val combinedResults = (tracks + albums + artists + playlists + podcasts).distinctBy { item ->
                             when (item) {
                                 is SearchResultItem.SongItem -> "song_${item.song.id}"
                                 is SearchResultItem.AlbumItem -> "album_${item.album.id}"
                                 is SearchResultItem.ArtistItem -> "artist_${item.artist.id}"
                                 is SearchResultItem.PlaylistItem -> "playlist_${item.playlist.id}"
+                                is SearchResultItem.PodcastItem -> "podcast_${item.podcast.feedUrl}"
                             }
                         }
 

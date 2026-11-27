@@ -36,6 +36,7 @@ Android:
 - Three navigation styles, including one without a bottom bar
 - Save a Track Mix as a playlist
 - Android Auto: Home (Flow, song mixes, recommended playlists), Library and search on the car's screen
+- Podcasts outside Deezer: search Apple's podcast directory or add an RSS link, subscribe, and see new episodes on Home. Episodes resume where you left off, skip 15s back and 30s forward, and have their own playback speed and Cut silence
 
 ## Android Auto
 

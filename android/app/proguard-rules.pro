@@ -77,6 +77,10 @@
 -keep class com.andymitch.dzr.data.download.DownloadIndex { *; }
 -keep class com.andymitch.dzr.data.download.DownloadedCollection { *; }
 -keep class com.andymitch.dzr.data.download.DownloadedTrack { *; }
+# Podcast subscriptions (podcasts.json) are saved and read with Gson.
+-keep class com.andymitch.dzr.data.podcast.Podcast { *; }
+-keep class com.andymitch.dzr.data.podcast.Episode { *; }
+-keep class com.andymitch.dzr.data.podcast.PodcastIndex { *; }
 -keepclassmembers enum com.andymitch.dzr.data.preferences.DeezerAudioQuality { *; }
 # Backup payload entities are part of the persisted .pxpl contract.
 -keep class com.andymitch.dzr.data.database.FavoritesEntity { *; }

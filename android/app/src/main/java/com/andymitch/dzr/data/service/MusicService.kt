@@ -41,6 +41,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
+import com.andymitch.dzr.data.podcast.isEpisodeId
 import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
@@ -69,6 +70,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -175,11 +177,14 @@ class MusicService : MediaLibraryService() {
     @Inject
     lateinit var deezerRepository: com.andymitch.dzr.data.repository.DeezerRepository
     @Inject
+    lateinit var podcastRepository: com.andymitch.dzr.data.podcast.PodcastRepository
+    @Inject
     @AppScope
     lateinit var appScope: CoroutineScope
 
     private var replayGainEnabled = false
     private var userPlaybackSpeed = 1f
+    private var episodeProgressJob: Job? = null
     private var replayGainUseAlbumGain = false
     private var replayGainJob: Job? = null
     private var replayGainRequestToken = 0L
@@ -243,6 +248,7 @@ class MusicService : MediaLibraryService() {
         private const val WIDGET_ART_FAILURE_RETRY_MS = 30_000L
         private const val WIDGET_QUEUE_PREVIEW_LIMIT = 4
         private const val HEADSET_RECONNECT_RESUME_WINDOW_MS = 15_000L
+        private const val EPISODE_PROGRESS_SAVE_MS = 10_000L
 
         fun markPendingMediaButtonForegroundStart() {
             pendingMediaButtonForegroundStarts.incrementAndGet()
@@ -513,6 +519,11 @@ class MusicService : MediaLibraryService() {
         serviceScope.launch {
             userPreferencesRepository.playbackSpeedFlow.collect { speed ->
                 userPlaybackSpeed = speed
+                applyPlaybackSpeed(mediaSession?.player ?: engine.masterPlayer)
+            }
+        }
+        serviceScope.launch {
+            combine(podcastRepository.speed, podcastRepository.cutSilence) { _, _ -> }.collect {
                 applyPlaybackSpeed(mediaSession?.player ?: engine.masterPlayer)
             }
         }
@@ -1147,6 +1158,7 @@ class MusicService : MediaLibraryService() {
             // is producing — keeps thermal headroom and battery for playback.
             PlaybackActivityTracker.setPlaybackActive(isPlaying)
             syncLocalListeningStatsFromPlayer(player)
+            trackEpisodeProgress(player, isPlaying)
 
 
 
@@ -1194,7 +1206,10 @@ class MusicService : MediaLibraryService() {
                 listeningStatsTracker.finalizeCurrentSession()
                 endOfTrackTimerSongId = null
                 val player = mediaSession?.player ?: engine.masterPlayer
-                if (player.mediaItemCount > 0) {
+                val endedEpisode = player.currentMediaItem?.mediaId?.takeIf(::isEpisodeId)
+                if (endedEpisode != null) {
+                    podcastRepository.markPlayed(endedEpisode)
+                } else if (player.mediaItemCount > 0) {
                     player.playWhenReady = false
                     player.seekTo(player.currentTimeline.getFirstWindowIndex(player.shuffleModeEnabled), 0L)
                 }
@@ -1245,6 +1260,8 @@ class MusicService : MediaLibraryService() {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer, forceNewSession = true)
+            applyPlaybackSpeed(mediaSession?.player ?: engine.masterPlayer)
+            resumeEpisode(mediaSession?.player ?: engine.masterPlayer)
             flowContinuation.extendIfNeeded(mediaSession?.player ?: engine.masterPlayer, serviceScope)
             cacheUpcoming(mediaSession?.player ?: engine.masterPlayer)
 
@@ -1334,8 +1351,34 @@ class MusicService : MediaLibraryService() {
 
     /** Applies the user's playback speed to [player], preserving pitch (time-stretch). */
     private fun applyPlaybackSpeed(player: Player) {
-        if (abs(player.playbackParameters.speed - userPlaybackSpeed) > 0.001f) {
-            player.setPlaybackSpeed(userPlaybackSpeed)
+        val episode = isEpisodeId(player.currentMediaItem?.mediaId)
+        val speed = if (episode) podcastRepository.speed.value else userPlaybackSpeed
+        if (abs(player.playbackParameters.speed - speed) > 0.001f) {
+            player.setPlaybackSpeed(speed)
+        }
+        engine.setSkipSilence(player, episode && podcastRepository.cutSilence.value)
+    }
+
+    private fun resumeEpisode(player: Player) {
+        val id = player.currentMediaItem?.mediaId?.takeIf(::isEpisodeId) ?: return
+        val saved = podcastRepository.position(id)
+        if (saved > 0 && player.currentPosition < 1_000) player.seekTo(saved)
+    }
+
+    private fun saveEpisodeProgress(player: Player) {
+        val id = player.currentMediaItem?.mediaId?.takeIf(::isEpisodeId) ?: return
+        podcastRepository.savePosition(id, player.currentPosition, player.duration.takeIf { it != C.TIME_UNSET } ?: 0L)
+    }
+
+    private fun trackEpisodeProgress(player: Player, isPlaying: Boolean) {
+        episodeProgressJob?.cancel()
+        saveEpisodeProgress(player)
+        if (!isPlaying) return
+        episodeProgressJob = serviceScope.launch {
+            while (true) {
+                delay(EPISODE_PROGRESS_SAVE_MS)
+                saveEpisodeProgress(mediaSession?.player ?: engine.masterPlayer)
+            }
         }
     }
 
@@ -2632,6 +2675,19 @@ class MusicService : MediaLibraryService() {
         // SLOT_BACK/SLOT_FORWARD buttons are present, Media3 strips the legacy
         // ACTION_SKIP_TO_PREVIOUS/NEXT flags from PlaybackStateCompat, which causes some
         // OEM compact system players (including ColorOS Control Center) to gray out skip.
+        if (isEpisodeId(songId)) {
+            val back = CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
+                .setDisplayName("Back 15 seconds")
+                .setPlayerCommand(Player.COMMAND_SEEK_BACK)
+                .setSlots(CommandButton.SLOT_BACK)
+                .build()
+            val forward = CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_30)
+                .setDisplayName("Forward 30 seconds")
+                .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+                .setSlots(CommandButton.SLOT_FORWARD)
+                .build()
+            return listOf(back, forward, shuffleButton, repeatButton)
+        }
         return listOf(likeButton, shuffleButton, repeatButton)
     }
 

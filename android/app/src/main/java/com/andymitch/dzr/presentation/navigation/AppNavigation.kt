@@ -350,6 +350,26 @@ fun AppNavigation(
             }
 
             composable(
+                route = Screen.PodcastDetail.route,
+                arguments = listOf(navArgument("feed") { type = NavType.StringType }),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val feed = backStackEntry.arguments?.getString("feed")
+                if (feed != null) {
+                    ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                        com.andymitch.dzr.presentation.screens.PodcastDetailScreen(
+                            feedUrl = feed,
+                            playerViewModel = playerViewModel,
+                            onBackClick = { navController.navigateBack() }
+                        )
+                    }
+                }
+            }
+
+            composable(
                 route = Screen.AlbumDetail.route,
                 arguments = listOf(
                     navArgument("albumId") { type = NavType.StringType },

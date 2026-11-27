@@ -23,6 +23,9 @@ sealed class Screen(val route: String) {
     object SmartTrackList : Screen("smart_track_list/{listType}") {
         fun createRoute(listType: String) = "smart_track_list/$listType"
     }
+    object PodcastDetail : Screen("podcast_detail?feed={feed}") {
+        fun createRoute(feedUrl: String) = "podcast_detail?feed=${android.net.Uri.encode(feedUrl)}"
+    }
     object RecentlyPlayed : Screen("recently_played")
     object Stats : Screen("stats")
     // The base route is "album_detail". The full route with the argument is defined in AppNavigation.

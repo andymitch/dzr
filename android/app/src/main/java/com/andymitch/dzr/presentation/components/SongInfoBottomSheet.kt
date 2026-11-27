@@ -1,5 +1,6 @@
 package com.andymitch.dzr.presentation.components
 
+import com.andymitch.dzr.data.podcast.isEpisode
 import com.andymitch.dzr.data.model.Song
 import com.andymitch.dzr.utils.shapes.RoundedStarShape
 import com.andymitch.dzr.presentation.viewmodel.SongInfoBottomSheetViewModel
@@ -368,7 +369,7 @@ fun SongInfoBottomSheet(
                                 }
                             }
                         }
-                        item {
+                        if (!song.isEpisode) item {
                             val scope = androidx.compose.runtime.rememberCoroutineScope()
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
